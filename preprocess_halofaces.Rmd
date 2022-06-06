@@ -385,11 +385,9 @@ table(df_OF_output_AUsW_unblind_posed_binned$bin_frame)
 ```
 
 
-
-
 do
 
-for the actual analysys we want
+for the actual analyses we want
 1- learn spatiotemporal structure suing NMF
 2 - does drug vs no drug differ in NMF metrics?
 3- can we separate groups based on NMF components using BADIA

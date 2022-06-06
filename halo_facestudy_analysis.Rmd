@@ -1,0 +1,290 @@
+---
+title: "analysys_halofacestudy"
+author: "Helio"
+date: "06/06/2022"
+output: html_document
+---
+
+
+dependencies: preprocss_halofaces.Rmd
+df_OF_output_AUsW_unblind_posed
+
+
+
+for the actual analyses we want
+1- learn spatiotemporal structure suing NMF
+2 - does drug vs no drug differ in NMF metrics?
+3- can we separate groups based on NMF components using BADIA
+
+spatiotemporal dynamics
+- movement substates (initiation, sustainement, etc)
+- if we use kmean clustering, do we have differences into how many substaes are there
+- or if we use a fixed number of substaes, are there significant temporal differences (e.g. duration, reccurence)
+
+preferences
+```{r}
+library(tidyverse)
+library(data.table)
+
+library(NMF)
+
+```
+
+
+Steps and decision
+initialisation = random seed
+find k
+set iteratiions
+fit final
+
+
+fit drug and placebo separatelly?
+```{r}
+# Initialise and find k
+
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+
+
+df_OF_output_AUsW_unblind_posed_binned
+
+# single run and single numeric seed for reproducibility
+res_find_k <- nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], 2:6, 
+                      seed=123456,
+                      nrun = 100,
+                       .options = 'v')
+
+summary(res_find_k)
+
+# plot quality measures by rank (k)
+NMF::plot(res_find_k)+
+  geom_vline(xintercept = 3)
+
+# ?NMF::consensusmap
+NMF::consensusmap(res_find_k)
+
+
+```
+
+Check for overffiting by reshufling the ata and refitting the NMF on simulated data
+SHUFFLING to avoid overfitting to noise
+
+```{r}
+# shuffle original data 
+
+V.random <- randomize(df_OF_output_AUsW_unblind_posed_binned[,16:32]) 
+
+# estimate quality measures from the shuffled data (use default NMF algorithm) 
+estim.k.random <- nmf(V.random, 2:6, nrun=100, seed=123456,
+                      .option = 'v') 
+
+# then we can assess the quality of random estimation to our estimation
+
+# plot measures on same graph (x, y) 
+plot(res_k, estim.k.random) + 
+  geom_vline(xintercept = 3)
+
+
+```
+
+We select values of k where the magnitude of the cophenetic correlation coefficient begins to fall (see below).
+so now we can fit the final model
+
+```{r}
+res_k3 <-NMF::nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], r = 3, 
+                  nrun = 100, 
+                  seed=123456,
+                 .options = list( 'v','t')) #error tracking
+
+
+plot(res_k3)
+summary(res_k3_em)
+
+# basis components 
+NMF::basismap(res_k3_em) # weights/ amplitudes
+
+# mixture coefficients 
+coefmap(res_k3_em) #hidden variables
+
+# access more info
+# res_k3_em
+
+```
+
+
+
+
+
+
+Combine the data and visualise
+```{r}
+
+df_OF_output_AUsW_unblind_posed_binned$NMFtable<- as.data.frame(res_k3_em_ts_morph@fit@W)
+df_OF_output_AUsW_unblind_posed_binned$comp1 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V1
+table(is.na(df_OF_output_AUsW_unblind_posed_binned$comp1))
+df_OF_output_AUsW_unblind_posed_binned$comp2 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V2
+df_OF_output_AUsW_unblind_posed_binned$comp3 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V3
+colnames(db_of_natural1)
+
+# visualization by emotion and morph
+# bind_rows(db_of_natural1, db_of_morph)
+df_OF_output_AUsW_unblind_posed_binned[,c(2:5,31:33)]%>%
+  gather(component, coef, -timebin,-Emotion, -Dataset, -morph)%>%
+  group_by(Emotion, component, morph, timebin)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(timebin, coef, color = Emotion))+
+  geom_smooth()+
+  facet_grid(~component)+
+  theme_classic()
+
+# visualisation of the morphed dataset
+df_OF_output_AUsW_unblind_posed_binned[,c(2:5,31:33)]%>%
+  gather(component, coef, -timebin,-Emotion, -Dataset, -morph)%>%
+  group_by(Emotion, component, morph, timebin)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(timebin, coef, color = Emotion))+
+  geom_smooth()+
+  facet_grid(~component)+
+  theme_classic()
+
+
+# compare datasets
+
+df_OF_output_AUsW_unblind_posed_binned[,c(2:5,31:33)]%>%
+  gather(component, coef, -timebin,-Emotion, -Dataset, -morph)%>%
+  group_by(Emotion, component, Dataset, timebin)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(timebin, coef, color = Emotion))+
+  geom_smooth()+
+  facet_grid(Dataset~component)+
+  theme_classic()
+
+df_OF_output_AUsW_unblind_posed_binned[,c(2:5,31:33)]%>%
+  gather(component, coef, -timebin,-Emotion, -Dataset, -morph)%>%
+  group_by(Emotion, component, Dataset, timebin)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(timebin, coef, color = Emotion))+
+  geom_smooth()+
+  facet_grid(Dataset~component)+
+  theme_classic()
+
+
+
+```
+
+we can also do classification on this
+
+```{r}
+# combine the datasets keep timbeins and stimuli
+nmf_agg_ts_tb<-bind_rows(db_of_natural1, db_of_morph)[,c(1,2:5,31:33)]%>%
+  # gather( component, coef, -timebin,-Emotion, -Dataset, -morph, -filename)%>%
+  group_by(filename,timebin, Emotion, Dataset, morph)%>%
+  summarise_at(c("comp1", "comp2", "comp3"), mean, na.rm = TRUE)
+
+# combine datasets and aggregate over time bins
+nmf_agg_ts <- bind_rows(db_of_natural1, db_of_morph)[,c(1,2:5,31:33)]%>%
+  # gather( component, coef, -timebin,-Emotion, -Dataset, -morph, -filename)%>%
+  group_by(filename, Emotion, Dataset, morph)%>%
+  summarise_at(c("comp1", "comp2", "comp3"), mean, na.rm = TRUE)
+
+# save 
+write_csv(nmf_agg_ts, "nmf_agg_ts.csv")
+write_csv(nmf_agg_ts_tb, "nmf_agg_ts_tb.csv")
+
+
+```
+
+
+
+
+
+
+
+
+
+
+visualisations
+- differences between emotions on the components
+- differences between drug vs no drug?
+- classification - can we classify drug vs no drug based in these components
+
+
+do the same for aggregated data
+
+Visualize learned components by variables of interest (emotion, datadet, etc)
+```{r}
+#store the basis components
+# you can reconstruct V by multiplying W and H
+# res_k3_em@fit@W* res_k3_em@fit@H
+
+res_k3_em@
+db_of_natural1_agg$NMFtable<- as.data.frame(res_k3_em@fit@W)
+
+# store component coefficients
+db_of_natural1_agg$comp1 = db_of_natural1_agg$NMFtable$V1
+db_of_natural1_agg$comp2 = db_of_natural1_agg$NMFtable$V2
+db_of_natural1_agg$comp3 = db_of_natural1_agg$NMFtable$V3
+
+colnames(db_of_natural1_agg)
+
+library(viridis)
+
+# heatmap
+db_of_natural1_agg[,c(2,3,21:23)] %>% 
+  gather(component, coef, -Emotion, -Dataset)%>%
+  group_by(Emotion, component,Dataset)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  mutate(Emotion = factor(Emotion, 
+                          levels = c("Anger", "Disgust", "Fear", "Surprise", "Sadness", "Happiness")))%>%
+  ggplot(aes(Emotion, component, fill = coef))+
+  geom_tile()+
+  scale_fill_viridis(option="magma")+
+  theme_classic()+
+  facet_grid(~Dataset)
+
+
+# aggregated plot
+db_of_natural1_agg[,c(2,3,21:23)] %>% 
+  gather(component, coef, -Emotion, -Dataset)%>%
+  group_by(Emotion, component,Dataset)%>%
+   mutate(Emotion = factor(Emotion, 
+                          levels = c("Anger", "Disgust", "Fear", "Surprise", "Sadness", "Happiness")))%>%
+  ggplot(aes(Emotion, coef, color = Emotion, fill = Emotion)) +
+  geom_jitter(alpha = .1, position = position_dodge(1))+
+  stat_summary(geom = "pointrange")+
+  geom_boxplot(alpha = .1)+
+    theme_classic()+
+  facet_grid(component~Dataset)+
+  ggpubr::stat_compare_means()+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")
+
+# aggregated plot by DATASET
+db_of_natural1_agg[,c(2,3,21:23)] %>% 
+  gather(component, coef, -Emotion, -Dataset)%>%
+  group_by( component,Dataset)%>%
+  ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  geom_jitter(alpha = .1, position = position_dodge(1))+
+  stat_summary(geom = "pointrange")+
+  geom_boxplot(alpha = .1)+
+    theme_classic()+
+  facet_grid(~component)+
+  ggpubr::stat_compare_means()+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")
+
+
+```
+
+
+
+
+
+2 - substates in movement - 
+
+
+
+do
