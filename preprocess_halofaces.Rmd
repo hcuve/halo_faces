@@ -1,0 +1,47 @@
+---
+title: "preprocess_halofacestudy"
+author: "Helio Clemente Cuve, PhD"
+date: '2022-06-06'
+output: html_document
+---
+
+
+useful details
+#experimental conditions
+3 expression conditions (posed, spoken and spoken2)
+3 emotion categeories (happy, angry, sad)
+Spoken has 4 emotions (H. A. S and Neutral)
+Spoken 2 is the additional for all but was never analysed before
+
+# labels
+each video is labelled with the day (1 or 2) - see unblinding_BMY_drugday
+- this is needed to group the drug vs placebo correctly
+
+notes
+- some participants we only have day 1 data 
+
+no data for p9 as he refused to do the task and then day 1 data only for 4, 12, 26, 34, 35, 41, 42 and 43 
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r data}
+summary(data)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
