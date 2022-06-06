@@ -14,7 +14,7 @@ Spoken has 4 emotions (H. A. S and Neutral)
 Spoken 2 is the additional for all but was never analysed before
 
 # labels
-each video is labelled with the day (1 or 2) - see unblinding_BMY_drugday
+each video is labeled with the day (1 or 2) - see unblinding_BMY_drugday
 - this is needed to group the drug vs placebo correctly
 
 notes
@@ -22,24 +22,394 @@ notes
 
 no data for p9 as he refused to do the task and then day 1 data only for 4, 12, 26, 34, 35, 41, 42 and 43 
 
+Setup preferences
+```{r}
+# set working directory
+setwd("/Volumes/GoogleDrive-113094219255455017404/My Drive/2022 - University Of Birmingham/HaloStudy/Data/openFaceProcessed")
+setwd("/Volumes/GoogleDrive-113094219255455017404/My Drive/2022 - University Of Birmingham/RE-CUT_VIDEOS_23.05.22-20220523T152230Z-001/RE-CUT_VIDEOS_23.05.22/openFaceProcessed")
+
+# load libraries
+library(tidyverse)
+library(data.table)
+library(readr)
+
+```
+
+load 'csv' openFace fileand bind into one large dataframe while storing file name in a separate column
+
+```{r}
+# fcuntion to read append filename to dataframne
+read_plus <- function(flnm) {
+  data.table::fread(flnm) %>% 
+    mutate(filename = flnm)
+}
+
+# now read them
+df_OF_output <-
+  list.files(pattern = "*.csv", 
+             full.names = T) %>% 
+  map_df(~read_plus(.))
+# to do, add a progress bar
+
+
+# quick inspection fo the data
+df_OF_output
+dim(df_OF_output)
+colnames(df_OF_output)
+# summary(df_OF_output) # takes time for a this big od a df
+colnames(df_OF_output)
+table(is.na(df_OF_output$filename))
+ 
+### The head() and tail() functions default to 6 rows, but we can adjust the number of rows using the "n = " argument
+head(df_OF_output, n = 10) #first 10 rows
+tail(df_OF_output, n = 5) #last 5 rows
+
+
+```
+
+1 - now reduce the dataset into a set we actually need (AUS)
+2 - merge with unblinding data
+3 - do some quick visualisations
+
+```{r}
+colnames(df_OF_output)
+
+df_OF_output_AUs<- df_OF_output[,c(1:5,680:715)]
+# AU r = intensity c is presence
+colnames(df_OF_output_AUs)
+
+# rename action units based on a dictionary I created for the NMF tutorial
+# setwd("/Volumes/GoogleDrive-113094219255455017404/My Drive/2022 - University Of Birmingham/HaloStudy/Data")
+
+AU_OF_codes_merged <- readr::read_csv("AU_OF_codes_merged.csv")
+AU_OF_transposed <- read_csv("AU_OF_transposed.csv")
+AU_Wiki <- read_csv("AU_Wiki.csv")
+AU_OF_transposed
+
+# AU weights
+AU_OF_codes_merged$AU_Code_OF_r<- paste0(AU_OF_codes_merged$AU_Code_OF,paste0("_",AU_OF_codes_merged$FACS_name))
+
+# codes for AU presence
+AU_OF_codes_merged$AU_Code_OF_c<- paste0("AU",AU_OF_codes_merged$AU_CODE,paste0("_c_", AU_OF_codes_merged$FACS_name))
+
+
+colnames(df_OF_output_AUs)
+
+# quick check
+df_OF_output_AUs%>%
+  ggplot(aes(AU01_r))+
+  geom_histogram()
+
+df_OF_output_AUs%>%
+  ggplot(aes(AU01_c))+
+  geom_histogram()
+
+# rename AUS based on appended names and codes
+t(AU_OF_codes_merged$AU_Code_OF_r)
+t(AU_OF_codes_merged$AU_Code_OF_c)
+
+cnames1 <- colnames(df_OF_output_AUs)
+(17*2)+6
+cname2<-c(cnames1[1:5],t(AU_OF_codes_merged$AU_Code_OF_r),t(AU_OF_codes_merged$AU_Code_OF_c), "filename")
+# cnames1
+# t(AU_OF_codes_merged$AU_Code_OF_r)
+# note OF addded a new action fpr presence 28 (lipsuck) I will exclude this for now
+df_OF_output_AUs$AU28_c<-NULL
+
+# df_OF_output_AUstest<-df_OF_output_AUs
+# names(df_OF_output_AUstest)<- cname2
+names(df_OF_output_AUs)<- cname2
+
+
+colnames(df_OF_output_AUs)
+
+# now merge unblinding data
+
+library(readxl)
+Unblinding_BMI_drugday <- read_excel("Unblinding_BMI_drugday.xlsx")
+View(Unblinding_BMI_drugday)
+
+df_OF_output_AUs$filename
+unique(
+df_OF_output_AUs$filename)
+
+# return the string between "_p and ,csv = this will be the particiapnt code
+
+library(stringr)
+
+df_OF_output_AUs$subject<- sub(".*_p", "", str_match(df_OF_output_AUs$filename, "p\\s*(.*?)\\s*.csv")[,2])
+
+# testday
+
+df_OF_output_AUs$test.day<- str_match(df_OF_output_AUs$filename, "_day\\s*(.*?)\\s*_p")[,2]
+
+
+unique(df_OF_output_AUs$subject)
+# how many participants do we expect = 43, checks out
+Unblinding_BMI_drugday
+
+names(Unblinding_BMI_drugday)<- make.names(names(Unblinding_BMI_drugday))
+Unblinding_BMI_drugday
+
+# merge
+df_OF_output_AUs$subject<- as.factor(as.character( df_OF_output_AUs$subject))
+Unblinding_BMI_drugday$subject<-as.factor(as.character(Unblinding_BMI_drugday$subject))
+
+# expected rows()
+# nrow(df_OF_output_AUs)  =131476
+df_OF_output_AUs_unblind<- left_join(df_OF_output_AUs, Unblinding_BMI_drugday)
+
+# if test.day == drugday  = "halo, vs placebo
+colnames(df_OF_output_AUs_unblind)
+
+df_OF_output_AUs_unblind$drug.placebo <- if_else(df_OF_output_AUs_unblind$test.day == df_OF_output_AUs_unblind$drug.day, "drug", "placebo")
+
+# add emotion
+# return word between 3rd and 4rth underscore df$values = sapply(strsplit(df$V1, "_"), function(x) x[3])
+unique( sapply(strsplit(df_OF_output_AUs_unblind$filename, "_"), function(x) x[3]))
+
+df_OF_output_AUs_unblind$expression <-sapply(strsplit(df_OF_output_AUs_unblind$filename, "_"), function(x) x[3])
+# 2nd and 3rd undrcore
+# unique( sapply(strsplit(df_OF_output_AUs_unblind$filename, "_"), function(x) x[2]))
+df_OF_output_AUs_unblind$posed.spoken<- sapply(strsplit(df_OF_output_AUs_unblind$filename, "_"), function(x) x[2])
+
+
+```
+
+Do some quick visualizations for time, etc
+
+```{r}
+# lets see distribution of duration
+df_OF_output_AUs_unblind%>%
+  subset(test.day ==1)%>%
+  group_by(filename,test.day, expression,posed.spoken)%>%
+  summarise_at(c("timestamp", "frame"), max, na.rm = T)%>%
+  ggplot(aes(frame))+
+  geom_histogram()+
+  theme_classic()+
+  facet_grid(expression~posed.spoken)
+
+df_OF_output_AUs_unblind%>%
+  subset(test.day ==2)%>%
+  group_by(filename,test.day, expression,posed.spoken)%>%
+  summarise_at(c("timestamp", "frame"), max, na.rm = T)%>%
+  ggplot(aes(timestamp))+
+  geom_histogram()+
+  theme_classic()+
+  facet_grid(expression~posed.spoken)
+
+
+
+
+
+```
+
+Visualise heatmaps for action units
+
+```{r}
+# store weights only
+colnames(df_OF_output_AUs_unblind)
+df_OF_output_AUsW_unblind<- df_OF_output_AUs_unblind[,c(1:5,40:49,6:22)]
+
+df_OF_output_AUsW_unblind%>%
+  gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(timestamp,frame, AUs, expression,drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(frame), AUs, fill = AU.coefs))+
+    geom_tile()+
+    facet_grid(drug.placebo~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())
+
+
+df_OF_output_AUsW_unblind%>%
+  gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(timestamp,frame, AUs,posed.spoken,drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(frame), AUs, fill = AU.coefs))+
+    geom_tile()+
+    facet_grid(posed.spoken~drug.placebo)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  # scale_fill_viridis_c(option = "plasma")
+  # scale_fill_viridis_c()
+  scale_fill_viridis_c(option = "magma")
+  
+  # check emotion differences
+  df_OF_output_AUsW_unblind%>%
+  gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(timestamp,frame, AUs,expression,posed.spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(frame), AUs, fill = AU.coefs))+
+    geom_tile()+
+    facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  # scale_fill_viridis_c(option = "plasma")
+  # scale_fill_viridis_c()
+  scale_fill_viridis_c(option = "magma")
+
+
+```
+
+
+binify based on moving average to we have comparable number of bins
+
+start by separting just emotion
+
+```{r}
+df_OF_output_AUsW_unblind_posed<- subset(df_OF_output_AUsW_unblind, 
+                                         posed.spoken == "posed")
+
+df_OF_output_AUsW_unblind_posed
+
+df_OF_output_AUsW_unblind_posed%>%
+  subset(test.day ==1)%>%
+  group_by(filename,test.day, expression,posed.spoken)%>%
+  summarise_at(c("timestamp", "frame"), max, na.rm = T)%>%
+  ggplot(aes(frame))+
+  geom_histogram()+
+  theme_classic()+
+  facet_grid(expression~posed.spoken)
+
+
+ # = 100 bins
+# average is 250
+# 220/100
+
+df_OF_output_AUsW_unblind_posed
+?cut
+colnames(df_OF_output_AUsW_unblind_posed)
+df_OF_output_AUsW_unblind_posed_binned <-df_OF_output_AUsW_unblind_posed%>%
+  group_by(filename, subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression )%>%
+  mutate(bin_frame = cut(frame, 100, labels = FALSE))%>%
+  group_by(filename,bin_frame,subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+ 
+ 
+df_OF_output_AUsW_unblind_posed_binned$filename
+# "./cut_posed_angry_day1_p1.csv"
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+df_OF_output_AUsW_unblind_posed_binned%>%
+  subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(bin_frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(bin_frame), AUs, fill = AU.coefs))+
+    geom_tile()+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+# unbinned
+df_OF_output_AUsW_unblind_posed%>%
+  subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(frame), AUs, fill = AU.coefs))+
+    geom_tile()+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+# similar
+# let's check lines
+
+df_OF_output_AUsW_unblind_posed_binned%>%
+  subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(bin_frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(bin_frame), AU.coefs, group = AUs))+
+    geom_line()+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+df_OF_output_AUsW_unblind_posed%>%
+  subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(frame),AU.coefs, group = AUs))+
+ geom_line()+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+df_OF_output_AUsW_unblind_posed_binned%>%
+  subset(subject == 1)%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(bin_frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(bin_frame), AU.coefs, group = AUs))+
+   geom_smooth(se = F)+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+df_OF_output_AUsW_unblind_posed%>%
+  subset(subject == 1)%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(frame),AU.coefs, group = AUs))+
+  geom_smooth(se = F)+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+table(df_OF_output_AUsW_unblind_posed_binned$bin_frame)
+
+```
+
+
+
+
+do
+
+for the actual analysys we want
+1- learn spatiotemporal structure suing NMF
+2 - does drug vs no drug differ in NMF metrics?
+3- can we separate groups based on NMF components using BADIA
+
+spatiotemporal dynmaics
+- movement substates (initiation, sustainement, etc)
+- if we use kmean clustering, do we have differences into how many substaes are there
+- or if we use a fixed number of substaes, are there significant temporal differences (e.g. duration, reccurence)
+
 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
 ```{r data}
 summary(data)
 ```
 
 ## Including Plots
-
 You can also embed plots, for example:
 
 ```{r pressure, echo=FALSE}
