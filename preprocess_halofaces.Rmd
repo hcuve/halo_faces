@@ -258,7 +258,7 @@ df_OF_output_AUsW_unblind%>%
 
 binify based on moving average to we have comparable number of bins
 
-start by separting just emotion
+start by separqting just emotion
 
 ```{r}
 df_OF_output_AUsW_unblind_posed<- subset(df_OF_output_AUsW_unblind, 
