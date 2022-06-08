@@ -566,7 +566,7 @@ nmfk4_agg_no_ts
 #   summarise_at(c("comp1", "comp2", "comp3"), mean, na.rm = TRUE)
 # 
 # # save 
-# write_csv(nmf_agg_ts, "nmf_agg_ts.csv")
+write_csv(nmfk4_agg_no_ts, "nmfk4_agg_no_ts.csv")
 # write_csv(nmf_agg_ts_tb, "nmf_agg_ts_tb.csv")
 
 
@@ -575,5 +575,274 @@ before we do for classification and clustering
 let's do BADIA
 
 ```{r}
+# start with the dimensions
+colnames(nmfk4_agg_no_ts)
+# drug no drug
+
+bada_models<-list()
+bada_models$drug_nodrug<- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,24:27], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts$drug.placebo),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+# based on emotion
+bada_models$emotion <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,24:27], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+
+# based on AUS
+colnames(nmfk4_agg_no_ts)
+bada_models$drug_nodrug_fromAUS<- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,4:20], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts$drug.placebo),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+
+bada_models$emotion_fromAUS <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,4:20], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+
+
+# do placebo vs  drug separately
+nmfk4_agg_no_ts_drug<-subset(nmfk4_agg_no_ts, drug.placebo == "drug")
+nmfk4_agg_no_ts_plac<-subset(nmfk4_agg_no_ts, drug.placebo != "drug")
+
+colnames(nmfk4_agg_no_ts_drug)
+bada_models$drug_emotion_NMF <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts_drug[,24:27], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts_drug$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+# lacebo
+
+bada_models$placebo_emotion_NMF <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts_plac[,24:27], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts_plac$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+
+df_OF_output_AUsW_unblind_posed_binned_drug<-subset(df_OF_output_AUsW_unblind_posed_binned, drug.placebo  =="drug")
+
+bada_models$ts_drug<- TInPosition::tepBADA.inference.battery(df_OF_output_AUsW_unblind_posed_binned_drug[,38:41], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(df_OF_output_AUsW_unblind_posed_binned_drug$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 100, 
+                                                       critical.value = 2)
+
+df_OF_output_AUsW_unblind_posed_binned$subject<- as.factor(df_OF_output_AUsW_unblind_posed_binned$subject)
+
+summary(lmer(k4_comp3 ~ 1 + expression*drug.placebo +(1+drug.placebo|subject),
+             REML = FALSE,
+     data  =df_OF_output_AUsW_unblind_posed_binned))
+
+df_OF_output_AUsW_unblind_posed_binned%>%
+  group_by(subject, expression, drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(drug.placebo, k4_comp4))+
+  geom_boxplot(alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  geom_smooth(aes(group =subject), method = "lm", se  =F, sie = 1, alpha = .1)+
+  facet_grid(~expression)
+
 
 ```
+
+
+movement subspaces
+```{r}
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+unique(df_OF_output_AUsW_unblind_posed_binned$filename)
+
+df_OF_output_AUsW_unblind_posed_binned %>%
+  ungroup()%>%
+  subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  select(c(2,38:41))%>%
+    # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
+  gather(component, coef,-bin_frame)%>%
+  group_by( component, bin_frame)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_line()+
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+library(zoo)
+
+df_OF_output_AUsW_unblind_posed_binned
+
+??zoo::rollmean
+
+install.packages("RcppRoll")
+library(RcppRoll)
+RcppRoll::roll_mean(df_OF_output_AUsW_unblind_posed_binned$k4_comp4)
+??RcppRoll::roll_mean
+
+df_OF_output_AUsW_unblind_posed_binned%>%
+  group_by(filename)%>%
+   dplyr::mutate(comp1_k3 = rollmean(k4_comp1, k = 10, fill = NA),
+                 comp2_k3 = rollmean(k4_comp2, k = 10, fill = NA),
+                 comp3_k3 = rollmean(k4_comp3, k = 10, fill = NA),
+                 comp4_k3 = rollmean(k4_comp4, k = 10, fill = NA)) %>%
+    # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+ungroup%>%
+  select(subject, bin_frame,expression, drug.placebo, comp1_k3,comp2_k3,comp3_k3, comp4_k3)%>%
+  gather(component, coef,-bin_frame,-subject, -expression, -drug.placebo) %>%
+
+  ggplot(aes(bin_frame, coef, color =drug.placebo ))+
+  # geom_line()+
+  geom_smooth(se = F)+
+  facet_grid(component~expression)+
+  theme_classic()
+  
+  
+  geom_line()+
+  geom_line(aes(y = k4_comp3), color = "red")+
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+
+
+
+
+                 comp3_k5 = roll_mean(k4_comp3, n = 5),
+                 comp3_k10 = roll_mean(k4_comp3, n = 10),
+                comp3_k15 = roll_mean(k4_comp3, n = 15),
+                 comp3_k20 = roll_mean(k4_comp3, n = 20))
+
+
+# lets do a moving average o the signals
+
+```
+classify substates
+
+```{r}
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+p1_angry<- df_OF_output_AUsW_unblind_posed_binned %>%
+  ungroup()%>%
+  subset(filename == "./cut_posed_angry_day1_p1.csv")
+
+set.seed(1)
+wcss = vector()
+colnames(p1_angry)
+# for (i in 1:10) wcss[i] = sum(kmeans(p1_angry[,38:41], i)$withinss)
+# plot(1:10,
+#      wcss,
+#      type = 'b',
+#      main = paste('The Elbow Method'),
+#      xlab = 'Number of clusters',
+#      ylab = 'WCSS')
+# 
+# # Fitting K-Means to the dataset
+# set.seed(25)
+# kmeans = kmeans(x = clust_dataset, centers = 3)
+# y_kmeans = kmeans$cluster
+# 
+# # Visualising the clusters
+# # install.packages("cluster")
+# library(cluster)
+# 
+# ?clusplot
+# 
+# clust_dataset
+# y_kmeans
+# clusplot(clust_dataset,
+#          y_kmeans,
+#          lines = 2,
+#          shade = TRUE,
+#          color = TRUE,
+#          labels = 1,
+#          plotchar = FALSE,
+#          span = TRUE
+#          # label = 
+#          # main = paste('Clusters of customers'),
+#          # xlab = 'Annual Income',
+#          # ylab = 'Spending Score'
+#          )
+?kmeans
+p1_angry_kmean_clust<- kmeans(p1_angry[,38:41], 4)
+
+p1_angry$kmean_order<- p1_angry_kmean_clust$cluster
+p1_angry$kmean_center<- p1_angry_kmean_clust$cluster
+
+testk$cluster
+testk<-kmeans(p1_angry[,38:41], 3)
+colnames(p1_angry)
+
+p1_angry %>%
+  ungroup()%>%
+  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  select(c(2,38:42))%>%
+    # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
+  gather(component, coef,-bin_frame,-kmean_order)%>%
+  group_by( component, bin_frame)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(kmean_order)), 
+            alpha = .1)  +
+    geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+```
+
