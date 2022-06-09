@@ -816,14 +816,30 @@ colnames(p1_angry)
 #          # ylab = 'Spending Score'
 #          )
 ?kmeans
-p1_angry_kmean_clust<- kmeans(p1_angry[,38:41], 4)
 
-p1_angry$kmean_order<- p1_angry_kmean_clust$cluster
-p1_angry$kmean_center<- p1_angry_kmean_clust$cluster
 
-testk$cluster
-testk<-kmeans(p1_angry[,38:41], 3)
+p1_angry <-p1_angry %>%
+  ungroup()%>%
+  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  # select(c(2,38,42))%>%
+  mutate(k4_comp1_speed = (abs(lag(k4_comp1) - k4_comp1))/abs((lead(bin_frame)-bin_frame)),
+         k4_comp2_speed = (abs(lag(k4_comp2) - k4_comp2))/abs((lead(bin_frame)-bin_frame)),
+         k4_comp3_speed = (abs(lag(k4_comp3) - k4_comp3))/abs((lead(bin_frame)-bin_frame)),
+         k4_comp4_speed = (abs(lag(k4_comp4) - k4_comp4))/abs((lead(bin_frame)-bin_frame)),
+         )
+
 colnames(p1_angry)
+
+
+
+replace_na(list(p1_angry=0, y = 0))
+p1_angry<-as.data.frame(p1_angry)
+p1_angry[is.na(p1_angry)] <-0
+
+p1_angry[is.na(p1_angry)] <- 0
+
+
+
 
 p1_angry %>%
   ungroup()%>%
@@ -844,5 +860,251 @@ p1_angry %>%
   theme_classic()
 
 
+# lets compute speed
+colnames(p1_angry)
+p1_angry<- p1_angry %>%
+mutate_at(c(43:46), ~replace(., is.na(.), 0))
+  
+
+
+testk$cluster
+testk<-kmeans(p1_angry[,38:41], 3)
+colnames(p1_angry)
+
+p1_angry_kmean_clust<- kmeans(p1_angry[,38:41], 3)
+p1_angry_kmean_clust_speed<- kmeans(p1_angry[,43:46], 3)
+p1_angry$kmean_order<- p1_angry_kmean_clust$cluster
+p1_angry$kmean_order_speed<- p1_angry_kmean_clust_speed$cluster
+
+p1_angry$kmean_center<- p1_angry_kmean_clust$cluster
+# based on dist and speed
+p1_angry_kmean_clust_speed_dist<- kmeans(p1_angry[,c(38:41,43:46)], 3)
+p1_angry$kmean_order_dist_speed<- p1_angry_kmean_clust_speed_dist$cluster
+
+
+# plot cluster absed on component weights
+colnames(p1_angry)
+p1_angry%>%
+ungroup()%>%
+  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  select(c(2,38:42))%>%
+  # mutate(k4_comp1_speed = (abs(lead(k4_comp1) - k4_comp1))/abs((lead(bin_frame)-bin_frame)))%>%
+  
+    # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
+  gather(component, coef,-bin_frame,-kmean_order)%>%
+  group_by(component, bin_frame)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(kmean_order)), 
+            alpha = .1)  +
+    geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+# based on speed
+
+# colnames(p1_angry)
+p1_angry%>%
+ungroup()%>%
+  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  select(c(2,43:47))%>%
+  # mutate(k4_comp1_speed = (abs(lead(k4_comp1) - k4_comp1))/abs((lead(bin_frame)-bin_frame)))%>%
+  
+    # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
+  gather(component, coef,-bin_frame,-kmean_order_speed)%>%
+  group_by(component, bin_frame)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(kmean_order_speed)), 
+            alpha = .1)  +
+    geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+# p1_angry$kmean_order_dist_speed<- as.integer(as.factor(as.character(p1_angry$kmean_order_dist_speed))
+
+# duplicated(p1_angry$kmean_order_dist_speed)
+p1_angry%>%
+ungroup()%>%
+  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  select(c(2,38:41, 43:46, 48))%>%
+  # mutate(k4_comp1_speed = (abs(lead(k4_comp1) - k4_comp1))/abs((lead(bin_frame)-bin_frame)))%>%
+  
+    # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
+  gather(component, coef,-bin_frame,-kmean_order_dist_speed)%>%
+  group_by(component, bin_frame)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(kmean_order_dist_speed)), 
+            alpha = .1)  +
+    geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+
+
+
+```
+# what we need to do is for every person run a loop that first for each trial a kmean,
+
+algorithymim from 2 to 10 and 
+store
+- kmean result cluster in each itteration
+
+we need a list that will store unique trial name + number of K+ resulting k object
+
+
+```{r}
+
+
+<- unique(df_OF_output_AUsW_unblind_posed_binned$filename)
+# 228
+
+store_kmeans<- list()
+
+len <- 5
+empty_list <- vector(mode = "list", length = length(unique_trial))
+
+empty_list
+class(empty_list)
+
+
+
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+# compute the speed metrics
+df_OF_output_AUsW_unblind_posed_binned<-
+df_OF_output_AUsW_unblind_posed_binned%>%
+  group_by(filename)%>%
+    mutate(k4_comp1_speed = (abs(lag(k4_comp1) - k4_comp1))/abs((lead(bin_frame)-bin_frame)),
+         k4_comp2_speed = (abs(lag(k4_comp2) - k4_comp2))/abs((lead(bin_frame)-bin_frame)),
+         k4_comp3_speed = (abs(lag(k4_comp3) - k4_comp3))/abs((lead(bin_frame)-bin_frame)),
+         k4_comp4_speed = (abs(lag(k4_comp4) - k4_comp4))/abs((lead(bin_frame)-bin_frame)),
+         )%>%
+  mutate_at(c("k4_comp1_speed", "k4_comp2_speed", "k4_comp3_speed", "k4_comp4_speed"), ~replace(., is.na(.), 0))
+
+
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+
+
+
+empty_list<- list()
+list
+
+r = 1
+rm(u)
+rm(k)
+# rm(r)
+
+u = 2
+
+# loop over data and ks
+# for (u in 1: length(unique_trial)) {
+#   # u=1
+#    temp_df<- subset(df_OF_output_AUsW_unblind_posed_binned,filename == unique_trial[u])[,38:45]
+# 
+#   # k=1
+#        # r = u+r
+#   for (k in 2:10) {
+# 
+#     empty_list[[r]] = kmeans(temp_df, k)
+#     r = r+1
+#   }
+#   
+#   }
+
+# for now loop oover peple but fit the same k = 3
+
+# create an id that matches what we have in the loop
+df_OF_output_AUsW_unblind_posed_binned$idno<- rep(1:228, each = 100)
+
+k3_list<- list()
+df_OF_output_AUsW_unblind_posed_binned$clust3<- NA
+
+for (u in 1: length(unique_trial)) {
+  # subset each trail on every run
+   temp_df<- subset(df_OF_output_AUsW_unblind_posed_binned,filename == unique_trial[u])[,38:45]
+
+       # r = u+r
+  # for (k in 2:10) {
+    k3_list[[u]] = kmeans(temp_df, 3)
+    df_OF_output_AUsW_unblind_posed_binned$clust3[df_OF_output_AUsW_unblind_posed_binned$idno == u] <- k3_list[[u]]$cluster
+    # r = r+1
+}
+
+transform(k3_list[[1]]$cluster, id = as.numeric(factor(k3_list[[1]]$cluster)))
+# create a unique value for new values ina. column in r
+
+df2 <- transform(df,id=as.numeric(factor(sample)))
+
+df_OF_output_AUsW_unblind_posed_binned%>%
+  group_by(filename)%>%
+  group_indices(clust3)
+  transform(id = as.numeric(factor(clust3)))
+  
+  
+  
+
+
+
+
 ```
 
+
+  message(sprintf("$$$$$RUNING kmean %i", i))
+  
+  
+  
+  resampled_temp_test<- fabricatr::resample_data(clustering_new_pre_PCA3.1 [,c(1,2,3, 5:9)], 
+                                  N = c(51,55),
+                                  ID_labels = c("ssid", "stimDescription"),
+                                  unique_labels = TRUE)
+  resampled_temp$sim_no = i
+  
+# run PCA on the resampled data
+# ?list
+    message(sprintf("$$$$$fitting PCA %i", i))
+mfa.res_res <- FactoMineR::MFA(resampled_temp[,1:8], 
+               group = c(3, 3, 2), 
+               type = c("n", "s", "s"),
+              # ind.sup = c(1),
+              ncp = 2,
+               name.group = c("pp_stim","auton","subj"),
+               num.group.sup = c(1),
+               # ind.sup = c(1,2),
+               graph = FALSE)
+
+
+# store the eigen values
+  message(sprintf("$$$$$storing PCA %i", i))
+eugentest<- as.data.frame(mfa.res_res$eig[1:2,])
+eugentest$sim_no<- i
+
+cortest<- as.data.frame(mfa.res_res$quanti.var$cor)
+cortest$sim_no = i
+
+partials_temp<- as.data.frame(res.mfa_bio_vs_self2_k2$partial.axes$cor)
+partials_temp$sim_no = i
+# update the initial d=frames
+  message(sprintf("$$$$$upating dataframes %i", i))
+  resamp_1st<- (bind_rows(resamp_1st, resampled_temp))
+eigen_first<- bind_rows(eigen_first, eugentest)
+cor_first<- bind_rows(cor_first, cortest)
+partials_first<- bind_rows(partials_first, partials_temp)
+  message(sprintf("$$$$$completed iteration%i", i))
+}
+
+
+
+```
+
+store the cluster
