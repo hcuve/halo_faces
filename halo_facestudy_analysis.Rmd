@@ -761,10 +761,10 @@ ungroup%>%
 
 
 
-                 comp3_k5 = roll_mean(k4_comp3, n = 5),
-                 comp3_k10 = roll_mean(k4_comp3, n = 10),
-                comp3_k15 = roll_mean(k4_comp3, n = 15),
-                 comp3_k20 = roll_mean(k4_comp3, n = 20))
+                #  comp3_k5 = roll_mean(k4_comp3, n = 5),
+                #  comp3_k10 = roll_mean(k4_comp3, n = 10),
+                # comp3_k15 = roll_mean(k4_comp3, n = 15),
+                #  comp3_k20 = roll_mean(k4_comp3, n = 20))
 
 
 # lets do a moving average o the signals
@@ -817,8 +817,13 @@ colnames(p1_angry)
 #          )
 ?kmeans
 
+p1_angry<- p1_angry[,c(2,38:41)]
 
-p1_angry <-p1_angry %>%
+?diff()
+
+p1_angry 
+
+p1_angry1<- p1_angry %>%
   ungroup()%>%
   # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
   # select(c(2,38,42))%>%
@@ -826,12 +831,51 @@ p1_angry <-p1_angry %>%
          k4_comp2_speed = (abs(lag(k4_comp2) - k4_comp2))/abs((lead(bin_frame)-bin_frame)),
          k4_comp3_speed = (abs(lag(k4_comp3) - k4_comp3))/abs((lead(bin_frame)-bin_frame)),
          k4_comp4_speed = (abs(lag(k4_comp4) - k4_comp4))/abs((lead(bin_frame)-bin_frame)),
-         )
+         k4_comp1_diff =diff(zoo::zoo(k4_comp1), na.pad = TRUE),
+         k4_comp2_diff =diff(zoo::zoo(k4_comp2), na.pad = TRUE),
+         k4_comp3_diff =diff(zoo::zoo(k4_comp3), na.pad = TRUE),
+         k4_comp4_diff =diff(zoo::zoo(k4_comp4), na.pad = TRUE),
+         
+         # moving averages
+         k4_comp1_diff_ma = zoo::rollmean(k4_comp1_diff, k = 5, fill = NA),
+         k4_comp2_diff_ma = zoo::rollmean(k4_comp2_diff, k = 5, fill = NA),
+         k4_comp3_diff_ma = zoo::rollmean(k4_comp3_diff, k = 5, fill = NA),
+         k4_comp4_diff_ma = zoo::rollmean(k4_comp4_diff, k = 5, fill = NA),
+           
+          k4_comp1_speed_ma = zoo::rollmean(k4_comp1_speed, k = 5, fill = NA),
+        k4_comp2_speed_ma = zoo::rollmean(k4_comp2_speed, k = 5, fill = NA),
+         k4_comp3_speed_ma = zoo::rollmean(k4_comp3_speed, k = 5, fill = NA),
+         k4_comp4_speed_ma = zoo::rollmean(k4_comp4_speed, k = 5, fill = NA),
+         )%>%
+  select(1,14:21)%>%
+gather(component, coef,-bin_frame)%>%
+  # group_by( component, bin_frame)%>%
+  # summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), abs(coef), color = component))+
+  geom_line()
+
+p1_angry1<- na.omit(p1_angry1)
+p1_angry1
+p1_angry1_scale<- p1_angry1%>%mutate_at(2:9, scale)
+
+
+p1_angry1_scale%>%
+  gather(component, coef,-bin_frame)%>%
+  # group_by( component, bin_frame)%>%
+  # summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef, color = component))+
+  geom_line()
+
+
+cor(p1_angry[,2:5])
+  
+```
+```{r}
 
 colnames(p1_angry)
 
 
-
+# replace nas
 replace_na(list(p1_angry=0, y = 0))
 p1_angry<-as.data.frame(p1_angry)
 p1_angry[is.na(p1_angry)] <-0
@@ -871,72 +915,28 @@ testk$cluster
 testk<-kmeans(p1_angry[,38:41], 3)
 colnames(p1_angry)
 
-p1_angry_kmean_clust<- kmeans(p1_angry[,38:41], 3)
-p1_angry_kmean_clust_speed<- kmeans(p1_angry[,43:46], 3)
-p1_angry$kmean_order<- p1_angry_kmean_clust$cluster
-p1_angry$kmean_order_speed<- p1_angry_kmean_clust_speed$cluster
+# let's do the kmeans
+p1_angry1_scale
+# p1_angry_kmean_clust<- kmeans(p1_angry1_scale[,2:9], 3)
+# p1_angry_kmean_clust_speed<- kmeans(p1_angry[,43:46], 3)
+# p1_angry$kmean_order<- p1_angry_kmean_clust$cluster
+# p1_angry$kmean_order_speed<- p1_angry_kmean_clust_speed$cluster
+# 
+# p1_angry$kmean_center<- p1_angry_kmean_clust$cluster
 
-p1_angry$kmean_center<- p1_angry_kmean_clust$cluster
+
 # based on dist and speed
-p1_angry_kmean_clust_speed_dist<- kmeans(p1_angry[,c(38:41,43:46)], 3)
-p1_angry$kmean_order_dist_speed<- p1_angry_kmean_clust_speed_dist$cluster
+# scale predictors
+
+p1_angry_kmean_clust_speed_dist<- kmeans(p1_angry1_scale[,c(2:9)], 3)
+p1_angry1_scale$kmean_order_dist_speed<- p1_angry_kmean_clust_speed_dist$cluster
 
 
 # plot cluster absed on component weights
 colnames(p1_angry)
-p1_angry%>%
+p1_angry1_scale%>%
 ungroup()%>%
-  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
-  select(c(2,38:42))%>%
-  # mutate(k4_comp1_speed = (abs(lead(k4_comp1) - k4_comp1))/abs((lead(bin_frame)-bin_frame)))%>%
-  
-    # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  gather(component, coef,-bin_frame,-kmean_order)%>%
-  group_by(component, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
-  ggplot(aes(as.numeric(bin_frame), coef))+
-
-  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(kmean_order)), 
-            alpha = .1)  +
-    geom_line(aes(group = component))+
-  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
-  # geom_smooth(se = F)+
-  # facet_grid(expression~component)+
-  theme_classic()
-
-# based on speed
-
-# colnames(p1_angry)
-p1_angry%>%
-ungroup()%>%
-  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
-  select(c(2,43:47))%>%
-  # mutate(k4_comp1_speed = (abs(lead(k4_comp1) - k4_comp1))/abs((lead(bin_frame)-bin_frame)))%>%
-  
-    # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  gather(component, coef,-bin_frame,-kmean_order_speed)%>%
-  group_by(component, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
-  ggplot(aes(as.numeric(bin_frame), coef))+
-
-  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(kmean_order_speed)), 
-            alpha = .1)  +
-    geom_line(aes(group = component))+
-  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
-  # geom_smooth(se = F)+
-  # facet_grid(expression~component)+
-  theme_classic()
-
-# p1_angry$kmean_order_dist_speed<- as.integer(as.factor(as.character(p1_angry$kmean_order_dist_speed))
-
-# duplicated(p1_angry$kmean_order_dist_speed)
-p1_angry%>%
-ungroup()%>%
-  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
-  select(c(2,38:41, 43:46, 48))%>%
-  # mutate(k4_comp1_speed = (abs(lead(k4_comp1) - k4_comp1))/abs((lead(bin_frame)-bin_frame)))%>%
-  
-    # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
+  # select(c(2,38:42))%>%
   gather(component, coef,-bin_frame,-kmean_order_dist_speed)%>%
   group_by(component, bin_frame)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
@@ -951,11 +951,31 @@ ungroup()%>%
   theme_classic()
 
 
+left_join(p1_angry1_scale, p1_angry)[,c(1,10:14)]%>%
+  # su
+  
+  # select(c(2,38:42))%>%
+  gather(component, coef,-bin_frame,-kmean_order_dist_speed)%>%
+  group_by(component, bin_frame)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef))+
 
+ geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(kmean_order_dist_speed)), 
+            alpha = .1)  +
+    geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+# lets test in a seconf example
 
 
 ```
-# what we need to do is for every person run a loop that first for each trial a kmean,
+
+
+
+# what we need to do now is for every person run a loop that first for each trial a kmean,
 
 algorithymim from 2 to 10 and 
 store
@@ -967,7 +987,7 @@ we need a list that will store unique trial name + number of K+ resulting k obje
 ```{r}
 
 
-<- unique(df_OF_output_AUsW_unblind_posed_binned$filename)
+# <- unique(df_OF_output_AUsW_unblind_posed_binned$filename)
 # 228
 
 store_kmeans<- list()
@@ -1052,8 +1072,21 @@ df_OF_output_AUsW_unblind_posed_binned%>%
   transform(id = as.numeric(factor(clust3)))
   
   
+colnames(df_OF_output_AUsW_unblind_posed_binned)
   
+df_OF_output_AUsW_unblind_posed_binned%>%
+  
+  ggplot(aes(as.numeric(bin_frame), idno))+
+  # ggplot(aes(as.numeric(bin_frame), coef))+
 
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(clust3)), 
+            alpha = .1)  +
+    # geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  facet_grid(~drug.placebo)
 
 
 
