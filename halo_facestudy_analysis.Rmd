@@ -1184,25 +1184,143 @@ df_OF_output_AUsW_unblind_posed_binned3_nona<- df_OF_output_AUsW_unblind_posed_b
 
 colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
 
-df_OF_output_AUsW_unblind_posed_binned3_nona%>%
-  subset(idno  == 54)%>%
+df_OF_output_AUsW_unblind_posed_binned3_nona1<- df_OF_output_AUsW_unblind_posed_binned3_nona%>%
+  group_by(filename)%>%
+  
+  mutate(cluster_ordered = match(clust3, unique(clust3)))%>%
+  # select(clust3, bin_frame, cluster_ordered)%>%
+  arrange(filename, bin_frame)
+
+# df_OF_output_AUsW_unblind_posed_binned3_nona%>%
+#   group_by(filename)%>%
+#   
+#   mutate(cluster_ordered = match(clust3, unique(clust3)))%>%
+#   select(clust3, bin_frame, cluster_ordered)%>%
+#   arrange(filename, bin_frame)%?%
+  
+  colnames(df_OF_output_AUsW_unblind_posed_binned3_nona1)
+df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
+  # subset(idno  == 54)%>%
 ungroup()%>%
-  select(c(2,38:41, 63))%>%
-  mutate_if(is.numeric, scale)%>%
-  gather(component, coef,-bin_frame,-output1)%>%
-  group_by(component, bin_frame)%>%
+  select(c(1,2,9,38:41, 64))%>%
+  # mutate_if(is.numeric, scale)%>%
+  gather(component, coef,-bin_frame,-cluster_ordered,-filename,-drug.placebo) %>%
+  group_by(filename,component, bin_frame,cluster_ordered, drug.placebo)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
   ggplot(aes(as.numeric(bin_frame), coef))+
 
- geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(output1)), 
+ geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_ordered)), 
             alpha = .1)  +
-    geom_line(aes(group = component))+
+    # geom_line(aes(group = component))+
   # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
   # geom_smooth(se = F)+
   # facet_grid(expression~component)+
-  theme_classic()
+  theme_classic()+
+  facet_grid(drug.placebo~.)
+
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona1)
+
+df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
+  # subset(idno  == 54)%>%
+ungroup()%>%
+  select(c(1,2,10,38:41, 64))%>%
+  # mutate_if(is.numeric, scale)%>%
+  gather(component, coef,-bin_frame,-cluster_ordered,-filename, -expression)%>%
+  group_by(filename,component, bin_frame,cluster_ordered,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef))+
+
+ geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_ordered)), 
+            alpha = .1)  +
+    # geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  facet_grid(expression~.)
 
 
+reprex<-data.frame(id = rep(1:2, each = 4), 
+           v1 = rep(seq(1:4), 2),
+           cluster = c(2,2,1,3,3,1,2,2),
+           what_iWant = c(1,1,2,3,1,2,3,3))
+
+
+
+reprex%>%
+  group_by(id)%>%
+mutate(what_IWant2 = match(cluster, unique(cluster))) %>%
+     ungroup
+
+
+
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona1)
+df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
+  # subset(idno  == 54)%>%
+ungroup()%>%
+  select(c(1,2,3,10,38:41, 64))%>%
+  # mutate_if(is.numeric, scale)%>%
+  gather(component, coef,-bin_frame,-cluster_ordered,-filename, -expression,-subject)%>%
+  group_by(filename,component, bin_frame,cluster_ordered,expression, subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), as.numeric(subject)))+
+  geom_tile(aes(fill = factor(cluster_ordered)))+
+
+ # geom_rect(aes(xmin = bin_frame, group = subject, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_ordered)), 
+ #            alpha = .1)  +
+    # geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  facet_grid(expression~.)+
+  scale_fill_viridis_d()
+
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
+  # subset(idno  == 54)%>%
+ungroup()%>%
+  select(c(1,2,3,9,38:41, 64))%>%
+  # mutate_if(is.numeric, scale)%>%
+  gather(component, coef,-bin_frame,-cluster_ordered,-filename, -drug.placebo,-subject)%>%
+  group_by(filename,component, bin_frame,cluster_ordered,drug.placebo, subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), as.numeric(subject)))+
+  geom_tile(aes(fill = factor(cluster_ordered)))+
+
+ # geom_rect(aes(xmin = bin_frame, group = subject, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_ordered)), 
+ #            alpha = .1)  +
+    # geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  facet_grid(drug.placebo~.)+
+  scale_fill_viridis_d()
+
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
+  # subset(idno  == 54)%>%
+ungroup()%>%
+  select(c(1,2,3,9,10,38:41, 64))%>%
+  # mutate_if(is.numeric, scale)%>%
+  gather(component, coef,-bin_frame,-cluster_ordered,-filename, -drug.placebo,-subject,-expression)%>%
+  group_by(filename,component, bin_frame,cluster_ordered, expression, drug.placebo, subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), as.numeric(subject)))+
+  geom_tile(aes(fill = factor(cluster_ordered)))+
+
+ # geom_rect(aes(xmin = bin_frame, group = subject, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_ordered)), 
+ #            alpha = .1)  +
+    # geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  facet_grid(drug.placebo~expression)+
+  scale_fill_viridis_d()
 ```
 
 
