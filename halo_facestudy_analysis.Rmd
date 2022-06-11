@@ -1321,8 +1321,101 @@ ungroup()%>%
   theme_classic()+
   facet_grid(drug.placebo~expression)+
   scale_fill_viridis_d()
+
+
+# let's plot variabkes based on the clusters
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona1)
+df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
+  ungroup()%>%
+  select(c(3,9,10,48:59, 64))%>%
+  # mutate_if(is.numeric, scale)%>%
+  gather(component, coef,-cluster_ordered, -drug.placebo,-subject,-expression,)%>%
+  group_by(cluster_ordered, drug.placebo,subject,expression,component)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(as.factor(cluster_ordered), coef))+
+  geom_jitter(width = .1, alpha = .01)+
+  geom_boxplot(alpha = .1)+
+  facet_grid(~component)+
+  theme_classic()
+
+df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
+  ungroup()%>%
+  select(c(3,9,10,48:52, 64))%>%
+  # mutate_if(is.numeric, scale)%>%
+  gather(component, coef,-cluster_ordered, -drug.placebo,-subject,-expression,)%>%
+  group_by(cluster_ordered, drug.placebo,subject,expression,component)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(as.factor(component ), coef))+
+  geom_jitter(width = .1, alpha = .01)+
+  geom_boxplot(alpha = .1)+
+  geom_smooth(aes(group = subject), se = F, size = .1)+
+  facet_grid(~cluster_ordered)+
+  theme_classic()
 ```
 
+new algorithm first find sustain and transition
+based on:
+- if cluster duration (in frames) > than the average duration of a cluster = sustain (this is beacuse transition should be short, sustain should be longest, so)
+
+and the cluster avg speed < than the average speed
+
+
+
+```{r}
+
+rleid(df_OF_output_AUsW_unblind_posed_binned3_nona1$cluster_ordered)
+
+df_OF_output_AUsW_unblind_posed_binned3_nona2<- df_OF_output_AUsW_unblind_posed_binned3_nona1 %>%
+  ungroup()%>%
+  group_by(idno)%>%
+  mutate(cluster_ordered_unique = rleid(cluster_ordered), bin_new_id = 1:n())%>%
+  group_by(idno, cluster_ordered_unique)%>%
+  mutate(frame_dur = n())%>%
+  group_by(idno)%>%
+  mutate(frame_dur_avg = mean(frame_dur, na.rm = TRUE),
+         frame_dur_min = min(frame_dur, na.rm = TRUE),
+         frame_dur_max = max(frame_dur, na.rm  = TRUE),
+         )
+  
+
+df_OF_output_AUsW_unblind_posed_binned3_nona3<-
+df_OF_output_AUsW_unblind_posed_binned3_nona2%>%
+  group_by(idno)%>%
+  mutate(name_new_clust = if_else(frame_dur> frame_dur_avg, "sustain", "transition"))
+  
+  
+  select(c(3,9,10,48:56, 64))
+  
+  
+  
+  colnames(df_OF_output_AUsW_unblind_posed_binned3_nona3)
+  df_OF_output_AUsW_unblind_posed_binned3_nona3%>%
+  subset(idno  == 4)%>%
+ungroup()%>%
+  select(c(2,38:41, 46,71))%>%
+  gather(component, coef,-bin_frame,-name_new_clust,-idno )%>%
+  group_by(component, bin_frame,name_new_clust)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(name_new_clust)), 
+            alpha = .5)  +
+    geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+```
+
+
+then look at transitions to find
+
+if the average weight of the last 2 samples of the transition a higher than the first 2 samples then its activation, if the last two samples value if lower than the first 2 then deactivation
+
+```{r}
+
+```
 
 transform(k3_list[[1]]$cluster, id = as.numeric(factor(k3_list[[1]]$cluster)))
 # create a unique value for new values ina. column in r
