@@ -1053,7 +1053,8 @@ df_OF_output_AUsW_unblind_posed_binned1<- df_OF_output_AUsW_unblind_posed_binned
   mutate_at(c("k4_comp1_speed", "k4_comp2_speed", "k4_comp3_speed", "k4_comp4_speed"), ~replace(., is.na(.), 0))
 ```  
 
-  
+
+spatiotemporal clustering using kmeans 
 
 ```{r}
 colnames(df_OF_output_AUsW_unblind_posed_binned1)
@@ -1124,21 +1125,51 @@ df_OF_output_AUsW_unblind_posed_binned3_nona
 colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
 
 df_OF_output_AUsW_unblind_posed_binned3_nona%>%
-  subset(idno  == 20)%>%
-ungroup()%>%
-  select(c(2,52:59, 46:47))%>%
-  gather(component, coef,-bin_frame,-clust3,-idno )%>%
-  group_by(component, bin_frame)%>%
+  subset(idno  == 1)%>%
+    group_by(idno)%>%
+    mutate(sp_avg = (k4_comp1_speed_ma+k4_comp2_speed_ma+k4_comp3_speed_ma+k4_comp4_speed_ma)/4,
+           cuoff = (mean(sp_avg, na.rm = TRUE) + (2* mad(sp_avg, na.rm = TRUE)))) %>%
+  ungroup()%>%
+  select(c(2,52:59, 46:47,38:41,64))%>%
+  gather(component, coef,-bin_frame,-clust3,-idno ) %>%
+  mutate(var_type = if_else(grepl("diff", component ), "diff",
+                        if_else(grepl("speed", component ), "speed",  
+                                if_else(grepl("sp_avg", component ), "avg_speed",  
+                            "comp_nmf"))))%>%
+
+  
+  # scale so we dob;t have massivelly different sizes acordss variables
+   group_by(var_type)%>%
+  # mutate(coef_z = scale(coef))%>%
+  group_by(component,var_type, bin_frame)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
   ggplot(aes(as.numeric(bin_frame), coef))+
 
-  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(clust3)), 
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(clust3)), 
             alpha = .1)  +
-    geom_line(aes(group = component))+
+    geom_line(aes(group = component, linetype = var_type), size = 1)+
   # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
   # geom_smooth(se = F)+
   # facet_grid(expression~component)+
-  theme_classic()
+  theme_classic()+
+  facet_grid(var_type~.)+
+  geom_hline(yintercept = 0.5118612)
+# 0.5118612 1.071568
+# the ones where it fails
+  # subset(idno  == 5)%>%
+
+# what if we say when speed exceedes X ammounts of sd
+
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
+
+df_OF_output_AUsW_unblind_posed_binned3_nona %>%
+  group_by(filename)%>%
+   group_by(idno)%>%
+    mutate(sp_avg = (k4_comp1_speed_ma+k4_comp2_speed_ma+k4_comp3_speed_ma+k4_comp4_speed_ma)/4)%>%
+  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
+  mutate(manual_clust = if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ (2*(mad(sp_avg, na.rm = TRUE)))), "transition state", 
+                                "stable state"))
+```
 
 # colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
 
@@ -1338,6 +1369,13 @@ df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
   facet_grid(~component)+
   theme_classic()
 
+```
+
+
+
+```{r}
+
+# don't plot
 df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
   ungroup()%>%
   select(c(3,9,10,48:52, 64))%>%
@@ -1349,7 +1387,7 @@ df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
   geom_jitter(width = .1, alpha = .01)+
   geom_boxplot(alpha = .1)+
   geom_smooth(aes(group = subject), se = F, size = .1)+
-  facet_grid(~cluster_ordered)+
+  # facet_grid(~cluster_ordered)+
   theme_classic()
 ```
 
@@ -1390,7 +1428,7 @@ df_OF_output_AUsW_unblind_posed_binned3_nona2%>%
   
   colnames(df_OF_output_AUsW_unblind_posed_binned3_nona3)
   df_OF_output_AUsW_unblind_posed_binned3_nona3%>%
-  subset(idno  == 4)%>%
+  subset(idno  == 12)%>%
 ungroup()%>%
   select(c(2,38:41, 46,71))%>%
   gather(component, coef,-bin_frame,-name_new_clust,-idno )%>%
