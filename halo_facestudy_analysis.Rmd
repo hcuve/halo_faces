@@ -1163,12 +1163,139 @@ df_OF_output_AUsW_unblind_posed_binned3_nona%>%
 colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
 
 df_OF_output_AUsW_unblind_posed_binned3_nona %>%
+  
+  # compare kmean and manual clustering
   group_by(filename)%>%
    group_by(idno)%>%
     mutate(sp_avg = (k4_comp1_speed_ma+k4_comp2_speed_ma+k4_comp3_speed_ma+k4_comp4_speed_ma)/4)%>%
   # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
   mutate(manual_clust = if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ (2*(mad(sp_avg, na.rm = TRUE)))), "transition state", 
-                                "stable state"))
+                                "stable state"))%>%
+  
+  
+   ungroup()%>%
+   subset(idno  == 10)%>%
+  select(c(2,52:59, 46:47,38:41,64,65))%>%
+  gather(component, coef,-bin_frame,-clust3,-idno,-manual_clust) %>%
+  mutate(var_type = if_else(grepl("diff", component ), "diff",
+                        if_else(grepl("speed", component ), "speed",  
+                                if_else(grepl("sp_avg", component ), "avg_speed",  
+                            "comp_nmf")))) %>%
+
+  
+  # scale so we dob;t have massivelly different sizes acordss variables
+   group_by(var_type)%>%
+  mutate(coef_z = scale(coef))%>%
+  group_by(component, bin_frame,var_type, manual_clust)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef_z, group = component))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(manual_clust)), 
+            alpha = .1)  +
+    geom_line(aes(group = component, linetype = var_type), size = 1)+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  facet_grid(var_type~.)
+
+
+# 2
+df_OF_output_AUsW_unblind_posed_binned3_nona %>%
+  
+  # compare kmean and manual clustering
+  group_by(filename)%>%
+   group_by(idno)%>%
+    mutate(sp_avg = (k4_comp1_speed_ma+k4_comp2_speed_ma+k4_comp3_speed_ma+k4_comp4_speed_ma)/4)%>%
+  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
+  mutate(manual_clust = if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ (2*(mad(sp_avg, na.rm = TRUE)))), "transition state", 
+                                "stable state"))%>%
+  
+  
+   ungroup()%>%
+   subset(idno  == 10)%>%
+  select(c(2,52:59, 46:47,38:41,64,65))%>%
+  gather(component, coef,-bin_frame,-clust3,-idno,-manual_clust) %>%
+  mutate(var_type = if_else(grepl("diff", component ), "diff",
+                        if_else(grepl("speed", component ), "speed",  
+                                if_else(grepl("sp_avg", component ), "avg_speed",  
+                            "comp_nmf")))) %>%
+
+  
+  # scale so we dob;t have massivelly different sizes acordss variables
+   group_by(var_type)%>%
+  mutate(coef_z = scale(coef))%>%
+  group_by(component, bin_frame,var_type, clust3)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef_z, group = component))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(clust3)), 
+            alpha = .1)  +
+    geom_line(aes(group = component, linetype = var_type), size = 1)+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  facet_grid(var_type~.)
+
+# if speed is above the adaptive threshold and diff is positive = acceleration
+# if speed is abobe the threshold and diff = negative
+# anything else stable state
+
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona %>%
+  
+  # compare kmean and manual clustering
+  group_by(filename)%>%
+   group_by(idno)%>%
+    mutate(sp_avg = (k4_comp1_speed_ma+k4_comp2_speed_ma+k4_comp3_speed_ma+k4_comp4_speed_ma)/4)%>%
+   mutate(comp_delta_avg = (k4_comp1_diff_ma +k4_comp2_diff_ma+k4_comp3_diff_ma+k4_comp4_diff_ma)/4)%>%
+  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
+  mutate(manual_clust_sp_disp = 
+           if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                               (2*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg > 0, "activation state", 
+                    if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                               (2*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg < 0, "de-activation state", 
+                   
+                                "stable state")))%>%
+  
+  
+   ungroup()%>%
+   subset(idno  == 10)%>%
+  select(c(2,52:59, 46:47,38:41,64:66))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-idno,-manual_clust_sp_disp) %>%
+  mutate(var_type = if_else(grepl("diff", component ), "diff",
+                        if_else(grepl("speed", component ), "speed",  
+                                if_else(grepl("sp_avg", component ), "avg_speed",  
+                                        if_else(grepl("comp_delta_avg", component ), "disp_avg",  
+                            "comp_nmf"))))) %>%
+
+  
+  # scale so we dob;t have massivelly different sizes acordss variables
+   group_by(var_type)%>%
+  mutate(coef_z = scale(coef))%>%
+  group_by(component, bin_frame,var_type, manual_clust_sp_disp)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef_z, group = component))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(manual_clust_sp_disp)), 
+            alpha = .1)  +
+    geom_line(aes(group = component, linetype = var_type), size = 1)+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  facet_grid(var_type~.)
+
+
+# do a third whether we take the clusters and put transition whenever they are larger than a specified speed
+
+
+
+  
+  
+
 ```
 
 # colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
