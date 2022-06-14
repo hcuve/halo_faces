@@ -723,7 +723,7 @@ df_OF_output_AUsW_unblind_posed_binned %>%
 
 library(zoo)
 
-df_OF_output_AUsW_unblind_posed_binned
+colnames(df_OF_output_AUsW_unblind_posed_binned)
 
 ??zoo::rollmean
 
@@ -732,15 +732,15 @@ library(RcppRoll)
 RcppRoll::roll_mean(df_OF_output_AUsW_unblind_posed_binned$k4_comp4)
 ??RcppRoll::roll_mean
 
-df_OF_output_AUsW_unblind_posed_binned%>%
+# stick to k = 3
+df_OF_output_AUsW_unblind_posed_binned[,1:36] %>%
   group_by(filename)%>%
-   dplyr::mutate(comp1_k3 = rollmean(k4_comp1, k = 10, fill = NA),
-                 comp2_k3 = rollmean(k4_comp2, k = 10, fill = NA),
-                 comp3_k3 = rollmean(k4_comp3, k = 10, fill = NA),
-                 comp4_k3 = rollmean(k4_comp4, k = 10, fill = NA)) %>%
+   dplyr::mutate(comp1_k3 = rollmean(comp1, k = 10, fill = NA),
+                 comp2_k3 = rollmean(comp2, k = 10, fill = NA),
+                 comp3_k3 = rollmean(comp3, k = 10, fill = NA)) %>%
     # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
 ungroup%>%
-  select(subject, bin_frame,expression, drug.placebo, comp1_k3,comp2_k3,comp3_k3, comp4_k3)%>%
+  select(subject, bin_frame,expression, drug.placebo, comp1_k3,comp2_k3,comp3_k3)%>%
   gather(component, coef,-bin_frame,-subject, -expression, -drug.placebo) %>%
 
   ggplot(aes(bin_frame, coef, color =drug.placebo ))+
@@ -749,28 +749,12 @@ ungroup%>%
   facet_grid(component~expression)+
   theme_classic()
   
-  
-  geom_line()+
-  geom_line(aes(y = k4_comp3), color = "red")+
-  # geom_smooth(se = F)+
-  # facet_grid(expression~component)+
-  theme_classic()
 
-
-
-
-
-
-                #  comp3_k5 = roll_mean(k4_comp3, n = 5),
-                #  comp3_k10 = roll_mean(k4_comp3, n = 10),
-                # comp3_k15 = roll_mean(k4_comp3, n = 15),
-                #  comp3_k20 = roll_mean(k4_comp3, n = 20))
-
-
-# lets do a moving average o the signals
 
 ```
 classify substates
+
+- quick test witha  single case
 
 ```{r}
 colnames(df_OF_output_AUsW_unblind_posed_binned)
@@ -1016,97 +1000,80 @@ colnames(df_OF_output_AUsW_unblind_posed_binned)
 options(scipen = 999)
 df_OF_output_AUsW_unblind_posed_binned
 
-df_OF_output_AUsW_unblind_posed_binned1<- df_OF_output_AUsW_unblind_posed_binned%>%
+df_OF_output_AUsW_unblind_posed_binned1<- df_OF_output_AUsW_unblind_posed_binned[,1:36]%>%
   ungroup()%>%
   group_by(filename)%>%
   ungroup()%>%
   # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
   # select(c(2,38,42))%>%
-  mutate(k4_comp1_speed = (abs(lag(k4_comp1) - k4_comp1))/abs((lead(bin_frame)-bin_frame)),
-         k4_comp2_speed = (abs(lag(k4_comp2) - k4_comp2))/abs((lead(bin_frame)-bin_frame)),
-         k4_comp3_speed = (abs(lag(k4_comp3) - k4_comp3))/abs((lead(bin_frame)-bin_frame)),
-         k4_comp4_speed = (abs(lag(k4_comp4) - k4_comp4))/abs((lead(bin_frame)-bin_frame)),
+  mutate(k3_comp1_speed = (abs(lag(comp1) - comp1))/abs((lead(bin_frame)-bin_frame)),
+         k3_comp2_speed = (abs(lag(comp2) - comp2))/abs((lead(bin_frame)-bin_frame)),
+         k3_comp3_speed = (abs(lag(comp3) - comp3))/abs((lead(bin_frame)-bin_frame)),
         
-         k4_comp1_diff =diff(zoo::zoo(k4_comp1), na.pad = TRUE),
-         k4_comp2_diff =diff(zoo::zoo(k4_comp2), na.pad = TRUE),
-         k4_comp3_diff =diff(zoo::zoo(k4_comp3), na.pad = TRUE),
-         k4_comp4_diff =diff(zoo::zoo(k4_comp4), na.pad = TRUE),
+         k3_comp1_diff = as.numeric(diff(zoo::zoo(comp1), na.pad = TRUE)),
+         k3_comp2_diff =as.numeric(diff(zoo::zoo(comp2), na.pad = TRUE)),
+         k3_comp3_diff =as.numeric(diff(zoo::zoo(comp3), na.pad = TRUE)),
          
          # moving averages
-         k4_comp1_diff_ma = zoo::rollmean(k4_comp1_diff, k = 5, fill = NA),
-         k4_comp2_diff_ma = zoo::rollmean(k4_comp2_diff, k = 5, fill = NA),
-         k4_comp3_diff_ma = zoo::rollmean(k4_comp3_diff, k = 5, fill = NA),
-         k4_comp4_diff_ma = zoo::rollmean(k4_comp4_diff, k = 5, fill = NA),
+         k3_comp1_diff_ma = as.numeric(zoo::rollmean(k3_comp1_diff, k = 5, fill = NA)),
+         k3_comp2_diff_ma = as.numeric(zoo::rollmean(k3_comp2_diff, k = 5, fill = NA)),
+         k3_comp3_diff_ma = as.numeric(zoo::rollmean(k3_comp3_diff, k = 5, fill = NA)),
            
-          k4_comp1_speed_ma = zoo::rollmean(k4_comp1_speed, k = 5, fill = NA),
-        k4_comp2_speed_ma = zoo::rollmean(k4_comp2_speed, k = 5, fill = NA),
-         k4_comp3_speed_ma = zoo::rollmean(k4_comp3_speed, k = 5, fill = NA),
-         k4_comp4_speed_ma = zoo::rollmean(k4_comp4_speed, k = 5, fill = NA),
-         )%>%
+          k3_comp1_speed_ma = as.numeric(zoo::rollmean(k3_comp1_speed, k = 5, fill = NA)),
+        k3_comp2_speed_ma = as.numeric(zoo::rollmean(k3_comp2_speed, k = 5, fill = NA)),
+         k3_comp3_speed_ma = as.numeric(zoo::rollmean(k3_comp3_speed, k = 5, fill = NA)))%>%
     ungroup()%>%
   mutate(idno = rep(1:228, each = 100))
 
-
-
-  mutate(df_OF_output_AUsW_unblind_posed_binned1, across(everything(), ~replace_na(.x, 0)))
-
-  mutate_at(c("k4_comp1_speed", "k4_comp2_speed", "k4_comp3_speed", "k4_comp4_speed"), ~replace(., is.na(.), 0))
+# 
+# pad NAS
+#   mutate(df_OF_output_AUsW_unblind_posed_binned1, across(everything(), ~replace_na(.x, 0)))
+# 
+#   mutate_at(c("k4_comp1_speed", "k4_comp2_speed", "k4_comp3_speed", "k4_comp4_speed"), ~replace(., is.na(.), 0))
 ```  
 
 
-spatiotemporal clustering using kmeans 
+spatiotemporal clustering using k-means 
 
 ```{r}
 colnames(df_OF_output_AUsW_unblind_posed_binned1)
 
-
-
 empty_list<- list()
 
 
-# loop over data and ks
-# for (u in 1: length(unique_trial)) {
-#   # u=1
-#    temp_df<- subset(df_OF_output_AUsW_unblind_posed_binned,filename == unique_trial[u])[,38:45]
-# 
-#   # k=1
-#        # r = u+r
-#   for (k in 2:10) {
-# 
-#     empty_list[[r]] = kmeans(temp_df, k)
-#     r = r+1
-#   }
-#   
-#   }
-
-# for now loop oover people but fit the same k = 3
-
-# create an id that matches what we have in the loop
-
 df_OF_output_AUsW_unblind_posed_binned1
-df_OF_output_AUsW_unblind_posed_binned2_nona<- na.omit(df_OF_output_AUsW_unblind_posed_binned1)
+
+colnames(df_OF_output_AUsW_unblind_posed_binned1)
+
+
+
+df_OF_output_AUsW_unblind_posed_binned2_nona<- df_OF_output_AUsW_unblind_posed_binned1
+# replace NAS
+df_OF_output_AUsW_unblind_posed_binned2_nona[, 37:48][is.na(df_OF_output_AUsW_unblind_posed_binned2_nona[, 37:48])] <- 0
 
 table(df_OF_output_AUsW_unblind_posed_binned2_nona$filename)
 df_OF_output_AUsW_unblind_posed_binned1$idno
 colnames(df_OF_output_AUsW_unblind_posed_binned2_nona)
 
 
+
+# k-means clustering based on NMF components and derivatives
 k3_list<- list()
 
 unique_trial<- unique(df_OF_output_AUsW_unblind_posed_binned2_nona$filename)
  
 df_OF_output_AUsW_unblind_posed_binned2_nona
-df_OF_output_AUsW_unblind_posed_binned$clust3<- NA
+# df_OF_output_AUsW_unblind_posed_binned$clust3<- NA
 
 df_OF_output_AUsW_unblind_posed_binned3_nona<- df_OF_output_AUsW_unblind_posed_binned2_nona
-
+df_OF_output_AUsW_unblind_posed_binned3_nona$clust3<- NA
 colnames(df_OF_output_AUsW_unblind_posed_binned2_nona)
 
 # loop fit kmeans and store clusters in the original data
 
 for (u in 1: length(unique_trial)) {
   # subset each trail on every run
-   temp_df<- subset(df_OF_output_AUsW_unblind_posed_binned2_nona,filename == unique_trial[u])[,52:59]
+   temp_df<- subset(df_OF_output_AUsW_unblind_posed_binned2_nona,filename == unique_trial[u])[,43:48]
 
        # r = u+r
   # for (k in 2:10) {
@@ -1117,20 +1084,22 @@ for (u in 1: length(unique_trial)) {
 
 table(df_OF_output_AUsW_unblind_posed_binned3_nona$clust3)
 
-# visualise one or to people
+# visualise one or two people
 
 
 unique(df_OF_output_AUsW_unblind_posed_binned3_nona$idno)
 df_OF_output_AUsW_unblind_posed_binned3_nona
+
 colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
 
-df_OF_output_AUsW_unblind_posed_binned3_nona%>%
+# heurictis ionspired by eye movement classification
+df_OF_output_AUsW_unblind_posed_binned3_nona %>%
   subset(idno  == 1)%>%
     group_by(idno)%>%
-    mutate(sp_avg = (k4_comp1_speed_ma+k4_comp2_speed_ma+k4_comp3_speed_ma+k4_comp4_speed_ma)/4,
-           cuoff = (mean(sp_avg, na.rm = TRUE) + (2* mad(sp_avg, na.rm = TRUE)))) %>%
-  ungroup()%>%
-  select(c(2,52:59, 46:47,38:41,64))%>%
+    mutate(sp_avg = (k3_comp1_speed_ma+k3_comp2_speed_ma+k3_comp3_speed_ma)/3,
+           cutoff = (mean(sp_avg, na.rm = TRUE) + (2* mad(sp_avg, na.rm = TRUE)))) %>%
+  ungroup() %>%
+  select(c(2,43:49, 50:51, 34:36))%>%
   gather(component, coef,-bin_frame,-clust3,-idno ) %>%
   mutate(var_type = if_else(grepl("diff", component ), "diff",
                         if_else(grepl("speed", component ), "speed",  
@@ -1158,24 +1127,71 @@ df_OF_output_AUsW_unblind_posed_binned3_nona%>%
 # the ones where it fails
   # subset(idno  == 5)%>%
 
-# what if we say when speed exceedes X ammounts of sd
-
-colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
+# scald
 
 df_OF_output_AUsW_unblind_posed_binned3_nona %>%
   
   # compare kmean and manual clustering
   group_by(filename)%>%
    group_by(idno)%>%
-    mutate(sp_avg = (k4_comp1_speed_ma+k4_comp2_speed_ma+k4_comp3_speed_ma+k4_comp4_speed_ma)/4)%>%
+    mutate(sp_avg = (k3_comp1_speed_ma+k3_comp2_speed_ma+k3_comp3_speed_ma)/3)%>%
   # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
   mutate(manual_clust = if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ (2*(mad(sp_avg, na.rm = TRUE)))), "transition state", 
                                 "stable state"))%>%
   
   
    ungroup()%>%
-   subset(idno  == 10)%>%
-  select(c(2,52:59, 46:47,38:41,64,65))%>%
+   subset(idno  == 1)%>%
+     select(c(2,43:49, 50:52, 34:36))%>%
+  # select(c(2,52:59, 46:47,38:41,64,65))%>%
+  gather(component, coef,-bin_frame,-clust3,-idno,-manual_clust) %>%
+  mutate(var_type = if_else(grepl("diff", component ), "diff",
+                        if_else(grepl("speed", component ), "speed",  
+                                if_else(grepl("sp_avg", component ), "avg_speed",  
+                            "comp_nmf")))) %>%
+
+  
+  # scale so we dob;t have massivelly different sizes acordss variables
+   group_by(var_type)%>%
+  mutate(coef_z = scale(coef))%>%
+  group_by(component, bin_frame,var_type, clust3)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), coef_z, group = component))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(clust3)), 
+            alpha = .1)  +
+    geom_line(aes(group = component, linetype = var_type), size = 1)+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  facet_grid(var_type~.)
+
+
+```
+
+# what if we say when speed exceedes X ammounts of sd
+
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
+
+
+```{r}
+
+df_OF_output_AUsW_unblind_posed_binned3_nona %>%
+  
+  # compare kmean and manual clustering
+  group_by(filename)%>%
+   group_by(idno)%>%
+    mutate(sp_avg = (k3_comp1_speed_ma+k3_comp2_speed_ma+k3_comp3_speed_ma)/3)%>%
+  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
+  mutate(manual_clust = if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ (2*(mad(sp_avg, na.rm = TRUE)))), "transition state", 
+                                "stable state"))%>%
+  
+  
+   ungroup()%>%
+   subset(idno  == 1)%>%
+    select(c(2,43:49, 50:52, 34:36))%>%
+  # select(c(2,52:59, 46:47,38:41,64,65))%>%
   gather(component, coef,-bin_frame,-clust3,-idno,-manual_clust) %>%
   mutate(var_type = if_else(grepl("diff", component ), "diff",
                         if_else(grepl("speed", component ), "speed",  
@@ -1200,57 +1216,22 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
   facet_grid(var_type~.)
 
 
-# 2
-df_OF_output_AUsW_unblind_posed_binned3_nona %>%
-  
-  # compare kmean and manual clustering
-  group_by(filename)%>%
-   group_by(idno)%>%
-    mutate(sp_avg = (k4_comp1_speed_ma+k4_comp2_speed_ma+k4_comp3_speed_ma+k4_comp4_speed_ma)/4)%>%
-  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
-  mutate(manual_clust = if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ (2*(mad(sp_avg, na.rm = TRUE)))), "transition state", 
-                                "stable state"))%>%
-  
-  
-   ungroup()%>%
-   subset(idno  == 10)%>%
-  select(c(2,52:59, 46:47,38:41,64,65))%>%
-  gather(component, coef,-bin_frame,-clust3,-idno,-manual_clust) %>%
-  mutate(var_type = if_else(grepl("diff", component ), "diff",
-                        if_else(grepl("speed", component ), "speed",  
-                                if_else(grepl("sp_avg", component ), "avg_speed",  
-                            "comp_nmf")))) %>%
+```
 
-  
-  # scale so we dob;t have massivelly different sizes acordss variables
-   group_by(var_type)%>%
-  mutate(coef_z = scale(coef))%>%
-  group_by(component, bin_frame,var_type, clust3)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
-  ggplot(aes(as.numeric(bin_frame), coef_z, group = component))+
 
-  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(clust3)), 
-            alpha = .1)  +
-    geom_line(aes(group = component, linetype = var_type), size = 1)+
-  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
-  # geom_smooth(se = F)+
-  # facet_grid(expression~component)+
-  theme_classic()+
-  facet_grid(var_type~.)
 
 # if speed is above the adaptive threshold and diff is positive = acceleration
 # if speed is abobe the threshold and diff = negative
 # anything else stable state
 
-
-
+```{r}
 df_OF_output_AUsW_unblind_posed_binned3_nona %>%
   
   # compare kmean and manual clustering
   group_by(filename)%>%
    group_by(idno)%>%
-    mutate(sp_avg = (k4_comp1_speed_ma+k4_comp2_speed_ma+k4_comp3_speed_ma+k4_comp4_speed_ma)/4)%>%
-   mutate(comp_delta_avg = (k4_comp1_diff_ma +k4_comp2_diff_ma+k4_comp3_diff_ma+k4_comp4_diff_ma)/4)%>%
+    mutate(sp_avg = (k3_comp1_speed_ma+k3_comp2_speed_ma+k3_comp3_speed_ma)/3)%>%
+   mutate(comp_delta_avg = (k3_comp1_diff_ma +k3_comp2_diff_ma+k3_comp3_diff_ma)/3)%>%
   # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
   mutate(manual_clust_sp_disp = 
            if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
@@ -1263,7 +1244,8 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
   
    ungroup()%>%
    subset(idno  == 10)%>%
-  select(c(2,52:59, 46:47,38:41,64:66))%>%
+      select(c(2,43:49, 50:53, 34:36))%>%
+  # select(c(2,52:59, 46:47,38:41,64:66))%>%
   gather(component, coef,-bin_frame,-manual_clust_sp_disp,-idno,-manual_clust_sp_disp) %>%
   mutate(var_type = if_else(grepl("diff", component ), "diff",
                         if_else(grepl("speed", component ), "speed",  
@@ -1298,12 +1280,16 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
 
 ```
 
+the k means segmentation
+```{r}
 # colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
 
 df_OF_output_AUsW_unblind_posed_binned3_nona%>%
-  subset(idno  == 20)%>%
+  subset(idno  == 10)%>%
 ungroup()%>%
-  select(c(2,38:41, 47))%>%
+        # select(c(2, 34:36,43:49, 50:53))%>%
+   select(c(2, 34:36,50))%>%
+  # select(c(2,38:41, 47))%>%
   gather(component, coef,-bin_frame,-clust3)%>%
   group_by(component, bin_frame)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
@@ -1316,9 +1302,10 @@ ungroup()%>%
   # geom_smooth(se = F)+
   # facet_grid(expression~component)+
   theme_classic()
+```
 
-library(data.table)
-?rleid
+
+```{r}
 
 df_OF_output_AUsW_unblind_posed_binned3_nona$clust3
 # okay let's do some smoothing such that a cluster needs to have at least 3 in row
@@ -1349,12 +1336,7 @@ df_OF_output_AUsW_unblind_posed_binned3_nona1<- df_OF_output_AUsW_unblind_posed_
   # select(clust3, bin_frame, cluster_ordered)%>%
   arrange(filename, bin_frame)
 
-# df_OF_output_AUsW_unblind_posed_binned3_nona%>%
-#   group_by(filename)%>%
-#   
-#   mutate(cluster_ordered = match(clust3, unique(clust3)))%>%
-#   select(clust3, bin_frame, cluster_ordered)%>%
-#   arrange(filename, bin_frame)%?%
+
   
   colnames(df_OF_output_AUsW_unblind_posed_binned3_nona1)
 df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
