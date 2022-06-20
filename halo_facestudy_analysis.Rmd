@@ -102,6 +102,11 @@ res_k3 <-NMF::nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], r = 3,
                   seed=123456,
                  .options = list( 'v')) #
 
+res_k2 <-NMF::nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], r =2, 
+                  nrun = 200, 
+                  seed=123456,
+                 .options = list( 'v')) #
+
 
 plot(res_k3)
 summary(res_k3)
@@ -150,7 +155,13 @@ df_OF_output_AUsW_unblind_posed_binned$k4_comp2 = df_OF_output_AUsW_unblind_pose
 df_OF_output_AUsW_unblind_posed_binned$k4_comp3 = df_OF_output_AUsW_unblind_posed_binned$NMFtable_k4$V3
 df_OF_output_AUsW_unblind_posed_binned$k4_comp4 = df_OF_output_AUsW_unblind_posed_binned$NMFtable_k4$V4
 
+# for k 2
+# for k  = 4
+df_OF_output_AUsW_unblind_posed_binned_k2<- df_OF_output_AUsW_unblind_posed_binned
+df_OF_output_AUsW_unblind_posed_binned_k2$NMFtable_k2<- as.data.frame(res_k2@fit@W)
 
+df_OF_output_AUsW_unblind_posed_binned_k2$k2_comp1 = df_OF_output_AUsW_unblind_posed_binned_k2$NMFtable_k2$V1
+df_OF_output_AUsW_unblind_posed_binned_k2$k2_comp2 = df_OF_output_AUsW_unblind_posed_binned_k2$NMFtable_k2$V2
 
 # visualization by emotion
 colnames(df_OF_output_AUsW_unblind_posed_binned)
@@ -187,6 +198,20 @@ df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
   facet_grid(~component)+
   theme_classic()
 
+
+
+# 
+colnames(df_OF_output_AUsW_unblind_posed_binned_k2)
+df_OF_output_AUsW_unblind_posed_binned_k2[,c(1,2:3,9:10, 49:50)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  group_by(expression, component, drug.placebo, bin_frame,filename)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = drug.placebo))+
+  geom_smooth(se = F)+
+  # geom_smooth(aes(group = filename), se = F, size = .5)+
+  facet_grid(expression~component)+
+  theme_classic()
 
 
 ```
@@ -732,7 +757,9 @@ library(RcppRoll)
 RcppRoll::roll_mean(df_OF_output_AUsW_unblind_posed_binned$k4_comp4)
 ??RcppRoll::roll_mean
 
+library(zoo)
 # stick to k = 3
+df_OF_output_AUsW_unblind_posed_binned$idno
 df_OF_output_AUsW_unblind_posed_binned[,1:36] %>%
   group_by(filename)%>%
    dplyr::mutate(comp1_k3 = rollmean(comp1, k = 10, fill = NA),
@@ -740,12 +767,13 @@ df_OF_output_AUsW_unblind_posed_binned[,1:36] %>%
                  comp3_k3 = rollmean(comp3, k = 10, fill = NA)) %>%
     # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
 ungroup%>%
-  select(subject, bin_frame,expression, drug.placebo, comp1_k3,comp2_k3,comp3_k3)%>%
-  gather(component, coef,-bin_frame,-subject, -expression, -drug.placebo) %>%
+  select(filename,subject, bin_frame,expression, drug.placebo, comp1_k3,comp2_k3,comp3_k3)%>%
+  gather(component, coef,-bin_frame,-subject, -expression, -drug.placebo,-filename) %>%
 
   ggplot(aes(bin_frame, coef, color =drug.placebo ))+
   # geom_line()+
   geom_smooth(se = F)+
+  geom_smooth(aes(group = filename), se = F, size = .1)+
   facet_grid(component~expression)+
   theme_classic()
   
@@ -1235,6 +1263,8 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
    group_by(idno)%>%
     mutate(sp_avg = (k3_comp1_speed_ma+k3_comp2_speed_ma+k3_comp3_speed_ma)/3)%>%
    mutate(comp_delta_avg = (k3_comp1_diff_ma +k3_comp2_diff_ma+k3_comp3_diff_ma)/3)%>%
+   group_by(idno)%>%
+  mutate(comp_delta_avg1 = scale(comp_delta_avg))%>%
   # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
   mutate(manual_clust_sp_disp = 
            if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
@@ -1243,12 +1273,12 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
                      # comp_delta_avg > (mean(abs(comp_delta_avg), na.rm = TRUE)+(.5*(mad(abs(comp_delta_avg), na.rm = TRUE)))), 
                    "activation state", "stable state"))%>%
   group_by(idno, manual_clust_sp_disp)%>%
-  mutate(comp_delta_avg_by_clust = mean(comp_delta_avg, na.rm = TRUE))%>%
-  group_by(idno)%>%
-  mutate(manual_clust_sp_disp2 = if_else(manual_clust_sp_disp == "activation state" &
-                                           comp_delta_avg_by_clust < 0,
-                                         "deactivation state",
-                                         manual_clust_sp_disp)) %>%
+  # mutate(comp_delta_avg_by_clust = mean(comp_delta_avg1, na.rm = TRUE))%>%
+  # group_by(idno)%>%
+  # mutate(manual_clust_sp_disp2 = if_else(manual_clust_sp_disp == "activation state" &
+  #                                          comp_delta_avg1 < -1,
+  #                                        "deactivation state",
+  #                                        manual_clust_sp_disp)) %>%
 
   
   # mutate(manual_clust_sp_disp2 = if_else(manual_clust_sp_disp == "activation state" & 
@@ -1263,13 +1293,13 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
                     #            (2*(mad(sp_avg, na.rm = TRUE)))) & 
                     #           comp_delta_avg < (mean(comp_delta_avg, na.rm = TRUE)-(.5*(mad(comp_delta_avg, na.rm = TRUE)))),
                     #         "de-activation state",
-                    # 
+                    # manual_clust_sp_disp2
   
    ungroup()%>%
-   subset(idno  == 67)%>%
-      select(c(2,43:49, 34:36, 55:56, 59))%>%
+   subset(idno  == 1)%>%
+      select(c(2,43:49, 34:36, 55:56, 58))%>%
   # select(c(2,52:59, 46:47,38:41,64:66))%>%
-  gather(component, coef,-bin_frame,-manual_clust_sp_disp2,-idno) %>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-idno) %>%
   mutate(var_type = if_else(grepl("diff", component ), "diff",
                         if_else(grepl("speed", component ), "speed",  
                                 if_else(grepl("sp_avg", component ), "avg_speed",  
@@ -1280,11 +1310,11 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
   # scale so we dob;t have massivelly different sizes acordss variables
    group_by(var_type)%>%
   mutate(coef_z = scale(coef))%>%
-  group_by(component, bin_frame,var_type, manual_clust_sp_disp2)%>%
+  group_by(component, bin_frame,var_type, manual_clust_sp_disp)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
   ggplot(aes(as.numeric(bin_frame), coef_z, group = component))+
 
-  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(manual_clust_sp_disp2)), 
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(manual_clust_sp_disp)), 
             alpha = .2)  +
     geom_line(aes(group = component, linetype = var_type), size = 1)+
   # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
@@ -1401,11 +1431,11 @@ ungroup()%>%
   # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
   mutate(manual_clust_sp_disp = 
            if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
-                               (2*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg > 0, "activation state", 
-                    if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
-                               (2*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg < 0, "de-activation state", 
+                               (1.5*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg > 0, "transition state", 
+                    # if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                    #            (2*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg < 0, "de-activation state", 
                    
-                                "stable state")))%>%
+                                "stable state"))%>%
   
   
    ungroup()%>%
@@ -1461,18 +1491,6 @@ ungroup()%>%
 
 ```
 
-
-reprex<-data.frame(id = rep(1:2, each = 4), 
-           v1 = rep(seq(1:4), 2),
-           cluster = c(2,2,1,3,3,1,2,2),
-           what_iWant = c(1,1,2,3,1,2,3,3))
-
-
-
-reprex%>%
-  group_by(id)%>%
-mutate(what_IWant2 = match(cluster, unique(cluster))) %>%
-     ungroup
 
 
 ```{r}
@@ -1552,17 +1570,17 @@ ungroup()%>%
  df_OF_output_AUsW_unblind_posed_binned3_nona %>%
   
   # compare kmean and manual clustering
-  # group_by(filename)%>%
+  group_by(filename)%>%
     mutate(sp_avg = (k3_comp1_speed_ma+k3_comp2_speed_ma+k3_comp3_speed_ma)/3)%>%
    mutate(comp_delta_avg = (k3_comp1_diff_ma +k3_comp2_diff_ma+k3_comp3_diff_ma)/3)%>%
   # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
   mutate(manual_clust_sp_disp = 
            if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
-                               (1.5*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg > 0, "activation state", 
-                    if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
-                               (1.5*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg < 0, "de-activation state", 
+                               (1.5*(mad(sp_avg, na.rm = TRUE)))), "activation state", 
+                    # if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                    #            (1.5*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg < 0, "de-activation state", 
                    
-                                "stable state")))%>%
+                                "stable state"))%>%
   
   
    ungroup()%>%
@@ -1592,6 +1610,109 @@ ungroup()%>%
     scale_fill_viridis_d(option = "inferno")
 
 
+
+```
+
+COMPUTE THE HEURISTIC BASED CLUSTERS AND PUT TO THE DATAFRAME
+
+```{r}
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust<- df_OF_output_AUsW_unblind_posed_binned3_nona %>%
+  
+  # compare kmean and manual clustering
+  group_by(filename)%>%
+    mutate(sp_avg = (k3_comp1_speed_ma+k3_comp2_speed_ma+k3_comp3_speed_ma)/3)%>%
+   mutate(comp_delta_avg = (k3_comp1_diff_ma +k3_comp2_diff_ma+k3_comp3_diff_ma)/3)%>%
+  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
+  mutate(manual_clust_sp_disp = 
+           if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                               (1.5*(mad(sp_avg, na.rm = TRUE)))), "transition state", 
+                    # if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                    #            (1.5*(mad(sp_avg, na.rm = TRUE)))) & comp_delta_avg < 0, "de-activation state", 
+                   
+                                "stable state"))%>%
+  
+  
+   ungroup()
+
+
+# now compare the speed per cluster
+# copare duration of custers
+
+
+   # subset(idno  == 10)%>%
+
+  # gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression) %>%
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona_clust)
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+      select(c(1,2,3,9,10,34:36, 49,57))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno )%>%
+group_by(filename, manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n())%>%
+group_by(filename, manual_clust_sp_disp, drug.placebo, expression)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)%>%
+  subset(manual_clust_sp_disp == "transition state")%>%
+  ggplot(aes(expression, clust_frame_no_bin))+
+  # geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~drug.placebo)+
+  theme_classic()+
+      ggpubr::stat_compare_means()+
+  ggtitle("transition state")
+
+# stable
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+      select(c(1,2,3,9,10,34:36, 49,57))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno )%>%
+group_by(filename, manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n())%>%
+group_by(filename, manual_clust_sp_disp, drug.placebo, expression)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)%>%
+  subset(manual_clust_sp_disp != "transition state")%>%
+  ggplot(aes(expression, clust_frame_no_bin))+
+  # geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~drug.placebo)+
+  theme_classic()+
+      ggpubr::stat_compare_means()+
+   ggtitle("stable state")
+
+
+# colnames(df_OF_output_AUsW_unblind_posed_binned3_nona_clust)
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+      select(c(1,2,3,9,10,46:48, 49,55,57))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno,-sp_avg )%>%
+group_by(filename, manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n(),
+         sp_avg_clust = mean(sp_avg, na.rm = TRUE))%>%
+group_by(filename, manual_clust_sp_disp, drug.placebo,component, expression)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)%>%
+  subset(manual_clust_sp_disp == "transition state")%>%
+  ggplot(aes(expression, sp_avg_clust))+
+  # geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~drug.placebo)+
+  theme_classic()+
+    ggpubr::stat_compare_means()+
+  ggtitle("transition state")
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+      select(c(1,2,3,9,10,46:48, 49,55,57))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno,-sp_avg )%>%
+group_by(filename, manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n(),
+         sp_avg_clust = mean(sp_avg, na.rm = TRUE))%>%
+group_by(filename, manual_clust_sp_disp, drug.placebo,component, expression)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)%>%
+  subset(manual_clust_sp_disp != "transition state")%>%
+  ggplot(aes(expression, sp_avg_clust))+
+  # geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~drug.placebo)+
+  theme_classic()+
+  ggpubr::stat_compare_means()+
+     ggtitle("stable state")
+  
 
 ```
 
