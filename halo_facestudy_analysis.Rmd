@@ -1735,6 +1735,73 @@ group_by(filename, subject,manual_clust_sp_disp, drug.placebo, expression)%>%
      ggtitle("stable state")
   
 
+
+
+  
+  
+  df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+      select(c(1,2,3,9,10,46:48, 49,55,57))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno,-sp_avg )%>%
+group_by(filename, manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n(),
+         sp_avg_clust = mean(sp_avg, na.rm = TRUE),
+          sp_sd_clust = sd(sp_avg, na.rm = TRUE)) %>%
+group_by(filename, subject,manual_clust_sp_disp, drug.placebo, expression)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)%>%
+  # subset(manual_clust_sp_disp != "transition state")%>%
+  ggplot(aes(expression, sp_sd_clust, color = manual_clust_sp_disp))+
+  geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  geom_smooth(aes(group = subject), se = F, alpha = .5, size = .1)+
+  # facet_grid(~drug.placebo)+
+  theme_classic()+
+      ggpubr::stat_compare_means()+
+  facet_grid(~manual_clust_sp_disp)
+  
+  
+  df_OF_output_AUsW_unblind_posed_binned3_nona_clust$sp_avg
+
+  df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+      select(c(1,2,3,9,10,46:48, 49,55,57))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno,-sp_avg )%>%
+group_by(filename, manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n(),
+         sp_avg_clust = mean(sp_avg, na.rm = TRUE),
+          sp_sd_clust = sd(sp_avg, na.rm = TRUE),
+         RMS_sd_clust = sqrt(mean(((lead(sp_avg) - sp_avg)^2),na.rm = TRUE)))   %>%
+group_by(filename, subject,manual_clust_sp_disp, drug.placebo, expression)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE) %>%
+  subset(manual_clust_sp_disp == "transition state")%>%
+  ggplot(aes(expression, RMS_sd_clust, color = manual_clust_sp_disp))+
+  # geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  # geom_smooth(aes(group = subject), se = F, alpha = .5, size = .1)+
+      facet_grid(~manual_clust_sp_disp)+
+  # facet_grid(~)+
+  theme_classic()
+      # ggpubr::stat_compare_means()+
+  
+  df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+      select(c(1,2,3,9,10,46:48, 49,55,57))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno,-sp_avg )%>%
+group_by(filename, manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n(),
+         sp_avg_clust = mean(sp_avg, na.rm = TRUE))%>%
+group_by(filename, subject,manual_clust_sp_disp, drug.placebo, expression)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)%>%
+  # subset(manual_clust_sp_disp != "transition state")%>%
+  ggplot(aes(expression, sp_avg_clust, color = manual_clust_sp_disp))+
+  geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  geom_smooth(aes(group = subject), se = F, alpha = .5, size = .1)+
+  # facet_grid(~drug.placebo)+
+  theme_classic()+
+  facet_grid(~manual_clust_sp_disp)+
+  ggpubr::stat_compare_means()+
+     ggtitle("stable state")
+
+
+
 ```
 
 Count how any states do we have
@@ -1929,7 +1996,9 @@ df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4<- df_OF_output_AUsW_unbl
 group_by(filename, manual_clust_sp_disp)%>%
   mutate(clust_frame_no_bin = n(),
          sp_avg_clust = mean(sp_avg, na.rm = TRUE),
-          sp_sd_clust = sd(sp_avg, na.rm = TRUE))%>%
+          sp_sd_clust = sd(sp_avg, na.rm = TRUE),
+          RMS_sd_clust = sqrt(mean(((lead(sp_avg) - sp_avg)^2),na.rm = TRUE)))   %>%
+         # )%>%
 group_by(filename, manual_clust_sp_disp, expression, subject, drug.placebo)%>%
   summarise_if(is.numeric, mean, na.rm  =TRUE)
 
@@ -1988,6 +2057,31 @@ int_plot_speed1<- interactions::cat_plot(lmer_substates$speed1, pred = expressio
   labs(title = "FacetNull", subtitle = "Xside placed bottom, Yside placed left")+
      facet_grid(~manual_clust_sp_disp)+
     geom_smooth(aes(group = subject), method = "lm", se = F)
+   
+   
+   # RMS_sd_clust
+   
+   lmer_substates$speed2 <- lmer(RMS_sd_clust ~  drug.placebo * expression*manual_clust_sp_disp+
+                              (1|subject),
+                            data = df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4,
+                            REML = FALSE)
+
+anova(lmer_substates$speed2)
+
+emmeans::emmeans(lmer_substates$speed2, pairwise~expression, type = "response" )
+emmeans::emmeans(lmer_substates$speed2, pairwise~ manual_clust_sp_disp, type = "response" )
+
+emmeans::emmeans(lmer_substates$speed2, pairwise~ expression|manual_clust_sp_disp, type = "response" )
+
+?interactions::cat_plot
+
+interactions::cat_plot(lmer_substates$speed2, pred = expression, modx = manual_clust_sp_disp,
+                       plot.points = TRUE,
+                       point.alpha = .3)
+   
+   
+
+   
   
 ```
 
@@ -2030,6 +2124,13 @@ afex::aov_ez(data = df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4,
               # fun_aggregate = "mean",
               print.formula = TRUE)
 df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4
+
+afex::aov_ez(data = df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4,
+              id = "subject",
+              dv = "RMS_sd_clust",
+              within = c("drug.placebo", "expression","manual_clust_sp_disp"),
+              # fun_aggregate = "mean",
+              print.formula = TRUE)
 
 ```
 
