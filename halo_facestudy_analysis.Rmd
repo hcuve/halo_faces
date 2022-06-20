@@ -1659,6 +1659,25 @@ group_by(filename, manual_clust_sp_disp, drug.placebo, expression)%>%
       ggpubr::stat_compare_means()+
   ggtitle("transition state")
 
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona_clust)
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+      select(c(1,2,3,9,10,34:36, 49,57))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno )%>%
+group_by(filename, manual_clust_sp_disp,subject)%>%
+  mutate(clust_frame_no_bin = n())%>%
+group_by(filename, manual_clust_sp_disp, drug.placebo, expression,subject)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)%>%
+  subset(manual_clust_sp_disp == "transition state")%>%
+  ggplot(aes(drug.placebo , clust_frame_no_bin))+
+  # geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+      geom_smooth(aes(group = subject), method = "lm", se = F, size = .2, color = "gray80")+
+  facet_grid(~expression)+
+  theme_classic()+
+      ggpubr::stat_compare_means()+
+  ggtitle("transition state")
+
 # stable
 df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
       select(c(1,2,3,9,10,34:36, 49,57))%>%
@@ -1716,8 +1735,165 @@ group_by(filename, manual_clust_sp_disp, drug.placebo,component, expression)%>%
 
 ```
 
+Count how any states do we have
+
+```{r}
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust$BMI
 
 
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust$manual_clust_sp_disp
+library(data.table)
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+  ungroup()%>%
+  group_by(filename, expression, drug.placebo)%>%
+    # mutate(new = cumsum(manual_clust_sp_disp)) %>%
+    mutate(grp = rleid(manual_clust_sp_disp))%>%
+  summarise_if(is.numeric, mean,na.rm = TRUE)%>%
+  ggplot(aes(grp, color = expression, fill = expression))+
+  geom_histogram(aes(y=..density..), alpha=0.5,
+                position="identity")+
+   geom_density(alpha=.2)+
+  facet_grid(~drug.placebo)+
+  theme_classic()
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+  ungroup()%>%
+  group_by(filename, expression, drug.placebo)%>%
+    # mutate(new = cumsum(manual_clust_sp_disp)) %>%
+  mutate(grp = rleid(manual_clust_sp_disp))%>%
+  summarise_if(is.numeric, mean,na.rm = TRUE)%>%
+  ggplot(aes(expression, log(grp+.1), color = expression))+
+  geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  # geom_histogram(aes(y=..density..), alpha=0.5,
+  #               position="identity")+
+  #  geom_density(alpha=.2)+
+  facet_grid(~drug.placebo)+
+  theme_classic()
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+  ungroup()%>%
+  group_by(filename, drug.placebo, subject)%>%
+    # mutate(new = cumsum(manual_clust_sp_disp)) %>%
+  mutate(grp = rleid(manual_clust_sp_disp))%>%
+  summarise_if(is.numeric, mean,na.rm = TRUE)%>%
+  ggplot(aes(drug.placebo, grp, color = drug.placebo))+
+  # geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  geom_smooth(aes(group = subject), method = "lm", se = F, size = .2, color = "gray80")+
+  # geom_histogram(aes(y=..density..), alpha=0.5,
+  #               position="identity")+
+  #  geom_density(alpha=.2)+
+  # facet_grid(~drug.placebo)+
+  theme_classic()
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+  ungroup()%>%
+  group_by(filename, expression, subject)%>%
+    # mutate(new = cumsum(manual_clust_sp_disp)) %>%
+  mutate(grp = rleid(manual_clust_sp_disp))%>%
+  summarise_if(is.numeric, mean,na.rm = TRUE)%>%
+  ggplot(aes(expression, grp, color = expression))+
+  # geom_jitter(width = .1, alpha = .1)+
+  stat_summary(geom = "pointrange")+
+    geom_smooth(aes(group = subject), method = "lm", se = F, size = .2, color = "gray80")+
+  # geom_histogram(aes(y=..density..), alpha=0.5,
+  #               position="identity")+
+  #  geom_density(alpha=.2)+
+  # facet_grid(~drug.placebo)+
+  theme_classic()
+```
+
+
+try and model mixed models on the variabes above
+
+```{r}
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+  ungroup()%>%
+  group_by(filename, expression, subject)%>%
+    # mutate(new = cumsum(manual_clust_sp_disp)) %>%
+  mutate(clust_frame_no = rleid(manual_clust_sp_disp))
+
+# 
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust
+
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona_clust)
+lmer_substates<- list()
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust$manual_clust_sp_disp<- as.factor(df_OF_output_AUsW_unblind_posed_binned3_nona_clust$manual_clust_sp_disp)
+
+library(lmerTest)
+
+unique(df_OF_output_AUsW_unblind_posed_binned3_nona_clust$clust_frame_no)
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg<-
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+  group_by(filename, subject,drug.placebo,expression)%>%
+  summarise_if(is.numeric, max, na.rm = TRUE)
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust$manual_clust_sp_disp
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg$clust_frame_no
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg$subject<- as.factor(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg$subject)
+lmer_substates$clust_no <- glmer(clust_frame_no ~  drug.placebo * expression+
+                              (1|subject),
+                            data = df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg,
+                            # REML = FALSE)
+                            # ,
+                            family = "poisson")
+
+summary(lmer_substates$clust_no )
+
+anova(lmer_substates$clust_no)
+
+emmeans::emmeans(lmer_substates$clust_no, pairwise~drug.placebo, type = "response" )
+emmeans::emmeans(lmer_substates$clust_no, pairwise~expression, type = "response" )
+
+emmeans::emmeans(lmer_substates$clust_no, pairwise~ drug.placebo|expression, type = "response" )
+
+
+interactions::cat_plot(lmer_substates$clust_no, pred = expression, modx = drug.placebo)
+
+
+
+# 
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg2<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+  #     select(c(1,2,3,9,10,46:48, 49,55,57))%>%
+  # gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno,-sp_avg )%>%
+group_by(filename, manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n(),
+         sp_avg_clust = mean(sp_avg, na.rm = TRUE))%>%
+   group_by(filename, subject,drug.placebo,expression,manual_clust_sp_disp)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+  
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg2
+
+unique(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg2$clust_frame_no_bin)
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg2$subject<- as.factor(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg2$subject)
+
+lmer_substates$clust_no_framebin <- glmer(clust_frame_no_bin ~  manual_clust_sp_disp * expression+
+                              (1|subject),
+                            data = df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg2,
+                            # REML = FALSE)
+                            # ,
+                            family = "poisson")
+
+summary(lmer_substates$clust_no_framebin)
+
+anova(lmer_substates$clust_no_framebin)
+
+emmeans::emmeans(lmer_substates$clust_no_framebin, pairwise~drug.placebo, type = "response" )
+emmeans::emmeans(lmer_substates$clust_no_framebin, pairwise~expression, type = "response" )
+
+emmeans::emmeans(lmer_substates$clust_no_framebin, pairwise~ expression|manual_clust_sp_disp, type = "response" )
+```
 
 
 
