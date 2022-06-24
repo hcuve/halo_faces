@@ -154,10 +154,10 @@ coefmap(res_k4)
 
 
 
-
+# NMF on time
 ```{r}
 
-# NMF on time
+
 colnames(dcast_time2)
 # add a very tiny number
 dcast_time3<- dcast_time2[,6:105]+.001
@@ -184,20 +184,119 @@ NMF::basismap(res_k3_time)
 coefmap(res_k3_time) 
 
 res_k3_time@fit@H
+
+library(NMF)
+res_k4_time <- NMF::nmf(dcast_time4, r = 4, 
+                  nrun = 100, 
+                  seed=123456,
+                 .options = list( 'v')) #
+
+NMF::basismap(res_k4_time) 
+coefmap(res_k4_time) 
+
+
+res_k5_time <- NMF::nmf(dcast_time4, r = 5, 
+                  nrun = 100, 
+                  seed=123456,
+                 .options = list( 'v')) #
+
+NMF::basismap(res_k5_time) 
+coefmap(res_k5_time) 
+
+
+dcast_time2$comp1
+res_k3_time@fit@W
 ```
-
-
-
-
-
 
 
 
 
 Combine the data and visualise
 ```{r}
+
+sf = 1 # scaling factor to make it easier to change sizes of everything, in which case change here
+
+p<- list()
+p$graphstyle_int <-  theme(#base plot theme
+  
+  # axis lines
+  axis.line.y = element_line(color="black", size = 1.5),
+  axis.line.x = element_line(color="black", size = 1,5),
+  
+  axis.title.y=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)),
+  axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)),
+  
+  # text
+  strip.text.x = element_text(size = 12*(sf+.5),  colour = "black"),
+  strip.text.y = element_text(size = 12*(sf+.5),  colour = "black"),
+  
+  text=element_text(size = 14),
+  axis.text.x = element_text(size = 14*(sf+.5), colour = "black",),
+  axis.text.y = element_text(size = 14*(sf+.5), colour = "black"),
+  
+  
+  # panel
+  panel.grid.major = element_blank(),
+  panel.background = element_blank(),
+  # panel.background = element_rect(fill="transparent"),
+  # panel.border = element_rect(fill="transparent"),
+  # strip shades (reco rectagles)
+   # strip.background = element_blank(),
+  
+  # legend
+  # legend.position = "top",
+  legend.key = element_rect(colour = "transparent", fill="transparent"),
+  axis.ticks = element_blank(),
+  # legend.k
+  #legend.direction = "horizontal",
+
+  legend.text = element_text(size = 10*(sf+.3)),
+  # legend.title = element_text(size = 10*(sf+.3)),
+  # legend line tends to be really small in print so adjust here
+  # legend.key.height = unit(.5, "cm"),
+  # legend.key.width = unit(2, "cm"),
+  
+  #legend.text = element_text(size = 10*sf),
+  # legend.title=element_blank(),
+  #legend.text = element_blank(),
+  #axis.ticks = element_blank(),
+)
+
+# recreate heatmap AUS
 res_k3@fit@H
 
+?coefmap
+coefmap(res_k3)+
+  scale_fill_viridis_c()
+chool_talk<-list()
+
+
+chool_talk$AU_NM<-
+as.data.frame(res_k3@fit@H)%>%
+  mutate(component = 1:n())%>%
+  gather(AU, coef, -component)%>%
+  group_by(component)%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )%>%
+  arrange(AU_code)%>%
+  ggplot(aes(component,AU, fill = coef))+
+  geom_tile()+
+  theme_classic()+
+  # scale_fill_viridis_()
+  scale_fill_viridis_c(option = "inferno")+
+  xlab("K")+
+  p$graphstyle_int+
+guides(fill=guide_colorbar(ticks.colour = NA))
+
+chool_talk$AU_NM
+  
+
+
+```
+```{r}
 df_OF_output_AUsW_unblind_posed_binned$NMFtable<- as.data.frame(res_k3@fit@W)
 
 df_OF_output_AUsW_unblind_posed_binned$comp1 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V1
@@ -224,6 +323,7 @@ df_OF_output_AUsW_unblind_posed_binned_k2$k2_comp2 = df_OF_output_AUsW_unblind_p
 colnames(df_OF_output_AUsW_unblind_posed_binned)
 # bind_rows(db_of_natural1, db_of_morph)
 colnames(df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,16:32,34:36)])
+
 df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
   group_by(expression, component, drug.placebo, bin_frame)%>%
@@ -247,17 +347,37 @@ df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
 
 df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(component, drug.placebo, bin_frame)%>%
+  group_by(bin_framecomponent, drug.placebo, bin_frame)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE)%>%
   # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = drug.placebo))+
+  ggplot(aes(bin_frame, expression, fill= coef, color = ))+
   geom_smooth(se = F)+
-  facet_grid(~component)+
+  # facet_grid(~component)+
   theme_classic()
+
+
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  group_by(filename,component, expression, subject)%>%
+  mutate_at(c("coef"), scale)%>%
+  group_by(component, expression, bin_frame)%>%
+
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, component, fill= coef))+
+  geom_tile()+
+  scale_fill_viridis_c(option = "inferno")+
+  # geom_smooth(se = F)+
+  facet_grid(~expression)+
+  theme_classic()
+
+```
 
 
 
 # 
+
+```{r}
 colnames(df_OF_output_AUsW_unblind_posed_binned_k2)
 df_OF_output_AUsW_unblind_posed_binned_k2[,c(1,2:3,9:10, 49:50)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
@@ -289,6 +409,7 @@ dcast_time2$comp3 = dcast_time2$table_time_NMF_k3$V3
 res_k3_time@fit@ibterms
 res_k3_time@fit@H
 colnames(dcast_time2)
+
 dcast_time2[c(1:4,106:108)]%>%
     # mutate_if(is.numeric, scale)%>%
   group_by(filename,subject, drug.placebo, expression)%>%
@@ -303,26 +424,126 @@ dcast_time2[c(1:4,106:108)]%>%
 
   
   as.data.frame(res_k3_time@fit@H)%>%
-    mutate(id = row_number())%>%
+    # mutate(id = row_number())%>%
+    mutate(id = 1:n())%>%
 gather(time_bin,coef,-id)%>%
     ggplot(aes(as.numeric(time_bin), id, fill = coef))+
     geom_tile()+
     theme_classic()+
-    scale_fill_viridis_c()
-```
+    scale_fill_viridis_c(option = "inferno")
+  
+  
+  
+  res_k5_time
+  
+  
+    as.data.frame(res_k5_time@fit@H)%>%
+    # mutate(id = row_number())%>%
+    mutate(id = 1:n())%>%
+gather(time_bin,coef,-id)%>%
+    ggplot(aes(as.numeric(time_bin), id, fill = coef))+
+    geom_tile()+
+    theme_classic()+
+    scale_fill_viridis_c(option = "inferno")
+    
+        as.data.frame(res_k3_time@fit@H)%>%
+    # mutate(id = row_number())%>%
+    mutate(id = 1:n())%>%
+gather(time_bin,coef,-id)%>%
+          mutate(coef = ifelse(time_bin <=2, 0,
+                               ifelse(time_bin >98, 0, coef))) %>%
+          group_by(id)%>%
+          mutate_at(c("coef"), scale)%>%
+    ggplot(aes(as.numeric(time_bin), coef, color = as.factor(id)))+
+          # geom_line()
+          geom_smooth(se = F, span = .5, size = 2)+
+          # geom_density(aes(y = coef))+
+    # geom_tile()+
+    theme_classic()+
+    scale_fill_viridis_c(option = "inferno")
+  
+  
+        
+res_k3_time@fit@W
 
-%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  group_by(expression, component, drug.placebo, bin_frame,filename)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = drug.placebo))+
-  geom_smooth(se = F)+
-  # geom_smooth(aes(group = filename), se = F, size = .5)+
-  facet_grid(expression~component)+
-  theme_classic()
+colnames(dcast_time2)
+dcast_time2_aggjasp<- dcast_time2[,c(1:4,107:109)] %>%
+  group_by(filename)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+
+write_csv(dcast_time2_aggjasp, "dcast_time2_aggjasp.csv")
+
+
 
 ```
+  
+dcast_time3<- dcast_time2[,6:105]+.001
+?rowMax
+colnames(dcast_time3)
+pmax(dcast_time3)
+install.packages("matrixStats")
+library(matrixStats)
+
+dcast_time3$max<- rowMaxs(as.matrix(         dcast_time3))
+
+
+max(dcast_time3)
+table(is.na(dcast_time3))
+
+dcast_time_h<-subset(dcast_time4, 
+                     dcast_time2$expression == "angry")
+
+
+  res_k3_time_a <- NMF::nmf(dcast_time_h, r = 3, 
+                  nrun = 100, 
+                  seed=123456,
+                 .options = list( 'v')) #
+  
+  dcast_time_h<-subset(dcast_time4, 
+                     dcast_time2$expression == "sad")
+
+
+  res_k3_time_s <- NMF::nmf(dcast_time_h, r = 3, 
+                  nrun = 100, 
+                  seed=123456,
+                 .options = list( 'v')) #
+  
+  # happy
+    dcast_time_ha<-subset(dcast_time4, 
+                     dcast_time2$expression == "happy")
+
+
+  res_k3_time_ha <- NMF::nmf(dcast_time_ha, r = 3, 
+                  nrun = 100, 
+                  seed=123456,
+                 .options = list( 'v')) #
+  
+  
+ dcast_time_h$table_time_NMF_k3<- as.data.frame(res_k3_time_a@fit@W)
+# res_k3_time
+dcast_time_h$comp1 = dcast_time_h$table_time_NMF_k3$V1
+dcast_time_h$comp2 = dcast_time_h$table_time_NMF_k3$V2
+dcast_time_h$comp3 = dcast_time_h$table_time_NMF_k3$V3
+
+# sad
+dcast_time_s$table_time_NMF_k3<- as.data.frame(res_k3_time_s@fit@W)
+# res_k3_time
+dcast_time_s$comp1 = dcast_time_s$table_time_NMF_k3$V1
+dcast_time_s$comp2 = dcast_time_s$table_time_NMF_k3$V2
+dcast_time_s$comp3 = dcast_time_s$table_time_NMF_k3$V3
+
+# happy
+dcast_time_ha$table_time_NMF_k3<- as.data.frame(res_k3_time_ha@fit@W)
+# res_k3_time
+dcast_time_ha$comp1 = dcast_time_ha$table_time_NMF_k3$V1
+dcast_time_ha$comp2 = dcast_time_ha$table_time_NMF_k3$V2
+dcast_time_ha$comp3 = dcast_time_ha$table_time_NMF_k3$V3
+
+# then bidn these
+
+
+# angry
+  
 
 
 same as above for  k 4
@@ -358,7 +579,7 @@ tsne(pollen$data,labels=as.factor(pollen$celltypes))
 df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]
 
 library(tsne)
-library(M3C)]
+library(M3C)
 
 install.packages("M3C")
 
@@ -1828,6 +2049,8 @@ ungroup()%>%
   # select(c(2,52:59, 46:47,38:41,64:66))%>%
   gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression) %>%
       # gather(component, coef,-bin_frame,-cluster_ordered,-filename,-drug.placebo) %>%
+   group_by(subject,component,manual_clust_sp_disp, expression)%>%
+   mutate_at(c())
   group_by(subject,component, bin_frame,manual_clust_sp_disp, expression)%>%
   
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
@@ -2227,19 +2450,173 @@ anova(lmer_substates$howmanystate_trans)
 
 # speed
 
-df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust  %>%
       # select(c(1,2,3,9,10,46:48, 49,55,57))%>%
   # gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno,-sp_avg )%>%
+  # df_OF_output_AUsW_unblind_posed_binned3_nona_clust
 group_by(filename, manual_clust_sp_disp)%>%
   mutate(clust_frame_no_bin = n(),
-         sp_avg_clust = mean(sp_avg, na.rm = TRUE),
-          sp_sd_clust = sd(sp_avg, na.rm = TRUE),
-          RMS_sd_clust = sqrt(mean(((lead(sp_avg) - sp_avg)^2),na.rm = TRUE)))   %>%
+         # speed
+         sp_avg_clust_k1 = mean(k3_comp1_speed_ma, na.rm = TRUE),
+         sp_avg_clust_k2 = mean(k3_comp2_speed_ma, na.rm = TRUE),
+         sp_avg_clust_k3 = mean(k3_comp3_speed_ma, na.rm = TRUE),
+         RMS_sd_clust_k1 = sqrt(mean(((lead(k3_comp1_speed_ma) - k3_comp1_speed_ma)^2),na.rm = TRUE)),
+        RMS_sd_clust_k2 = sqrt(mean(((lead(k3_comp2_speed_ma) - k3_comp2_speed_ma)^2),na.rm = TRUE)),
+        RMS_sd_clust_k3 = sqrt(mean(((lead(k3_comp3_speed_ma) - k3_comp3_speed_ma)^2),na.rm = TRUE)))%>%
+         
+          # 
+          # 
+          # sp_sd_clust = sd(sp_avg, na.rm = TRUE),
+          # RMS_sd_clust = sqrt(mean(((lead(sp_avg) - sp_avg)^2),na.rm = TRUE)),
+          # RMS_diff_clust = sqrt(mean((comp_delta_avg^2),na.rm = TRUE)))   %>%
+         # )%>%
+group_by(filename, manual_clust_sp_disp, expression, subject, drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4$test_ind<- if_else(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4$drug.placebo == "drug", 1,0)
+
+
+# do we compute these metrics for each co,ponent or just averages?
+# 
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust  %>%
+      # select(c(1,2,3,9,10,46:48, 49,55,57))%>%
+  # gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno,-sp_avg )%>%
+  # df_OF_output_AUsW_unblind_posed_binned3_nona_clust
+group_by(filename,manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n(),
+         # speed
+         sp_avg_clust_k1 = mean(k3_comp1_speed_ma, na.rm = TRUE),
+         sp_avg_clust_k2 = mean(k3_comp2_speed_ma, na.rm = TRUE),
+         sp_avg_clust_k3 = mean(k3_comp3_speed_ma, na.rm = TRUE),
+         RMS_sd_clust_k1 = sqrt(mean(((lead(k3_comp1_speed_ma) - k3_comp1_speed_ma)^2),na.rm = TRUE)),
+        RMS_sd_clust_k2 = sqrt(mean(((lead(k3_comp2_speed_ma) - k3_comp2_speed_ma)^2),na.rm = TRUE)),
+        RMS_sd_clust_k3 = sqrt(mean(((lead(k3_comp3_speed_ma) - k3_comp3_speed_ma)^2),na.rm = TRUE)))%>%
+         
+          # 
+          # 
+          # sp_sd_clust = sd(sp_avg, na.rm = TRUE),
+          # RMS_sd_clust = sqrt(mean(((lead(sp_avg) - sp_avg)^2),na.rm = TRUE)),
+          # RMS_diff_clust = sqrt(mean((comp_delta_avg^2),na.rm = TRUE)))   %>%
          # )%>%
 group_by(filename, manual_clust_sp_disp, expression, subject, drug.placebo)%>%
   summarise_if(is.numeric, mean, na.rm  =TRUE)
 
 
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.2<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust  %>%
+      # select(c(1,2,3,9,10,46:48, 49,55,57))%>%
+  # gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno,-sp_avg )%>%
+  # df_OF_output_AUsW_unblind_posed_binned3_nona_clust
+group_by(filename,manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n(),
+         # speed
+         sp_avg_clust_k1 = mean(k3_comp1_speed_ma, na.rm = TRUE),
+         sp_avg_clust_k2 = mean(k3_comp2_speed_ma, na.rm = TRUE),
+         sp_avg_clust_k3 = mean(k3_comp3_speed_ma, na.rm = TRUE),
+         RMS_sd_clust_k1 = sqrt(mean(((lead(k3_comp1_speed_ma) - k3_comp1_speed_ma)^2),na.rm = TRUE)),
+        RMS_sd_clust_k2 = sqrt(mean(((lead(k3_comp2_speed_ma) - k3_comp2_speed_ma)^2),na.rm = TRUE)),
+        RMS_sd_clust_k3 = sqrt(mean(((lead(k3_comp3_speed_ma) - k3_comp3_speed_ma)^2),na.rm = TRUE)))%>%
+         
+          # 
+          # 
+          # sp_sd_clust = sd(sp_avg, na.rm = TRUE),
+          # RMS_sd_clust = sqrt(mean(((lead(sp_avg) - sp_avg)^2),na.rm = TRUE)),
+          # RMS_diff_clust = sqrt(mean((comp_delta_avg^2),na.rm = TRUE)))   %>%
+         # )%>%
+group_by(filename, expression, subject, drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)
+
+write_csv(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4,"df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.csv")
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1$test_ind<- if_else(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1$drug.placebo == "drug", 1,0)
+write_csv(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1,
+          "df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1.csv")
+
+```
+
+```
+
+```{r}
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.2$test_ind<- if_else(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.2$drug.placebo == "drug", 1,0)
+write_csv(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.2,
+          "df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.2.csv")
+
+
+my_comparisons <- list( c("angry", "sad"), c("angry", "happy"), c("happy", "sad") )
+ggboxplot(ToothGrowth, x = "dose", y = "len",
+          color = "dose", palette = "npg")+
+# Add pairwise comparisons p-value
+stat_compare_means(comparisons = my_comparisons, label.y = c(29, 35, 40))+
+stat_compare_means(label.y = 45)     # Add global Anova p-value
+
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.2)
+
+library(ggpubr)
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1[,c(1:5,33:35,60:62)]%>%
+  select(!starts_with("comp"))%>%
+  gather(component_AU, coef, - filename, - manual_clust_sp_disp, - expression, - subject, - drug.placebo)%>%
+  group_by(component_AU)%>%
+  
+  mutate_at(c("coef"), scale)%>%
+    group_by(component_AU, expression, subject,manual_clust_sp_disp)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(expression, coef, color = expression))+
+  geom_jitter(width = .1, alpha = .1)+
+  geom_bar(stat = "summary", fun.y = "mean", alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  stat_summary(aes(group = subject), geom = "line", alpha = .1, size = .5, color = "gray70")+
+  facet_grid( manual_clust_sp_disp~ component_AU)+
+  theme(axis.text.x = element_text(angle = 90))+
+  # ggpubr::stat_compare_means(method = "t.test")+
+  stat_compare_means(method = "anova", label.y = 10)+
+  stat_compare_means(aes(label = ..p.signif..), comparisons = my_comparisons,
+                     label.y = c(5, 7, 9))+
+# stat_compare_means(label.y = 3.5)  +
+  theme_classic()
+  
+
+unique(test$component_AU)
+ # gather(component, coef,-bin_frame,-cluster_ordered,-filename, -drug.placebo,-subject)%>%
+   
+   
+   
+# corr
+   
+   df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1[,c(1:5,33:35,60:62)]%>%
+  select(!starts_with("RMS"))%>%
+  gather(component_AU, coef, - filename, - manual_clust_sp_disp, - expression, - subject, - drug.placebo)%>%
+  group_by(component_AU)%>%
+  
+  mutate_at(c("coef"), scale)%>%
+    group_by(component_AU, expression, subject,manual_clust_sp_disp)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(expression, coef, color = expression))+
+  geom_jitter(width = .1, alpha = .1)+
+  geom_bar(stat = "summary", fun.y = "mean", alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  stat_summary(aes(group = subject), geom = "line", alpha = .1, size = .5, color = "gray70")+
+  facet_grid( manual_clust_sp_disp~ component_AU)+
+  theme(axis.text.x = element_text(angle = 90))+
+  # ggpubr::stat_compare_means(method = "t.test")+
+  stat_compare_means(method = "anova", label.y = 10)+
+  stat_compare_means(aes(label = ..p.signif..), comparisons = my_comparisons,
+                     label.y = c(5, 7, 9))+
+# stat_compare_means(label.y = 3.5)  +
+  theme_classic()
+  
+# 
+# unique(test$component_AU)
+#  gather(component, coef,-bin_frame,-cluster_ordered,-filename, -drug.placebo,-subject)
+#  
+ dcast_time2_aggjasp
+ df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.2
+ 
+space_time<- left_join(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.2,
+           dcast_time2_aggjasp, by = "filename")
+write_csv(space_time, "space_time.csv")
+```
 
 
 df_OF_output_AUsW_unblind_posed_binned3_nona_clust$sp_avg
@@ -2374,7 +2751,7 @@ afex::aov_ez(data = df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4,
 
 
 
-
+```{r}
 df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
   # subset(idno  == 54)%>%
 ungroup()%>%
@@ -2384,7 +2761,7 @@ ungroup()%>%
   group_by(filename,component, bin_frame,cluster_ordered,drug.placebo, subject)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
   ggplot(aes(as.numeric(bin_frame), as.numeric(subject)))+
-  geom_tile(aes(fill = factor(cluster_ordered)))+
+  geom_tile(aes(fill = factor(cluster_ordered))) +
 
  # geom_rect(aes(xmin = bin_frame, group = subject, xmax = dplyr::lead(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_ordered)), 
  #            alpha = .1)  +
@@ -2493,6 +2870,7 @@ df_OF_output_AUsW_unblind_posed_binned3_nona2%>%
   
   
   colnames(df_OF_output_AUsW_unblind_posed_binned3_nona3)
+  
   df_OF_output_AUsW_unblind_posed_binned3_nona3%>%
   subset(idno  == 12)%>%
 ungroup()%>%
