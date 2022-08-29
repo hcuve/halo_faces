@@ -1,0 +1,135 @@
+---
+title: "voronoi_AU"
+author: "Helio"
+date: '2022-06-29'
+output: html_document
+---
+
+
+<!-- df_OF_output -->
+```{r}
+
+# df_OF_output_AUs
+
+colnames(df_OF_output)
+colnames(df_OF_output[,c(1:5,715, 300:435,680:696)])
+
+db_landmarks<- df_OF_output[,c(1:5,715,300:435,680:696)]
+
+colnames(db_landmarks)
+
+df %>%
+  gather(key = "age", value = "age_values", age1, age2) %>%
+  gather(key = "weight", value = "weight_values", weight1, weight2) %>%
+  filter(substring(age, 4) == substring(weight, 7))
+
+colnames(db_landmarks)
+colnames(db_landmarks[,c(1,6:159)])
+
+colnames(db_landmarks[,c(1,6:159)]%>%
+  group_by(filename)%>%
+  gather(x_land, x_val, 4:70))
+
+
+write_csv("db_landmarks.csv", db_landmarks)
+
+
+db_landmarks_gather <- 
+  db_landmarks[,c(1,6:159)]%>%
+  group_by(filename)%>%
+  gather(x_land, x_val, 3:70)
+  
+
+db_landmarks_gather%>%
+gather(y_land, y_val, 3:70)%>% 
+  gather(AU_code, AU_val, 3:ncol())  
+
+
+
+library(readr)
+db_landmarks <- read_csv("/Volumes/GoogleDrive/My Drive/2022 - University Of Birmingham/HaloStudy/Data/db_landmarks.csv")
+
+View(db_landmarks)
+
+
+colnames(db_landmarks)
+
+db_landmarks$filename
+
+db_landmarks
+
+library(tidyverse)
+
+train<- subset(db_landmarks,
+               
+               filename == "./cut_posed_angry_day1_p2.csv")
+
+
+
+colnames(train)
+
+unique(train$filename)
+colnames(train[,(6:159)])
+
+train1<- train[,c(1,6:74)] %>%
+  subset(frame == 1)%>%
+  select(-frame)%>%
+  gather(x_land, x_val, x_0:x_67,-filename)%>%
+  mutate(id = substring(x_land,3:4))
+
+colnames(train)
+trainy<- train[,c(1,6,70:142)] %>%
+  subset(frame == 1)%>%
+  select(-frame)%>%
+  gather(y_land, y_val, y_0:y_67,-filename)%>%
+  mutate(id = substring(y_land,3:4))
+
+
+colnames(train1)
+install.packages("ggvoronoi")
+
+left_join(train1, trainy)%>%
+  mutate_if(is.numeric, scale)%>%
+  ggplot(aes(x_val, y_val))+
+  geom_point(size = .02)+
+  stat_v
+  # geom_path(aes(group = id))+
+  xlim(-4,4)+
+  ylim(2,-2)
+
+
+vor_test<- left_join(train1, trainy)%>%
+  mutate_if(is.numeric, scale)
+install.packages("deldir")
+
+
+# Data
+set.seed(1)
+library(deldir)
+
+# Calculate Voronoi Tesselation and tiles
+tesselation <- deldir(vor_test$x_val, vor_test$y_val)
+tiles <- tile.list(tesselation)
+tiles
+plot(tiles, pch = 19)+
+  ylim = rev(rep(-4:4))
+```
+
+
+train2 <- train1%>%
+  # subset(frame == 1)%>%
+gather(y_land, y_val, 2:69,-x_land, -x_val,-filename)
+  gather(AU_code, AU_val, 2:22, -x_land, -x_val,-filename,-y_land, -y_val)
+
+colnames(train2)
+
+train2%>%
+  # group_by(x_land, y_land)%>%
+  # summarise_if(is.numeric, mean)%>%
+  mutate(n = 1:n()) %>%
+  # subset(n <)%>%
+  ggplot(aes(x_val,y_val ))+
+  geom_point(size = .1)
+  
+```
+
