@@ -78,6 +78,8 @@ df_OF_output_AUs<- df_OF_output[,c(1:5,680:715)]
 # AU r = intensity c is presence
 colnames(df_OF_output_AUs)
 
+unique(df_OF_output_AUs$filename)
+
 # rename action units based on a dictionary I created for the NMF tutorial
 # setwd("/Volumes/GoogleDrive-113094219255455017404/My Drive/2022 - University Of Birmingham/HaloStudy/Data")
 
@@ -174,6 +176,8 @@ df_OF_output_AUs_unblind$expression <-sapply(strsplit(df_OF_output_AUs_unblind$f
 df_OF_output_AUs_unblind$posed.spoken<- sapply(strsplit(df_OF_output_AUs_unblind$filename, "_"), function(x) x[2])
 
 
+unique(df_OF_output_AUs_unblind$posed.spoken)
+
 ```
 
 Do some quick visualizations for time, etc
@@ -258,7 +262,7 @@ df_OF_output_AUsW_unblind%>%
 
 binify based on moving average to we have comparable number of bins
 
-start by separqting just emotion
+start by separating just emotion
 
 ```{r}
 df_OF_output_AUsW_unblind_posed<- subset(df_OF_output_AUsW_unblind, 
@@ -398,18 +402,152 @@ spatiotemporal dynmaics
 - or if we use a fixed number of substaes, are there significant temporal differences (e.g. duration, reccurence)
 
 
+Pre-Process speech data
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
+```{r}
+unique(df_OF_output_AUsW_unblind$posed.spoken)
+df_OF_output_AUsW_unblind_spoken1_2<- subset(df_OF_output_AUsW_unblind, 
+                                         posed.spoken != "posed")
+
+df_OF_output_AUsW_unblind_spoken1_2
+
+# check how variable is duration
+df_OF_output_AUsW_unblind_spoken1_2%>%
+  subset(test.day ==1)%>%
+  group_by(filename,test.day, expression,posed.spoken)%>%
+  summarise_at(c("timestamp", "frame"), max, na.rm = T)%>%
+  ggplot(aes(frame))+
+  geom_histogram()+
+  theme_classic()+
+  facet_grid(expression~posed.spoken)
+
 ```
 
-```{r data}
-summary(data)
+```{r}
+df_OF_output_AUsW_unblind_spoken1_2
+ # = 100 bins
+# average is 250
+# 220/100
+
+df_OF_output_AUsW_unblind_spoken1_2
+
+# ?cut
+colnames(df_OF_output_AUsW_unblind_spoken1_2)
+
+# create bins
+df_OF_output_AUsW_unblind_spoken1_2_binned <-df_OF_output_AUsW_unblind_spoken1_2%>%
+  group_by(filename, subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression )%>%
+  mutate(bin_frame = cut(frame, 100, labels = FALSE))%>%
+  group_by(filename,bin_frame,subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+ 
+ 
+df_OF_output_AUsW_unblind_spoken1_2_binned$filename
+
+# "./cut_spoken_angry_day1_p19.csv"
+colnames(df_OF_output_AUsW_unblind_spoken1_2_binned)
+
+# quick visualisation of how the bins would be
+df_OF_output_AUsW_unblind_spoken1_2_binned%>%
+  subset(filename == "./cut_spoken_angry_day1_p19.csv")%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(bin_frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(bin_frame), AUs, fill = AU.coefs))+
+    geom_tile()+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+# unbined for comparison
+df_OF_output_AUsW_unblind_spoken1_2%>%
+  subset(filename == "./cut_spoken_angry_day1_p19.csv")%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(frame), AUs, fill = AU.coefs))+
+    geom_tile()+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+# very similar, so we can be confident that the binification is not screwing things up
 ```
 
-## Including Plots
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+# let's check the same plots in lines
+
+```{r}
+
+df_OF_output_AUsW_unblind_spoken1_2_binned%>%
+  subset(filename == "./cut_spoken_angry_day1_p19.csv")%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(bin_frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(bin_frame), AU.coefs, group = AUs))+
+    geom_line()+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+
+df_OF_output_AUsW_unblind_spoken1_2_binned%>%
+  subset(filename == "./cut_spoken_angry_day1_p19.csv")%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(frame),AU.coefs, group = AUs))+
+ geom_line()+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+```
+compare smoothed lines for binned vs unbinned spoken data
+```{r}
+df_OF_output_AUsW_unblind_spoken1_2_binned%>%
+  # subset(filename == "./cut_spoken_angry_day1_p19.csv")%>%
+  subset(subject == 1)%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(bin_frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(bin_frame), AU.coefs, group = AUs))+
+   geom_smooth(se = F)+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+
+df_OF_output_AUsW_unblind_spoken1_2%>%
+  subset(subject == 1)%>%
+    gather(AUs, AU.coefs, -(1:15))%>%
+  group_by(frame, AUs,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subset(drug.placebo == "drug")%>%
+    ggplot(aes(as.numeric(frame),AU.coefs, group = AUs))+
+  geom_smooth(se = F)+
+    # facet_grid(posed.spoken~expression)+
+    theme_classic()+
+  theme(axis.text.y = element_blank())+
+  scale_fill_viridis_c(option = "magma")
+
+
+table(df_OF_output_AUsW_unblind_posed_binned$bin_frame)
+
 ```
