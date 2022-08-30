@@ -1,0 +1,31 @@
+---
+title: "halo_facestudy_spoken_analysis"
+author: "Helio"
+date: '2022-08-30'
+output: html_document
+---
+
+
+
+dependencies: preprocss_halofaces.Rmd
+df_OF_output_AUsW_unblind_posed_binned
+
+related script:analysys_halofacestudy.Rmd
+related data: df_OF_output_AUsW_unblind_posed
+
+
+
+for the actual analyses we want
+1- learn spatiotemporal structure suing NMF
+2 - does drug vs no drug differ in NMF metrics?
+3- can we separate groups based on NMF components using BADIA
+
+spatiotemporal dynamics
+- movement substates (initiation, sustainment, etc)
+- if we use kmean clustering, do we have differences into how many substaes are there
+- or if we use a fixed number of substates, are there significant temporal differences (e.g. duration, recurrence)
+
+preferences
+
+
+
