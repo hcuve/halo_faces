@@ -34,7 +34,7 @@ library(NMF)
 Steps and decision
 initialisation = random seed
 find k
-set iteratiions
+set iterations
 fit final
 
 
@@ -110,8 +110,8 @@ colnames(df_OF_output_AUsW_unblind_posed_binned[,16:32])
 
 # dcast time to columns
 colnames(df_OF_output_AUsW_unblind_posed_binned[,c(1:3,9:10,16:32)])
-# funtion to normalise bmax
 
+# funtion to normalise bmax
 maxnorm<-function(m){
    (m/max(m, na.rm = T))}
 
@@ -489,6 +489,8 @@ chool_talk$ts_hm
 
 ```
 
+
+store NMF components o dataset
 ```{r}
 df_OF_output_AUsW_unblind_posed_binned$NMFtable<- as.data.frame(res_k3@fit@W)
 
@@ -514,6 +516,7 @@ df_OF_output_AUsW_unblind_posed_binned_k2$k2_comp2 = df_OF_output_AUsW_unblind_p
 
 # visualization by emotion
 colnames(df_OF_output_AUsW_unblind_posed_binned)
+
 # bind_rows(db_of_natural1, db_of_morph)
 colnames(df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,16:32,34:36)])
 
@@ -1036,7 +1039,6 @@ df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
 ```
 
 
-```
 
 ```{r}
   df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%

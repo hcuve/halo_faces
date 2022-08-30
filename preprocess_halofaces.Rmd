@@ -436,13 +436,17 @@ df_OF_output_AUsW_unblind_spoken1_2
 colnames(df_OF_output_AUsW_unblind_spoken1_2)
 
 # create bins
+
+df_OF_output_AUsW_unblind_spoken1_2$posed.spoken
 df_OF_output_AUsW_unblind_spoken1_2_binned <-df_OF_output_AUsW_unblind_spoken1_2%>%
-  group_by(filename, subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression )%>%
+  group_by(filename, subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression,posed.spoken )%>%
   mutate(bin_frame = cut(frame, 100, labels = FALSE))%>%
-  group_by(filename,bin_frame,subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression)%>%
+  group_by(filename,bin_frame,subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression,posed.spoken)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE)
  
  
+df_OF_output_AUsW_unblind_spoken1_2_binned
+
 df_OF_output_AUsW_unblind_spoken1_2_binned$filename
 
 # "./cut_spoken_angry_day1_p19.csv"
