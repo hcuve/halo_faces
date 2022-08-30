@@ -207,3 +207,317 @@ library(patchwork)
 #        width = 10, height = 7, dpi = 800)
 
 ```
+plots
+
+```{r}
+df_OF_output_AUsW_unblind_spoken1_binned$drug.placebo
+
+
+# drug vs placebo by expression
+ df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject,drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = drug.placebo))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(expression~component  )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+ 
+ 
+ # average effect of drug
+ 
+ df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max
+         ) %>%
+  
+  group_by( component, bin_frame,subject,drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = drug.placebo))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~component  )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+ 
+ 
+
+```
+
+
+heatmap - confusion maps
+
+
+```{r}
+
+ df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+        group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max
+         ) %>%
+  group_by(expression, component, drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(expression, component, fill = coef))+
+    geom_tile()+
+  facet_grid(~drug.placebo)+
+  theme_classic()+
+    scale_fill_viridis_c(option="magma")
+
+```
+
+
+export for classification
+
+
+```{r}
+
+
+# agg
+
+colnames(df_OF_output_AUsW_unblind_spoken1_binned)
+df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts <- df_OF_output_AUsW_unblind_spoken1_binned%>%
+  ungroup()%>%
+  select(c(3,9:10,17:36))%>%
+  # gather( component, coef, -timebin,-Emotion, -Dataset, -morph, -filename)%>%
+  group_by(subject,drug.placebo, expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+
+
+
+write_csv(df_OF_output_AUsW_unblind_spoken1_binned, 
+          "df_OF_output_AUsW_unblind_spoken1_binned.csv")
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$test_ind<- if_else(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$drug.placebo == "drug", 1, 0)
+
+
+write_csv(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts, 
+          "df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts.csv")
+nmfk4_agg_no_ts
+
+
+```
+
+
+should we do some filtering and smoothing before NMF
+
+```{r}
+colnames(df_OF_output_AUsW_unblind_spoken1_binned)
+
+ma_zoo<- function(x, na.rm = TRUE) {
+    return(zoo::rollmean(x,k = 5, fill = NA)) }
+
+options(scipen = 999)
+
+
+ADD_.1<- function(x, na.rm = TRUE) {
+    return(x+.01) }
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_NOZERO<- df_OF_output_AUsW_unblind_spoken1_binned%>%
+    ungroup()%>%
+  group_by(filename)%>%
+  mutate_at(17:33, ADD_.1)
+  
+
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma<- df_OF_output_AUsW_unblind_spoken1_binned_NOZERO %>%
+  ungroup()%>%
+  group_by(filename)%>%
+  mutate_at(17:33, ma_zoo)
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma<-df_OF_output_AUsW_unblind_spoken1_binned_ma%>%
+    group_by(filename)%>%
+fill(17:33, .direction = "up")%>%
+  fill(17:33, .direction = "down")
+
+  
+
+```
+
+
+moving average before NMF
+
+
+```{r}
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma
+
+colnames(df_OF_output_AUsW_unblind_spoken1_binned_ma[,17:33])
+
+table(is.na( df_OF_output_AUsW_unblind_spoken1_binned_ma[,17:33]))
+
+res_k3_spoken1_ma <- NMF::nmf(df_OF_output_AUsW_unblind_spoken1_binned_ma[,17:33], r = 3, 
+                  nrun = 200, #number of runs to try and update for
+                  seed=123456, #specific seed for reproducibility
+                 .options = list( 'v')) #ver
+
+# ife
+
+
+as.data.frame(res_k3_spoken1_ma@fit@H)%>%
+  mutate(component = 1:n())%>%
+  gather(AU, coef, -component)%>%
+  group_by(component)%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )%>%
+  arrange(AU_code)%>%
+  ggplot(aes(component,AU, fill = coef))+
+  geom_tile()+
+  theme_classic()+
+  # scale_fill_viridis_()
+  scale_fill_viridis_c(option = "inferno")+
+  xlab("K")+
+  p$graphstyle_int+
+guides(fill=guide_colorbar(ticks.colour = NA))
+```
+```{r}
+df_OF_output_AUsW_unblind_spoken1_binned_ma$NMFtable_k3<- as.data.frame(res_k3_spoken1_ma@fit@W)$V1
+
+# store components
+df_OF_output_AUsW_unblind_spoken1_binned_ma$k3_comp1 = as.data.frame(res_k3_spoken1_ma@fit@W)$V1
+df_OF_output_AUsW_unblind_spoken1_binned_ma$k3_comp2 = as.data.frame(res_k3_spoken1_ma@fit@W)$V2
+df_OF_output_AUsW_unblind_spoken1_binned_ma$k3_comp3 = as.data.frame(res_k3_spoken1_ma@fit@W)$V3
+
+
+
+# visualisation based on time
+
+
+# chool_talk$ts_smooth<- 
+
+colnames(df_OF_output_AUsW_unblind_spoken1_binned_ma)
+  
+  df_OF_output_AUsW_unblind_spoken1_binned_ma[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+  
+  
+  # ts by expression
+   df_OF_output_AUsW_unblind_spoken1_binned_ma[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = expression))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~component  )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+
+
+```
+
+
+
+```{r}
+
+
+# drug vs placebo by expression
+ df_OF_output_AUsW_unblind_spoken1_binned_ma[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject,drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = drug.placebo))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(expression~component  )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+ 
+ 
+ # average effect of drug
+ 
+df_OF_output_AUsW_unblind_spoken1_binned_ma[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max
+         ) %>%
+  
+  group_by( component, bin_frame,subject,drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = drug.placebo))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~component  )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+ 
+```
+
+
+
+JASP findings
+- emotion classification is good
+- but drug is not good not even within emotion
+
+
+State-space for spoken stim
+```{r}
+
+
+```
