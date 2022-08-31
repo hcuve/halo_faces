@@ -2025,6 +2025,8 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
 # if speed is abobe the threshold and diff = negative
 # anything else stable state
 
+```
+
 ```{r}
 colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
 install.packages("ggforce")
@@ -2175,7 +2177,7 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
 
 the k means segmentation
 
-```
+
 
 
 ```{r}
@@ -2268,7 +2270,7 @@ ungroup()%>%
   
   
 ```
-```
+
 ```{r}
   
   df_OF_output_AUsW_unblind_posed_binned3_nona %>%
@@ -2505,6 +2507,7 @@ df_OF_output_AUsW_unblind_posed_binned3_nona_clust<- df_OF_output_AUsW_unblind_p
 
   # gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression) %>%
 colnames(df_OF_output_AUsW_unblind_posed_binned3_nona_clust)
+
 df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
       select(c(1,2,3,9,10,34:36, 49,57))%>%
   gather(component, coef,-bin_frame,-manual_clust_sp_disp,-subject,-expression,-drug.placebo,  -filename, -idno )%>%

@@ -520,4 +520,259 @@ State-space for spoken stim
 ```{r}
 
 
+df_OF_output_AUsW_unblind_spoken1_binned_ma
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq_sum
+
+# manual clustering
+
+# compute speeds and displacement
+unique(df_OF_output_AUsW_unblind_spoken1_binned_ma$filename)
+# 304
+
+table(df_OF_output_AUsW_unblind_spoken1_binned_ma$filename)
+df_OF_output_AUsW_unblind_spoken1_binned_ma1<- 
+  
+  df_OF_output_AUsW_unblind_spoken1_binned_ma[,1:36]%>%
+  ungroup()%>%
+  group_by(filename)%>%
+  ungroup()%>%
+# speed calculations
+  mutate(k3_comp1_speed = (abs(lag(k3_comp1) -k3_comp1))/abs((lead(bin_frame)-bin_frame)),
+         k3_comp2_speed = (abs(lag(k3_comp2) -k3_comp2))/abs((lead(bin_frame)-bin_frame)),
+         k3_comp3_speed = (abs(lag(k3_comp3) -k3_comp3))/abs((lead(bin_frame)-bin_frame)),
+         
+      # diff computations
+         k3_comp1_diff = as.numeric(diff(zoo::zoo(k3_comp1), na.pad = TRUE)),
+         k3_comp2_diff =as.numeric(diff(zoo::zoo(k3_comp2), na.pad = TRUE)),
+         k3_comp3_diff =as.numeric(diff(zoo::zoo(k3_comp3), na.pad = TRUE)))%>%
+
+  group_by(filename)%>%
+  mutate(n_flename = n())%>%
+       ungroup()%>%
+  mutate(idno = rep(1:304, each = n_flename))
+         
+        #  # moving averages
+        #  k3_comp1_diff_ma = as.numeric(zoo::rollmean(k3_comp1_diff, k = 5, fill = NA)),
+        #  k3_comp2_diff_ma = as.numeric(zoo::rollmean(k3_comp2_diff, k = 5, fill = NA)),
+        #  k3_comp3_diff_ma = as.numeric(zoo::rollmean(k3_comp3_diff, k = 5, fill = NA)),
+        #    
+        #   k3_comp1_speed_ma = as.numeric(zoo::rollmean(k3_comp1_speed, k = 5, fill = NA)),
+        # k3_comp2_speed_ma = as.numeric(zoo::rollmean(k3_comp2_speed, k = 5, fill = NA)),
+        #  k3_comp3_speed_ma = as.numeric(zoo::rollmean(k3_comp3_speed, k = 5, fill = NA)))%>%
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1$filename
+
+colnames(df_OF_output_AUsW_unblind_spoken1_binned_ma1)
+
+# chool_talk$substate_illustration <-
+df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
+  
+  # compare kmean and manual clustering
+  group_by(filename)%>%
+   # group_by(idno)%>%
+    mutate(sp_avg = (k3_comp1_speed+k3_comp2_speed+k3_comp3_speed)/3)%>%
+   mutate(comp_delta_avg = (k3_comp1_diff +k3_comp2_diff+k3_comp3_diff)/3)%>%
+   group_by(filename)%>%
+  mutate(comp_delta_avg1 = scale(comp_delta_avg))%>%
+  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
+  mutate(manual_clust_sp_disp = 
+           if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                               (1.5*(mad(sp_avg, na.rm = TRUE)))), 
+                   # & 
+                     # comp_delta_avg > (mean(abs(comp_delta_avg), na.rm = TRUE)+(.5*(mad(abs(comp_delta_avg), na.rm = TRUE)))), 
+                   "transition state", "sustain state"))%>%
+  group_by(filename, manual_clust_sp_disp)%>%
+  
+   ungroup()%>%
+   subset(filename  == "./cut_spoken_angry_day1_p19.csv")%>%
+      select(c(1,2,34:46))%>%
+  # select(c(2,52:59, 46:47,38:41,64:66))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-filename) %>%
+  mutate(var_type = if_else(grepl("diff", component ), "3. diff",
+                        if_else(grepl("speed", component ), "2. speed",  
+                                if_else(grepl("sp_avg", component ), "3. avg speed",  
+                                        if_else(grepl("comp_delta_avg", component ), "5. avg diff",  
+                            "1. NMF comp"))))) %>%
+
+  
+  # scale so we dob;t have massivelly different sizes acordss variables
+   group_by(var_type)%>%
+  mutate(coef_z = scale(coef))%>%
+  group_by(component, bin_frame,var_type, manual_clust_sp_disp)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(bin_frame, coef_z, group = component))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(manual_clust_sp_disp)), 
+            alpha = .2)  +
+    geom_line(aes(group = component, linetype = var_type), size = 1)+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+    # ggforce::facet_col(facets = vars(var_type), 
+    #                  scales = "free_y", 
+    #                  space = "free")+
+
+  theme_classic()+
+  facet_grid(var_type~.)+
+
+  # scale_fill_viridis_d(option = "inferno")+
+  theme_classic()+
+  xlab("time bin")+
+  ylab("coef")+
+  p$graphstyle_int+
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        strip.text = element_text(size = 5))+
+    scale_fill_brewer(palette = "Dark2")
+
+```
+
+
+```{r}
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust<-
+df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
+  
+  # compare kmean and manual clustering
+  group_by(filename)%>%
+   # group_by(idno)%>%
+    mutate(sp_avg = (k3_comp1_speed+k3_comp2_speed+k3_comp3_speed)/3)%>%
+   mutate(comp_delta_avg = (k3_comp1_diff +k3_comp2_diff+k3_comp3_diff)/3)%>%
+   group_by(filename)%>%
+  mutate(comp_delta_avg1 = scale(comp_delta_avg))%>%
+  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
+  mutate(manual_clust_sp_disp = 
+           if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                               (1.5*(mad(sp_avg, na.rm = TRUE)))), 
+                   # & 
+                     # comp_delta_avg > (mean(abs(comp_delta_avg), na.rm = TRUE)+(.5*(mad(abs(comp_delta_avg), na.rm = TRUE)))), 
+                   "transition state", "sustain state"))
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust<-
+ df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust%>%
+  ungroup()%>%
+  group_by(filename, expression, subject)%>%
+    # mutate(new = cumsum(manual_clust_sp_disp)) %>%
+  mutate(clust_frame_no = rleid(manual_clust_sp_disp))
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum<- df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust  %>%
+
+group_by(filename,manual_clust_sp_disp)%>%
+  mutate(clust_frame_no_bin = n(),
+         # speed
+         sp_avg_clust_k1 = mean(k3_comp1_speed , na.rm = TRUE),
+         sp_avg_clust_k2 = mean(k3_comp2_speed , na.rm = TRUE),
+         sp_avg_clust_k3 = mean(k3_comp3_speed , na.rm = TRUE),
+         
+          avg_disp_clust_k1 = sum(abs(k3_comp1_diff ), na.rm = TRUE),
+          avg_disp_clust_k2 = sum(abs(k3_comp2_diff ), na.rm = TRUE),
+          avg_disp_clust_k3 = sum(abs(k3_comp3_diff ), na.rm = TRUE),
+         # sp_avg_clust_k2 = mean(k3_comp2_speed , na.rm = TRUE),
+         # sp_avg_clust_k3 = mean(k3_comp3_speed , na.rm = TRUE),
+         
+         
+        peak_sp_avg_clust_k1 = max(k3_comp1_speed , na.rm = TRUE),
+          peak_sp_avg_clust_k2 = max(k3_comp2_speed , na.rm = TRUE),
+          peak_sp_avg_clust_k3 = max(k3_comp3_speed , na.rm = TRUE),
+         
+         RMS_sd_clust_k1 = sqrt(mean(((lead(k3_comp1_speed ) - k3_comp1_speed )^2),na.rm = TRUE)),
+        RMS_sd_clust_k2 = sqrt(mean(((lead(k3_comp2_speed ) - k3_comp2_speed )^2),na.rm = TRUE)),
+        RMS_sd_clust_k3 = sqrt(mean(((lead(k3_comp3_speed ) - k3_comp3_speed )^2),na.rm = TRUE)))%>%
+         
+          # 
+          # 
+          # sp_sd_clust = sd(sp_avg, na.rm = TRUE),
+          # RMS_sd_clust = sqrt(mean(((lead(sp_avg) - sp_avg)^2),na.rm = TRUE)),
+          # RMS_diff_clust = sqrt(mean((comp_delta_avg^2),na.rm = TRUE)))   %>%
+         # )%>%
+group_by(filename, manual_clust_sp_disp, expression, subject, drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm  =TRUE)
+
+
+
+
+# power low
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq)
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
+  # subset(manual_clust_sp_disp == "stable state")%>%
+  
+  ggplot(aes(avg_disp_clust_k1,peak_sp_avg_clust_k1, color = expression))+
+  geom_point(alpha = .5)+
+ 
+  # geom_smooth(aes(group = subject), se = F)+
+  facet_grid(.~manual_clust_sp_disp)+
+  # geom_smooth(method = "lm", formula = y~x,col="blue", se=FALSE)+
+  # geom_smooth(method = "nls", formula = y~A*x^ B, se=FALSE,col="red", 
+  #             method.args =list(start=c(A=0,B=0)))
+  # 
+  
+     # geom_smooth(aes(group = expression), method = "glm", formula = y~x,
+     #                  method.args = list(start=c(A=0,B=0)), size = .2)+
+   # geom_smooth(aes(group = expression), method = "glm", formula = y~x,
+   #                    method.args = list(family = gaussian(link = 'log2'),
+   #                                       start=c(A=0,B=0)), size = .2)+
+  
+ geom_smooth(aes(group = expression), method = "glm", formula = y~log(x+.1),
+                      method.args = list(start=c(A=0,B=0)), size = .2)+
+  theme_classic()+
+  ggpubr::stat_cor()+
+  scale_color_brewer(palette = "Dark2")+
+  # scale_color_viridis_d(option = "inferno")+
+  p$graphstyle_int
+
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
+  ungroup()%>%
+  mutate_if(is.numeric, maxnorm)%>%
+  subset(!is.na(manual_clust_sp_disp))%>%
+  # subset(manual_clust_sp_disp == "transition state")%>%
+  
+  ggplot(aes(avg_disp_clust_k1,peak_sp_avg_clust_k1, color = expression))+
+  geom_point(alpha = .5, size = 1.5)+
+ 
+  # geom_smooth(aes(group = subject), se = F)+
+  facet_grid(.~manual_clust_sp_disp)+
+  # geom_smooth(method = "lm", formula = y~x,col="blue", se=FALSE)+
+  # geom_smooth(method = "nls", formula = y~A*x^ B, se=FALSE,col="red", 
+  #             method.args =list(start=c(A=0,B=0)))
+  # 
+  
+     # geom_smooth(aes(group = expression), method = "glm", formula = y~x,
+     #                  method.args = list(start=c(A=0,B=0)), size = .2)+
+   geom_smooth(aes(group = expression), method = "glm",se = F, formula = y~log(x+.1),
+                      method.args = list(
+                                         start=c(A=0,B=0)))+
+  
+ # geom_smooth(aes(group = expression), method = "glm", formula = y~log(x),
+ #                      method.args = list(start=c(A=0,B=0)), size = .2)+
+  theme_classic()+
+  ggpubr::stat_cor(p.accuracy = .001)+
+  ylab("peak speed k1 - au")+
+   xlab("displacement k1 - au")+
+  scale_color_brewer(palette = "Dark2")+
+    scale_x_continuous(breaks = c(0,.5,1), limits = c(0,1))+
+  # scale_colour_viridis_d()+
+  # ggpubr::stat_conf_ellipse()+
+  p$graphstyle_int+
+    theme(panel.spacing = unit(1, "cm"))
+
+
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum_max_norm<- df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
+  ungroup()%>%
+  mutate_if(is.numeric, maxnorm)%>%
+  subset(!is.na(manual_clust_sp_disp))
+
+write_csv(df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum_max_norm,
+          "df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum_max_norm_statespace.csv")
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum_max_norm
+
+
+write_csv(df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum,
+          "df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_statespace.csv")
 ```
