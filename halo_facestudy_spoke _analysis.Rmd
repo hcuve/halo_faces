@@ -207,6 +207,58 @@ library(patchwork)
 #        width = 10, height = 7, dpi = 800)
 
 ```
+
+combine sooken and posed
+
+```{r}
+spoken_NMF<- df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]
+
+posed_NMF<- 
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]
+
+df_OF_output_AUsW_unblind_spoken1_binned$k3_comp3
+
+posed_NMF$k3_comp1<- posed_NMF$comp1
+posed_NMF$k3_comp2<- posed_NMF$comp3
+posed_NMF$k3_comp3<- posed_NMF$comp2
+
+posed_NMF$comp1<- NULL
+posed_NMF$comp2<- NULL
+
+posed_NMF$comp3<- NULL
+
+posed_NMF$posed_spoken<- "posed"
+spoken_NMF$posed_spoken<- "spoken"
+
+
+bind_rows(posed_NMF, spoken_NMF)%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename,-posed_spoken)%>%
+  subset(expression!= "neutral")%>%
+  
+      group_by(filename,component,subject,expression,posed_spoken)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject,posed_spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(posed_spoken~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+
+posed_spoken_bindrows<- bind_rows(posed_NMF, spoken_NMF)%>%
+  group_by(filename,posed_spoken, expression, drug.placebo,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+
+write_csv(posed_spoken_bindrows, "posed_spoken_bindrows.csv")
+```
+
 plots
 
 ```{r}
@@ -629,6 +681,145 @@ df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
 
 ```
 
+susbatate plots
+
+```{r}
+chool_talk$speed_disp_fucntionk1_spoken<-
+
+
+  df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
+  subset(!is.na(statespace))%>%
+  ungroup()%>%
+  mutate_if(is.numeric, maxnorm)%>%
+  # subset(manual_clust_sp_disp == "transition state")%>%
+  
+  ggplot(aes(avg_disp_clust_k1,peak_sp_avg_clust_k1, color = expression))+
+  geom_point(alpha = .5, size = 1.5)+
+ 
+  # geom_smooth(aes(group = subject), se = F)+
+  facet_grid(.~statespace)+
+  # geom_smooth(method = "lm", formula = y~x,col="blue", se=FALSE)+
+  # geom_smooth(method = "nls", formula = y~A*x^ B, se=FALSE,col="red", 
+  #             method.args =list(start=c(A=0,B=0)))
+  # 
+  
+     # geom_smooth(aes(group = expression), method = "glm", formula = y~x,
+     #                  method.args = list(start=c(A=0,B=0)), size = .2)+
+   geom_smooth(aes(group = expression), method = "glm", se = F, formula = y~log(x+.1),
+                      method.args = list(
+                                         start=c(A=0,B=0)))+
+  
+ # geom_smooth(aes(group = expression), method = "glm", formula = y~log(x),
+ #                      method.args = list(start=c(A=0,B=0)), size = .2)+
+  theme_classic()+
+  ggpubr::stat_cor(p.accuracy = .001)+
+  ylab("peak speed k1 - au")+
+   xlab("displacement k1 - au")+
+  scale_color_brewer(palette = "Dark2")+
+    scale_x_continuous(breaks = c(0,.5,1), limits = c(0,1))+
+  # scale_colour_viridis_d()+
+  # ggpubr::stat_conf_ellipse()+
+  p$graphstyle_int+
+    theme(panel.spacing = unit(1, "cm"))
+
+
+
+chool_talk$speed_disp_fucntionk2 
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum$statespace<- df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum$manual_clust_sp_disp
+
+chool_talk$speed_disp_fucntionk2_spoken<- 
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
+  subset(!is.na(statespace))%>%
+  ungroup()%>%
+  mutate_if(is.numeric, maxnorm)%>%
+  # subset(manual_clust_sp_disp == "transition state")%>%
+  
+  ggplot(aes(avg_disp_clust_k2,peak_sp_avg_clust_k2, color = expression))+
+  geom_point(alpha = .5, size = 1.5)+
+ 
+  # geom_smooth(aes(group = subject), se = F)+
+  facet_grid(.~statespace)+
+  # geom_smooth(method = "lm", formula = y~x,col="blue", se=FALSE)+
+  # geom_smooth(method = "nls", formula = y~A*x^ B, se=FALSE,col="red", 
+  #             method.args =list(start=c(A=0,B=0)))
+  # 
+  
+     # geom_smooth(aes(group = expression), method = "glm", formula = y~x,
+     #                  method.args = list(start=c(A=0,B=0)), size = .2)+
+   geom_smooth(aes(group = expression), method = "glm", se = F,formula = y~log(x+.1),
+                      method.args = list(
+                                         start=c(A=0,B=0)))+
+  
+ # geom_smooth(aes(group = expression), method = "glm", formula = y~log(x),
+ #                      method.args = list(start=c(A=0,B=0)), size = .2)+
+  theme_classic()+
+  ggpubr::stat_cor(p.accuracy = .001)+
+  ylab("peak speed k2 - au")+
+   xlab("displacement k2 - au")+
+  scale_color_brewer(palette = "Dark2")+
+    scale_x_continuous(breaks = c(0,.5,1), limits = c(0,1))+
+  # scale_colour_viridis_d()+
+  # ggpubr::stat_conf_ellipse()+
+  p$graphstyle_int+
+    theme(panel.spacing = unit(1, "cm"))
+
+
+chool_talk$speed_disp_fucntionk3_spoken <- df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
+    subset(!is.na(statespace))%>%
+ungroup()%>%
+  mutate_if(is.numeric, maxnorm)%>%
+  # subset(manual_clust_sp_disp == "transition state")%>%
+  
+  ggplot(aes(avg_disp_clust_k3,peak_sp_avg_clust_k3, color = expression))+
+  geom_point(alpha = .5, size = 1.5)+
+ 
+  # geom_smooth(aes(group = subject), se = F)+
+  facet_grid(.~statespace)+
+  # geom_smooth(method = "lm", formula = y~x,col="blue", se=FALSE)+
+  # geom_smooth(method = "nls", formula = y~A*x^ B, se=FALSE,col="red", 
+  #             method.args =list(start=c(A=0,B=0)))
+  # 
+  
+     # geom_smooth(aes(group = expression), method = "glm", formula = y~x,
+     #                  method.args = list(start=c(A=0,B=0)), size = .2)+
+   geom_smooth(aes(group = expression), method = "glm",se = F, formula = y~log(x+.1),
+                      method.args = list(
+                                         start=c(A=0,B=0)))+
+  
+ # geom_smooth(aes(group = expression), method = "glm", formula = y~log(x),
+ #                      method.args = list(start=c(A=0,B=0)), size = .2)+
+  theme_classic()+
+  ggpubr::stat_cor(p.accuracy = .001)+
+  ylab("peak speed k3 - au")+
+   xlab("displacement k3 - au")+
+  scale_color_brewer(palette = "Dark2")+
+  # scale_colour_viridis_d()+
+  # ggpubr::stat_conf_ellipse()+
+    scale_x_continuous(breaks = c(0,.5,1), limits = c(0,1))+
+  p$graphstyle_int+
+    theme(panel.spacing = unit(1, "cm"))
+
+chool_talk$speed_disp_fucntionk1_spoken
+chool_talk$speed_disp_fucntionk2_spoken
+chool_talk$speed_disp_fucntionk3_spoken
+
+library(patchwork)
+chool_talk$speed_displace_fucn_patch_spoken<- (chool_talk$speed_disp_fucntionk1_spoken +chool_talk$speed_disp_fucntionk2_spoken+chool_talk$speed_disp_fucntionk3_spoken)+
+   plot_layout(guides = "collect") & theme(legend.position = "top")
+
+
+chool_talk$speed_displace_fucn_patch+  scale_x_continuous(breaks = c(0,.5,1), limits = c(0,1))
+ggsave("speed_displace_fucn_patch2_spoken.tiff", chool_talk$speed_displace_fucn_patch_spoken,
+       device = "tiff",
+       width = 18, height = 5, dpi = 100)
+
+
+```
+
+
+
+
 
 ```{r}
 df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust<-
@@ -693,7 +884,7 @@ group_by(filename, manual_clust_sp_disp, expression, subject, drug.placebo)%>%
 
 
 
-# power low
+#  - don't plot
 colnames(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq)
 
 df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
@@ -775,4 +966,226 @@ df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum_max_nor
 
 write_csv(df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum,
           "df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_statespace.csv")
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum_max_norm
+
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$sp_avg
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum$sp_avg
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum$peak_sp_avg_clust_k1
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum$peak_sp_avg_clust_k2
+df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum$peak_sp_avg_clust_k3
+
+
+# posed
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$peak_sp_avg_clust_k1
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$peak_sp_avg_clust_k2
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$peak_sp_avg_clust_k3
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$avg_disp_clust_k1
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$avg_disp_clust_k2
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$avg_disp_clust_k3
+
+posed_substate<-df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq
+# flip to match the NMF flip
+posed_substate$avg_disp_clust_k2<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$avg_disp_clust_k3
+posed_substate$avg_disp_clust_k3<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$avg_disp_clust_k2
+
+
+posed_substate$peak_sp_avg_clust_k2<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$peak_sp_avg_clust_k3
+posed_substate$peak_sp_avg_clust_k3<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq$peak_sp_avg_clust_k2
+
+
+colnames(df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq)
+spoken_substate<- df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum
+
+colnames(spoken_substate)
+spoken_substate_1<- spoken_substate%>%
+  select(cnames_substate_select)
+
+[,c(1,3:5,54:56,60:65,70)]
+
+cnames_substate_select<- colnames(spoken_substate_1)
+posed_substate_1<- posed_substate %>%
+  select(cnames_substate_select)
+
+posed_substate_1$posed_spoken<- "posed"
+
+spoken_substate_1$posed_spoken<- "spoken"
+
+spoken_substate_1$manual_clust_sp_disp<- NULL
+
+
+posed_substate_1$statespace
+spoken_substate_1$statespace<-sub(" .*", "", spoken_substate_1$statespace)
+
+bind_rows(posed_substate_1, spoken_substate_1)%>%
+
+  # df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
+  subset(!is.na(statespace))%>%
+  subset(expression!= "neutral")%>%
+  # subset(statespace != "sustain")%>%
+  ungroup()%>%
+  group_by(posed_spoken)%>%
+  mutate_if(is.numeric, maxnorm)%>%
+  # subset(manual_clust_sp_disp == "transition state")%>%
+  
+  ggplot(aes(avg_disp_clust_k1,peak_sp_avg_clust_k1, color = posed_spoken))+
+  geom_point(alpha = .5, size = 1.5)+
+ 
+  # geom_smooth(aes(group = subject), se = F)+
+  facet_grid(expression~statespace)+
+  # geom_smooth(method = "lm", formula = y~x,col="blue", se=FALSE)+
+  # geom_smooth(method = "nls", formula = y~A*x^ B, se=FALSE,col="red", 
+  #             method.args =list(start=c(A=0,B=0)))
+  # 
+  
+     # geom_smooth(aes(group = expression), method = "glm", formula = y~x,
+     #                  method.args = list(start=c(A=0,B=0)), size = .2)+
+   geom_smooth(method = "glm", se = T, formula = y~log(x+.1),
+                      method.args = list(
+                                         start=c(A=0,B=0)))+
+  
+ # geom_smooth(aes(group = expression), method = "glm", formula = y~log(x),
+ #                      method.args = list(start=c(A=0,B=0)), size = .2)+
+  theme_classic()+
+  ggpubr::stat_cor(p.accuracy = .001)+
+  ylab("peak speed k1 - au")+
+   xlab("displacement k1 - au")+
+  scale_color_brewer(palette = "Dark2")+
+    scale_x_continuous(breaks = c(0,.5,1), limits = c(0,1))+
+  # scale_colour_viridis_d()+
+  # ggpubr::stat_conf_ellipse()+
+  p$graphstyle_int+
+    theme(panel.spacing = unit(1, "cm"))
+
+
+# k2
+
+bind_rows(posed_substate_1, spoken_substate_1)%>%
+
+  # df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
+  subset(!is.na(statespace))%>%
+  subset(expression!= "neutral")%>%
+  # subset(statespace != "sustain")%>%
+  ungroup()%>%
+  group_by(posed_spoken)%>%
+  mutate_if(is.numeric, maxnorm)%>%
+  # subset(manual_clust_sp_disp == "transition state")%>%
+  
+  ggplot(aes(avg_disp_clust_k2,peak_sp_avg_clust_k2, color = posed_spoken))+
+  geom_point(alpha = .5, size = 1.5)+
+ 
+  # geom_smooth(aes(group = subject), se = F)+
+  facet_grid(expression~statespace)+
+  # geom_smooth(method = "lm", formula = y~x,col="blue", se=FALSE)+
+  # geom_smooth(method = "nls", formula = y~A*x^ B, se=FALSE,col="red", 
+  #             method.args =list(start=c(A=0,B=0)))
+  # 
+  
+     # geom_smooth(aes(group = expression), method = "glm", formula = y~x,
+     #                  method.args = list(start=c(A=0,B=0)), size = .2)+
+   geom_smooth(method = "glm", se = T, formula = y~log(x+.1),
+                      method.args = list(
+                                         start=c(A=0,B=0)))+
+  
+ # geom_smooth(aes(group = expression), method = "glm", formula = y~log(x),
+ #                      method.args = list(start=c(A=0,B=0)), size = .2)+
+  theme_classic()+
+  ggpubr::stat_cor(p.accuracy = .001)+
+  ylab("peak speed k3 - au")+
+   xlab("displacement k3 - au")+
+  scale_color_brewer(palette = "Dark2")+
+    scale_x_continuous(breaks = c(0,.5,1), limits = c(0,1))+
+  # scale_colour_viridis_d()+
+  # ggpubr::stat_conf_ellipse()+
+  p$graphstyle_int+
+    theme(panel.spacing = unit(1, "cm"))
+
+# k3
+
+bind_rows(posed_substate_1, spoken_substate_1)%>%
+
+  # df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
+  subset(!is.na(statespace))%>%
+  subset(expression!= "neutral")%>%
+  # subset(statespace != "sustain")%>%
+  ungroup()%>%
+  group_by(posed_spoken)%>%
+  mutate_if(is.numeric, maxnorm)%>%
+  # subset(manual_clust_sp_disp == "transition state")%>%
+  
+  ggplot(aes(avg_disp_clust_k2,peak_sp_avg_clust_k2, color = posed_spoken))+
+  geom_point(alpha = .5, size = 1.5)+
+ 
+  # geom_smooth(aes(group = subject), se = F)+
+  facet_grid(expression~statespace)+
+  # geom_smooth(method = "lm", formula = y~x,col="blue", se=FALSE)+
+  # geom_smooth(method = "nls", formula = y~A*x^ B, se=FALSE,col="red", 
+  #             method.args =list(start=c(A=0,B=0)))
+  # 
+  
+     # geom_smooth(aes(group = expression), method = "glm", formula = y~x,
+     #                  method.args = list(start=c(A=0,B=0)), size = .2)+
+   geom_smooth(method = "glm", se = T, formula = y~log(x+.1),
+                      method.args = list(
+                                         start=c(A=0,B=0)))+
+  
+ # geom_smooth(aes(group = expression), method = "glm", formula = y~log(x),
+ #                      method.args = list(start=c(A=0,B=0)), size = .2)+
+  theme_classic()+
+  ggpubr::stat_cor(p.accuracy = .001)+
+  ylab("peak speed k3 - au")+
+   xlab("displacement k3 - au")+
+  scale_color_brewer(palette = "Dark2")+
+    scale_x_continuous(breaks = c(0,.5,1), limits = c(0,1))+
+  # scale_colour_viridis_d()+
+  # ggpubr::stat_conf_ellipse()+
+  p$graphstyle_int+
+    theme(panel.spacing = unit(1, "cm"))
+
+
+
+
+```
+
+
+```{r}
+
+  
+bind_rows(posed_substate_1, spoken_substate_1)%>%
+  subset(expression!= "neutral")%>%
+    subset(!is.na(statespace))%>%
+  ggplot(aes(expression, clust_frame_no_bin, color = posed_spoken))+
+  geom_jitter(alpha = .1, width = .1)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~statespace)+
+  theme_classic()
+
+
+bind_rows(posed_substate_1, spoken_substate_1)%>%
+  subset(expression!= "neutral")%>%
+    subset(!is.na(statespace))%>%
+  ggplot(aes(expression, sp_avg, color = posed_spoken))+
+  geom_jitter(alpha = .1, width = .1)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~statespace)+
+  theme_classic()
+
+
+bind_rows(posed_substate_1, spoken_substate_1$)%>%
+  subset(expression!= "neutral")%>%
+    subset(!is.na(statespace))%>%
+  ggplot(aes(expression, abs(comp_delta_avg), color = posed_spoken))+
+  geom_jitter(alpha = .1, width = .1)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~statespace)+
+  theme_classic()
+
 ```
