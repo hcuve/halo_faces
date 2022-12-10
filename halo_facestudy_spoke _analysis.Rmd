@@ -256,7 +256,359 @@ posed_spoken_bindrows<- bind_rows(posed_NMF, spoken_NMF)%>%
   group_by(filename,posed_spoken, expression, drug.placebo,subject)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE)
 
+posed_spoken_bindrows_ts<- bind_rows(posed_NMF, spoken_NMF)%>%
+  group_by(filename, bin_frame, posed_spoken, expression, drug.placebo,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+
+
+View(posed_spoken_bindrows_ts)
+
+colnames(posed_spoken_bindrows)
+
 write_csv(posed_spoken_bindrows, "posed_spoken_bindrows.csv")
+write_csv(posed_spoken_bindrows, "posed_spoken_bindrows_ts.csv")
+
+caret::createDataPartition(c(2:9),
+                            2, p = .7, group = "filename")
+posed_spoken_bindrows_ts
+
+library(caTools)
+
+?sample.split
+
+
+posed_spoken_bindrows_ts$trainLogical<-sample.split(posed_spoken_bindrows_ts$k3_comp1, group = posed_spoken_bindrows_ts$filename, SplitRatio = 0.7)
+
+
+
+posed_spoken_bindrows_ts$trainLogical_num<-as.numeric(posed_spoken_bindrows_ts$trainLogical)
+table(posed_spoken_bindrows_ts$trainLogical)/length(posed_spoken_bindrows_ts$trainLogical)
+table(posed_spoken_bindrows_ts$trainLogical_num)/length(posed_spoken_bindrows_ts$trainLogical_num)
+
+
+write_csv(posed_spoken_bindrows_ts, "posed_spoken_bindrows_ts.csv")
+
+
+
+
+```
+
+
+install.packages(sktime)
+
+
+MULTIVARIATE TIMESERIES CLUSTERING
+```{r}
+# Load the caret package
+library(caret)
+
+# Split your data into training and testing sets
+train_ind <- createDataPartition(y, p = 0.7, list = FALSE)
+train <- posed_spoken_bindrows_ts%>%subset(trainLogical_num == 1 & posed_spoken == "posed")
+test <- posed_spoken_bindrows_ts%>%subset(trainLogical_num !=1 & posed_spoken == "posed")
+
+# Specify the model and tuning parameters
+train
+colnames(train)
+
+?caret::train()
+
+caret::getModelInfo()
+model <- train(
+  expression ~ .,
+  data = as.matrix(train[,c(4,7:9)]),
+  method = "rf"
+  # tuneGrid = expand.grid(cost = 10^seq(-3, 3)
+                         # )
+)
+
+
+# Classification with decision tree
+library(party)
+ctre
+tree <- ctree(pattern100~., newdata)
+
+# Classification performance
+tab <- table(Predicted = predict(tree, newdata), Actual = newdata$pattern100)
+sum(diag(tab))/sum(tab)
+
+install.packages(jasp)
+
+
+tree <- ctree(train$expression~., train[,7:9])
+
+# Classification performance
+tab <- table(Predicted = predict(tree, newdata), Actual = newdata$pattern100)
+sum(diag(tab))/sum(tab)
+
+
+# timeseries classification test
+# Install from GitHub using devtools package
+devtools::install_github("fjbaldan/CMFMTS")
+
+library(CMFMTS)
+?CMFMTS::cmfmts
+
+
+
+
+?CMFMTS::cmfmts
+dataset	
+# Data to process (data.frame). Each row contains a time series.
+
+
+train
+# DTW test
+?tidyr::gather()
+
+train_gather<- bind_rows(train, test)
+train_gather<- gather(train_gather[1:9], key = "nm_comp", value = "nmf_comp_value", - c(1:6))
+train_gather
+
+train_gather$timersies_unique <- paste0(train_gather$filename,paste0(train_gather$nm_comp))
+unique(train_gather$timersies_unique)
+
+
+
+
+
+# train_gather_comp1 <- train_gather%>%subset(timersies_unique == "./cut_posed_angry_day1_p10.csvk3_comp1")
+# i need to dcast time ids to rows, because this fucntion needs each row to be a timeseries
+colnames(train_gather_comp1)
+
+train_gather_dcast<- train_gather%>%
+  mutate(bin_frame = paste0("t_", paste0(bin_frame)))%>%
+ data.table::dcast(timersies_unique+filename+subject+expression+drug.placebo+subject+nm_comp~bin_frame, value.var = "nmf_comp_value")
+
+
+
+
+# now derive param,eters for the timeseries
+colnames(train_gather_dcast)
+
+# this extracts features from each timeseries - 41 in this case 
+# see Multivariate times series classification through an interpretable representation
+# Author links open overlay panelFrancisco J.BaldánaJosé M.Beníteza
+# https://www.sciencedirect.com/science/article/pii/S0020025521004825#b0180
+
+
+# we could do somethign similar where we create the features ourselves
+# e.g. displacement, speed, RMSSD, jerk, etc, this gives a smaller set of data compared to 
+
+test_ts <- CMFMTS::cmfmts(dataset = train_gather_dcast[,8:107],
+                na = TRUE)
+
+# note some variables are constant and may need to be excluded for classification
+# e.g lenght, seasonality
+# periods
+
+test_ts$filename<- train_gather_dcast$filename
+test_ts$subject<- train_gather_dcast$subject
+test_ts$expression<- train_gather_dcast$expression
+test_ts$drug.placebo<- train_gather_dcast$drug.placebo
+test_ts$nm_comp<- train_gather_dcast$nm_comp
+test_ts$nm_comp<- train_gather_dcast$nm_comp
+
+# dcast components such that each row only has one timeseries
+test_ts
+nm_comp
+colnames(test_ts)
+
+library(data.table)
+
+
+
+test_ts_dcast<-
+ setDT(test_ts)%>%
+   gather(ts_features, values, -filename,- subject, -expression,-drug.placebo, -nm_comp)%>%
+  mutate(ts_features_k =  paste0(ts_features, nm_comp))%>%
+  # mutate(bin_frame = paste0("t_", paste0(bin_frame)))%>%
+ data.table::dcast(filename + subject+expression+drug.placebo ~ ts_features_k, value.var = "values", sep = "")
+
+
+
+View(test_ts_dcast)
+
+# now test this is a regular model
+
+write_csv(test_ts_dcast,"test_ts_dcast.csv")
+
+scmfts
+
+
+```
+
+since this approach  above works, we could derive temporal parameters that need not be super exhaustive
+but that will capture the main info in the timeseries
+e.g. peak speed, peak discplacement, RMSSD for eitehr speed or displcamenet
+
+```{r}
+posed_spoken_bindrows
+colnames(posed_spoken_bindrows_ts)
+
+range(posed_spoken_bindrows_ts$k3_comp1_abs_diff, na.rm = T)
+options(scipen = 999)
+range(posed_spoken_bindrows_ts$k3_comp1, na.rm = T)
+posed_spoken_bindrows_ts<- posed_spoken_bindrows_ts%>%
+  group_by(filename)%>%
+
+   mutate(k3_comp1_abs_diff = as.numeric(diff(zoo::zoo(k3_comp1), na.pad = TRUE)),
+         k3_comp2_abs_diff= as.numeric(diff(zoo::zoo(k3_comp2), na.pad = TRUE)),
+         k3_comp3_abs_diff=as.numeric(diff(zoo::zoo(k3_comp3), na.pad = TRUE)))%>%
+  
+     mutate(k3_comp1_abs_diff_sum = sum(abs(k3_comp1_abs_diff), na.rm = T),
+         k3_comp2_abs_diff_sum= sum(abs(k3_comp2_abs_diff),na.rm = T),
+         k3_comp3_abs_diff_sum=sum(abs(k3_comp3_abs_diff),na.rm = T))%>%
+           
+          # speed calculations
+  mutate(k3_comp1_speed = (abs(lag(k3_comp1) -k3_comp1))/(abs(lead(bin_frame)-bin_frame)),
+         k3_comp2_speed = (abs(lag(k3_comp2) -k3_comp2))/(abs(lead(bin_frame)-bin_frame)),
+         k3_comp3_speed = (abs(lag(k3_comp3) -k3_comp3))/(abs(lead(bin_frame)-bin_frame)))%>%
+         
+        mutate(k3_comp1_speed_sum = sum(k3_comp1_speed, na.rm = T),
+         k3_comp2_speed_sum = sum(k3_comp2_speed, na.rm = T),
+         k3_comp3_speed_sum = sum(k3_comp3_speed, na.rm = T))%>%
+    mutate(
+        RMSSD_speed_k1 = sqrt(mean(((lead(k3_comp1_speed ) - k3_comp1_speed )^2),na.rm = TRUE)),
+        RMSSD_speed_k2 = sqrt(mean(((lead(k3_comp2_speed ) - k3_comp2_speed )^2),na.rm = TRUE)),
+        RMSSD_speed_k3 = sqrt(mean(((lead(k3_comp3_speed ) - k3_comp3_speed )^2),na.rm = TRUE)))%>%
+   mutate(
+        RMSSD_disp_k1 = sqrt(mean(((lead(k3_comp1_abs_diff ) - k3_comp1_abs_diff )^2),na.rm = TRUE)),
+        RMSSD_disp_k2 = sqrt(mean(((lead(k3_comp2_abs_diff ) - k3_comp2_abs_diff )^2),na.rm = TRUE)),
+        RMSSD_disp_k3 = sqrt(mean(((lead(k3_comp3_abs_diff ) - k3_comp3_abs_diff )^2),na.rm = TRUE)))
+
+
+unique(posed_spoken_bindrows_ts$filename)
+
+posed_spoken_bindrows_ts$k3_comp1_abs_diff_sum
+posed_spoken_bindrows_ts$k3_comp1_abs_diff
+
+posed_spoken_bindrows_ts$k3_comp1_speed
+posed_spoken_bindrows_ts$k3_comp1_speed_sum
+posed_spoken_bindrows_ts$RMSSD_speed_k1
+posed_spoken_bindrows_ts$RMSSD_disp_k1
+
+posed_spoken_bindrows_ts%>%
+  subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  ggplot(aes(bin_frame, k3_comp1_abs_diff))+
+  geom_line()+
+  geom_line(aes(y = k3_comp1_abs_diff_sum), color = "red")+
+  geom_line(aes(y = k3_comp1_speed), color = "blue")+
+  geom_line(aes(y = k3_comp1_speed_sum), color = "green")+
+  geom_line(aes(y = RMSSD_speed_k1), linetype = "dashed")+
+    geom_line(aes(y = RMSSD_disp_k1), linetype = "dotted")
+
+
+posed_spoken_bindrows_ts%>%
+  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  ggplot(aes(RMSSD_speed_k3, RMSSD_disp_k3))+
+  geom_point()
+  geom_line()+
+  geom_line(aes(y = k3_comp1_abs_diff_sum), color = "red")+
+  geom_line(aes(y = k3_comp1_speed), color = "blue")+
+  geom_line(aes(y = k3_comp1_speed_sum), color = "green")+
+  geom_line(aes(y = RMSSD_speed_k1), linetype = "dashed")+
+    geom_line(aes(y = RMSSD_disp_k1), linetype = "dotted")
+  
+  colnames(posed_spoken_bindrows_ts)
+ posed_spoken_bindrows_ts_agg<- posed_spoken_bindrows_ts%>%
+    group_by(filename, posed_spoken, expression, drug.placebo, subject)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+  
+ # aggregated wirth kiematic features
+ 
+ colnames(posed_spoken_bindrows_ts_agg)
+ 
+pcatest<- prcomp(posed_spoken_bindrows_ts_agg[,c(14:16,20:28)])$x[,1:2]
+posed_spoken_bindrows_ts_agg$PC1<- pcatest[,1]
+posed_spoken_bindrows_ts_agg$PC2<- pcatest[,2]
+pcatest$x[,1:2]
+ 
+  write_csv(posed_spoken_bindrows_ts_agg, "posed_spoken_bindrows_ts_agg.csv")
+  
+  # i gues we can also include trend, non linearity
+
+```
+
+
+install.packages("dtw")
+
+library(dtw) 
+demo(dtw)
+?dtw 
+plot.dtw
+
+
+?dtw::dtw()
+colnames(df_OF_output_AUsW_unblind_spoken1_2)
+
+
+df_OF_output_AUsW_unblind_spoken1_2[,c(1,6,14,16:18)]
+test_dtw<- df_OF_output_AUsW_unblind_spoken1_2[,c(1,6,14,16:18)]
+unique(test_dtw$filename)
+
+subset_test_dtw <- test_dtw%>%subset(filename == "./cut_spoken_angry_day1_p1.csv")
+subset_test_dtw2 <- test_dtw%>%subset(filename == "./cut_spoken_happy_day2_p29.csv")
+
+alignment_test <-
+  dtw(x = subset_test_dtw[,4:6],y = subset_test_dtw2[,4:6],
+      keep=TRUE,
+      step=asymmetric,
+      open.end=TRUE,open.begin=TRUE)
+
+alignment_test
+
+plot(alignment_test$index1,alignment_test$index2,main="Warping function");
+
+alignment_test$query
+alignment_test$reference
+
+alignment_test$index1
+alignment_test$index2
+
+alignment_test$index1
+plot(alignmentOBE,type="two",off=1);
+alignment_test$costMatrix
+alignment_test$directionMatrix
+alignment_test$stepPattern
+
+
+alignment_test$localCostMatrix
+dtw::dtwPlot(subset_test_dtw2[,4:6])
+lines(query[alignment_test$index1]~alignment_test$index2,col="blue")
+
+
+wq<-warp(alignment_test,index.reference=FALSE)
+wt<-warp(alignment_test,index.reference=TRUE);
+
+old.par <- par(no.readonly = TRUE);
+par(mfrow=c(2,1));
+
+plot(subset_test_dtw2$AU01_r_Inner_brow_raiser,main="Warping query")
+  lines(subset_test_dtw[wq],col="blue")
+
+plot(subset_test_dtw,type="l",col="blue",
+  main="Warping reference")
+  points(subset_test_dtw2[wt])
+
+par(old.par);
+
+
+##############
+##
+## Asymmetric step makes it "natural" to warp
+## the reference, because every query index has
+## exactly one image (q->t is a function)
+##
+
+alignment<- dtw(query,reference,step=asymmetric)
+wt<-warp(alignment,index.reference=TRUE);
+
+plot(query,type="l",col="blue",
+  main="Warping reference, asymmetric step");
+  points(reference[wt]);
+
+
 ```
 
 plots
@@ -679,12 +1031,138 @@ df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
         strip.text = element_text(size = 5))+
     scale_fill_brewer(palette = "Dark2")
 
+
+
+
+
+
+```
+
+
+```{r}
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
+  
+  # compare kmean and manual clustering
+  group_by(filename)%>%
+   # group_by(idno)%>%
+    mutate(sp_avg = (k3_comp1_speed+k3_comp2_speed+k3_comp3_speed)/3)%>%
+   mutate(comp_delta_avg = (k3_comp1_diff +k3_comp2_diff+k3_comp3_diff)/3)%>%
+   group_by(filename)%>%
+  mutate(comp_delta_avg1 = scale(comp_delta_avg))%>%
+  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
+  mutate(manual_clust_sp_disp = 
+           if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                               (1.5*(mad(sp_avg, na.rm = TRUE)))), 
+                   # & 
+                     # comp_delta_avg > (mean(abs(comp_delta_avg), na.rm = TRUE)+(.5*(mad(abs(comp_delta_avg), na.rm = TRUE)))), 
+                   "transition state", "sustain state"))%>%
+  group_by(filename, manual_clust_sp_disp)%>%
+  
+   ungroup()%>%
+   # subset(filename  == "./cut_spoken_angry_day1_p19.csv")%>%
+      select(c(1,2,34:46))%>%
+  # select(c(2,52:59, 46:47,38:41,64:66))%>%
+  gather(component, coef,-bin_frame,-manual_clust_sp_disp,-filename) %>%
+  mutate(var_type = if_else(grepl("diff", component ), "3. diff",
+                        if_else(grepl("speed", component ), "2. speed",  
+                                if_else(grepl("sp_avg", component ), "3. avg speed",  
+                                        if_else(grepl("comp_delta_avg", component ), "5. avg diff",  
+                            "1. NMF comp"))))) %>%
+
+  
+  # scale so we dob;t have massivelly different sizes acordss variables
+   group_by(var_type,filename)%>%
+  mutate(coef_z = scale(coef))%>%
+  group_by(filename,component, bin_frame,var_type, manual_clust_sp_disp)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(bin_frame, filename, fill = coef_z))+
+
+  # geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(manual_clust_sp_disp)), 
+            # alpha = .2)  +
+    # geom_line(aes(group = component, linetype = var_type), size = 1)+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+    # ggforce::facet_col(facets = vars(var_type), 
+    #                  scales = "free_y", 
+    #                  space = "free")+
+
+  theme_classic()
+  # facet_grid(var_type~.)+
+
+  # scale_fill_viridis_d(option = "inferno")+
+  theme_classic()+
+  xlab("time bin")+
+  ylab("coef")+
+  p$graphstyle_int+
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        strip.text = element_text(size = 5))+
+    scale_fill_brewer(palette = "Dark2")
+
+
+
+
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
+  
+  group_by(filename)%>%
+   # group_by(idno)%>%
+    mutate(sp_avg = (k3_comp1_speed+k3_comp2_speed+k3_comp3_speed)/3)%>%
+   mutate(comp_delta_avg = (k3_comp1_diff +k3_comp2_diff+k3_comp3_diff)/3)%>%
+   group_by(filename)%>%
+  mutate(comp_delta_avg1 = scale(comp_delta_avg))%>%
+  # mutate(df, IVMean = rowMeans(select(df, starts_with("IV")), na.rm = TRUE))
+  mutate(manual_clust_sp_disp = 
+           if_else(sp_avg > (mean(sp_avg, na.rm = TRUE)+ 
+                               (1.5*(mad(sp_avg, na.rm = TRUE)))), 
+                   # & 
+                     # comp_delta_avg > (mean(abs(comp_delta_avg), na.rm = TRUE)+(.5*(mad(abs(comp_delta_avg), na.rm = TRUE)))), 
+                   "transition state", "sustain state"))%>%
+  
+  
+   ungroup()%>%
+   # subset(idno  == 10)%>%
+      # select(c(2, 9,10, 34:36, 49, 57))%>%
+      # select(c(1,2, 9, 43:49, 50:53, 34:36))%>%
+  # select(c(2,52:59, 46:47,38:41,64:66))%>%
+  # gather(component, coef,-bin_frame,-manual_clust_sp_disp,-idno,-drug.placebo,-expression) %>%
+      # gather(component, coef,-bin_frame,-cluster_ordered,-filename,-drug.placebo) %>%
+  group_by(filename, bin_frame,manual_clust_sp_disp, drug.placebo,expression)%>%
+  
+  # summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+ ggplot(aes(as.numeric(bin_frame), as.factor(filename)))+
+            geom_tile(aes(fill = factor(manual_clust_sp_disp)))+
+
+ # geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(manual_clust_sp_disp)), 
+ #            alpha = .9)  +
+    # geom_line(aes(group = component))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()+
+  scale_color_brewer(palette = "dark2")+
+  # facet_grid(drug.placebo~expression)+
+    # scale_fill_viridis_d(option = "inferno")+
+  
+  p$graphstyle_int+
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        strip.text = element_text(size = 5))+
+    scale_fill_brewer(palette = "Dark2")+
+  xlab("time bin")+
+  ylab("expression")
+
+  
+
 ```
 
 susbatate plots
 
 ```{r}
-chool_talk$speed_disp_fucntionk1_spoken<-
+chool_talk$speed_disp_fucntionk1_spoken <-
 
 
   df_OF_output_AUsW_unblind_spoken1_binned_ma1_nona_clust_agg_main_seq_sum%>%
@@ -1187,5 +1665,14 @@ bind_rows(posed_substate_1, spoken_substate_1$)%>%
   stat_summary(geom = "pointrange")+
   facet_grid(~statespace)+
   theme_classic()
+
+```
+
+
+
+
+```{r}
+
+posed_spoken_bindrows
 
 ```
