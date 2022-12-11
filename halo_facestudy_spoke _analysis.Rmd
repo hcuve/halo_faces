@@ -433,14 +433,32 @@ colnames(train_gather_dcast[,8:107])
 test_ts <- CMFMTS::cmfmts(dataset = train_gather_dcast[,8:107],
                 na = TRUE)
 
+View(test_ts)
 colnames(train_gather_dcast_maxnorm_dcast)
 
 library(CMFMTS)
+
+# now derive time-series features for the normed timeseries
 mts_maxnorm<-  CMFMTS::cmfmts(dataset = train_gather_dcast_maxnorm_dcast[,8:107],
                 na = TRUE)
 
-train_gather_dcast_maxnorm_dcast
+View(test_ts)
 
+View(mts_maxnorm)
+
+cor(test_ts,mts_maxnorm, use="complete.obs")
+
+cor(test_ts$lempel_ziv,mts_maxnorm$lempel_ziv, use="complete.obs")
+
+cor(test_ts$aproximation_entropy, test_ts$sample_entropy, use="complete.obs")
+cor(mts_maxnorm$aproximation_entropy, mts_maxnorm$sample_entropy, use="complete.obs")
+
+
+
+```
+
+View(train_gather_dcast_maxnorm_dcast)
+```{r}
 # note some variables are constant and may need to be excluded for classification
 # e.g lenght, seasonality
 # periods
@@ -451,6 +469,17 @@ test_ts$expression<- train_gather_dcast$expression
 test_ts$drug.placebo<- train_gather_dcast$drug.placebo
 test_ts$nm_comp<- train_gather_dcast$nm_comp
 test_ts$nm_comp<- train_gather_dcast$nm_comp
+
+# 
+mts_maxnorm$filename<- train_gather_dcast_maxnorm_dcast$filename
+mts_maxnorm$subject<- train_gather_dcast_maxnorm_dcast$subject
+mts_maxnorm$expression<- train_gather_dcast_maxnorm_dcast$expression
+mts_maxnorm$drug.placebo<- train_gather_dcast_maxnorm_dcast$drug.placebo
+mts_maxnorm$nm_comp<- train_gather_dcast_maxnorm_dcast$nm_comp
+mts_maxnorm$nm_comp<- train_gather_dcast_maxnorm_dcast$nm_comp
+
+
+mts_maxnorm
 
 # dcast components such that each row only has one timeseries
 test_ts
@@ -469,13 +498,21 @@ test_ts_dcast<-
  data.table::dcast(filename + subject+expression+drug.placebo ~ ts_features_k, value.var = "values", sep = "")
 
 
+mts_maxnorm_dcast<-
+ setDT(test_ts)%>%
+   gather(ts_features, values, -filename,- subject, -expression,-drug.placebo, -nm_comp)%>%
+  mutate(ts_features_k =  paste0(ts_features, nm_comp))%>%
+  # mutate(bin_frame = paste0("t_", paste0(bin_frame)))%>%
+ data.table::dcast(filename + subject+expression+drug.placebo ~ ts_features_k, value.var = "values", sep = "")
+
 
 View(test_ts_dcast)
 
 # now test this is a regular model
 
 write_csv(test_ts_dcast,"test_ts_dcast.csv")
-
+write_csv(mts_maxnorm_dcast,"mts_maxnorm_dcast.csv")
+# resukts are veru simialr with both
 scmfts
 
 
@@ -560,14 +597,14 @@ posed_spoken_bindrows_ts%>%
   
  # aggregated wirth kiematic features
  
-
+```
 
 pcatest
 colnames(test_ts_dcast)
 test_ts_dcast
 
 
-
+```{r}
 # delete columns with constant variance
 
 # Identify the numerical columns
@@ -590,16 +627,10 @@ zero_sd_cols <- names(which(sd_values == 0))
 test_ts_dcast_no0Sd <- test_ts_dcast%>%select(-zero_sd_cols)
 View(test_ts_dcast_no0Sd)
 
+mts_maxnorm_dcast_no0Sd <- mts_maxnorm_dcast%>%select(-zero_sd_cols)
+
 
 # run the PCA
-test_ts_dcast_no0Sd
- colnames(test_ts_dcast_no0Sd)
- 
-
-
-
-# where is the infinitiy coming from
-
 
 # Identify the infinite and missing values
 inf_values <- is.infinite(as.data.frame(test_ts_dcast_no0Sd$))
@@ -612,45 +643,101 @@ table(na_values)
 test_ts_dcast_no0Sd<- test_ts_dcast_no0Sd %>%
   mutate_if(is.numeric,funs(ifelse(is.na(.), mean(., na.rm = TRUE), .)))
 
-na_values <- is.na(test_ts_dcast_no0Sd)
-table(na_values)
+mts_maxnorm_dcast_no0Sd<- mts_maxnorm_dcast_no0Sd %>%
+  mutate_if(is.numeric,funs(ifelse(is.na(.), mean(., na.rm = TRUE), .)))
 
 
- 
+# na_values <- is.na(test_ts_dcast_no0Sd)
+# table(na_values)
+
+
+ colnames(test_ts_dcast_no0Sd)
 pca_ts<- prcomp(as.data.frame(test_ts_dcast_no0Sd[,c(5:118)]))
+?prcomp
+pca_mts_maxnorm<- prcomp(as.data.frame(mts_maxnorm_dcast_no0Sd[,c(5:118)], rank. = 10))
 
-rotatest<-promax(pca_ts$rotation)
+# drop columsn with loading below .5 in the first 9 or 10 dimensions
 
+# rotatest<-promax(pca_ts$rotation)
+range(as.data.frame(pca_mts_maxnorm$rotation)$PC1)
 
-rpt_load<- rotatest$loadings[,1:3]
+as.data.frame(pca_mts_maxnorm$rotation)[,1:3] %>%
+  subset((abs(PC1) +abs(PC2)+abs(PC3))  >.5)
+
+range(pca_mts_maxnorm$rotation[,1])
+rotatest$loadings[,1:3]
 
 rpt_rotma<- rotatest$rotmat[,1:3]
 install.packages("psych")
 library(psych)
 
 ?principal
-princtewst <-psych::principal(test_ts_dcast_no0Sd[,c(5:118)],3,rotate="promax", scores = TRUE)
 
-summary(princtewst)
-
-princtewst$scores
-
-load_test<- (as.matrix(princtewst$loadings))
-
-test_ts_dcast_no0Sd$PC1<- 
-as.matrix(princtewst$scores)[,1]
-test_ts_dcast_no0Sd$PC2<- 
-as.matrix(princtewst$scores)[,2]
-
-test_ts_dcast_no0Sd$PC3<- 
-as.matrix(princtewst$scores)[,3]
+?psych::principal
+PCA_maxnormpsych <-psych::principal(mts_maxnorm_dcast_no0Sd[,c(5:118)],3, scores = TRUE)
 
 
-write_csv(test_ts_dcast_no0Sd, "test_ts_dcast_no0Sd_tsfeturesPCA.csv")
+mts_maxnorm_dcast_no0Sd
+
+library(readxl)
+toremovePCAmaxnorm <- read_excel("toremovePCAmaxnorm.xlsx")
+View(toremovePCAmaxnorm)
+
+mts_maxnorm_dcast_no0Sd_removed<- mts_maxnorm_dcast_no0Sd%>%
+select(-c(toremovePCAmaxnorm$remove))
+
+
+mts_maxnorm_dcast_no0Sd_removed
+colnames(mts_maxnorm_dcast_no0Sd_removed)
+
+PCA_maxnormpsych$loadings
+mts_maxnorm_dcast_no0Sd_removed
+
+write_csv(mts_maxnorm_dcast_no0Sd_removed, "mts_maxnorm_dcast_no0Sd_removed.csv")
+
+mts_maxnorm_dcast_no0Sd_removed$time_kl_shiftk3_comp1<- NULL
+mts_maxnorm_dcast_no0Sd_removed$time_kl_shiftk3_comp2<- NULL
+mts_maxnorm_dcast_no0Sd_removed$time_kl_shiftk3_comp3<- NULL
+
+colnames(mts_maxnorm_dcast_no0Sd_removed)
+# mts_maxnorm_dcast_no0Sd_removed_SCALE<-scale(mts_maxnorm_dcast_no0Sd_removed[,c(1:64)])
+
+colnames(mts_maxnorm_dcast_no0Sd_removed_SCALE)
+PCA_maxnormpsych <-psych::principal(mts_maxnorm_dcast_no0Sd_removed_SCALE[,c(1:64)],3, scores = TRUE)
+
+PCA_maxnormpsych
+
+mts_maxnorm_dcast_no0Sd_removed_SCALE2<- bind_cols(mts_maxnorm_dcast_no0Sd_removed[,1:4],mts_maxnorm_dcast_no0Sd_removed_SCALE)
+  
   
 
-psych::fa.sort(princtewst)
+  
+  PCA_maxnormpsych$scores
+  
+  
+  
+  
 
+```
+
+store pc scores
+```{r}
+
+mts_maxnorm_dcast_no0Sd_removed_SCALE2$PC1<-   PCA_maxnormpsych$scores[,1]
+mts_maxnorm_dcast_no0Sd_removed_SCALE2$PC2<-   PCA_maxnormpsych$scores[,2]
+mts_maxnorm_dcast_no0Sd_removed_SCALE2$PC3<-   PCA_maxnormpsych$scores[,3]
+
+  
+  write_csv(mts_maxnorm_dcast_no0Sd_removed_SCALE2, "mts_maxnorm_dcast_no0Sd_removed_SCALE2.csv")
+  
+
+# test_ts_dcast_no0Sd$PC1<- 
+# as.matrix(princtewst$scores)[,1]
+# test_ts_dcast_no0Sd$PC2<- 
+# as.matrix(princtewst$scores)[,2]
+# 
+# test_ts_dcast_no0Sd$PC3<- 
+# as.matrix(princtewst$scores)[,3]
 
 
 # Load the Rtsne and ggplot2 packages
@@ -660,73 +747,77 @@ library(ggplot2)
 # Load the dataset
 
 # Calculate the low-dimensional representation of the data using t-SNE
-colnames(test_ts_dcast_no0Sd)
+colnames(mts_maxnorm_dcast_no0Sd_removed_SCALE2)
 
 set.seed(44)
 
-table(test_ts_dcast_no0Sd$expression)
-tsne_results <- Rtsne(test_ts_dcast_no0Sd[,119:121], PCA = FALSE,
+table(mts_maxnorm_dcast_no0Sd_removed_SCALE2$expression)
+
+tsne_results <- Rtsne(mts_maxnorm_dcast_no0Sd_removed_SCALE2[,69:71], PCA = FALSE,
                       perplexity=30,theta=0.0)
 
 # Create a t-SNE plot using ggplot2
-
-?Rtsne
 
 ggplot(as.data.frame(tsne_results$Y), aes(V1, V2)) +
   geom_point(aes(color = test_ts_dcast_no0Sd$expression), size = 1.5)+
   theme(legend.position = "none")
 
+```
 
+
+
+```{r}
 # tsne with all the variables
 ?Rtsne
-tsne_results2 <- Rtsne(test_ts_dcast_no0Sd[,5:120], PCA = FALSE)
+colnames(mts_maxnorm_dcast_no0Sd_removed_SCALE2)
+tsne_results2 <- Rtsne(mts_maxnorm_dcast_no0Sd_removed_SCALE2[,5:68], PCA = FALSE)
 
 ggplot(as.data.frame(tsne_results2$Y), aes(V1, V2)) +
   geom_point(aes(color = test_ts_dcast_no0Sd$expression), size = 1.5)+
   theme(legend.position = "none")
 
+```
 
 
+```{r}
 # Load the Rtsne and plotly packages
-library(Rtsne)
+# library(Rtsne)
 install.packages("plotly")
 
 library(plotly)
 
-plotly::plot_ly()
+# plotly::plot_ly()
 
 # Create a t-SNE plot using plotly
-?plot_ly
 
 ?plot_ly
+
+# tsne_results$Y
 plot_ly(as.data.frame(tsne_results$Y), x = ~V1, y = ~V2, type = "scatter", mode = "markers",
         name = test_ts_dcast_no0Sd$expression, colors = c('#636EFA','#EF553B','#00CC96'))
-  scale_color_brewer(palette = "Dark2")
+  # scale_color_brewer(palette = "Dark2")
+  
+```
   
   
   
-unique(test_ts_dcast_no0Sd$filename)
-
-?sample
 
 
 library(caTools)
+```{r}
 # Train Test Split on both Iris and Mtcars
-train_test_split <- function(df) {
-  set.seed(42)
-  sample = sample.split(df, SplitRatio = 0.8#install.packages("caTools")
-  train = subset(df, sample == TRUE)
-  test  = subset(df, sample == FALSE)
-  return (list(train, test))
-}
+# train_test_split <- function(df) {
+#   set.seed(42)
+#   sample = sample.split(df, SplitRatio = 0.8#install.packages("caTools")
+#   train = subset(df, sample == TRUE)
+#   test  = subset(df, sample == FALSE)
+#   return (list(train, test))
+# }
 
 library(caTools)
 # Unwrapping mtcars
 
-?caret::train()
 
- r.forest$results
- 
 rf_result<- data.frame()
 acc_test<- data.frame()
 
@@ -737,21 +828,118 @@ install.packages("creditmodel")
 library(creditmodel)
 
 
+# ranfomforest
 
-for (i in 1:20) {
-    set.seed(i)
 
-  permuted_labels<- test_ts_dcast_no0Sd%>%
-    mutate(expression_shuffle = sample(expression))
 
-  permuted_labels$expression_shuffle
-  #
-  # colnames(train_set)
-  set.seed(1)
-  train_set <- train_test_split(permuted_labels$expression)[[1]]
+train_set <- train_test_split(permuted_labels)[[1]]
   test_set <- train_test_split(permuted_labels)[[2]]
-  test_set <- test_set%>%
-    mutate(expression_shuffle = expression)
+  
+  # fit therandom forest here
+  # set.seed(1234)
+  
+  # Unshuffled model
+  # train model
+  set.seed(1)
+
+  
+    set.seed(1)
+  trainIndex <- createDataPartition(mts_maxnorm_dcast_no0Sd_removed_SCALE2$expression, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+  trainIndex
+  train_set <- mts_maxnorm_dcast_no0Sd_removed_SCALE2[ trainIndex,]
+  test_set  <- mts_maxnorm_dcast_no0Sd_removed_SCALE2[-trainIndex,]
+  
+  # check
+  table(train_set$expression)
+  table(test_set$expression)
+?train
+  
+  
+  # fit the model
+  # ?trainControl
+  # 
+  # fitControl <- trainControl(## 10-fold CV
+  #                          method = "repeatedcv",
+  #                          number = 10,
+  #                          ## repeated ten times
+  #                          repeats = 100,
+  #                          p = .80)
+  
+  # rfc = RandomForestClassifier(random_state=1)
+  
+  r.forest_mts <- train(expression ~ PC1 + PC2 + PC3, 
+                data = train_set, 
+                method = "rf",
+                ntree = 30)
+  
+  r.forest_tr
+  
+r.forest_tr$finalModel 
+
+  test_set$prediction <- predict(r.forest_mts, test_set)
+  
+
+r.forest_mts$results
+
+r.forest_mts$trainingData
+r.forest_mts$bestTune
+r.forest_mts$resample
+
+r.forest_mts$finalModel
+# obb
+# 100-23.5 = 76.5 #matches jasp
+
+
+# 
+# r.forest_tr$metric
+# r.forest_tr$finalModel
+# 
+# r.forest_tr$finalModel$err.rate
+# 
+# r.forest_tr$trainingData
+  
+Acc_unshuff<- sum(test_set$prediction == test_set$expression)/length(test_set$expression)
+# Acc_unshuff = 0.8888889 = approximate to what we have
+# now we get exactly the same
+
+
+
+
+```
+
+
+<!-- Get a p value -->
+# now results are much closer
+# can i have more trees than rows random forest?
+
+
+```{r}
+boundary(r.forest_tr, x, class = "Species", main = "Random Forest")
+
+test_set_tem
+i = 1
+
+rf_results_df<- data.frame()
+rf_finalmodel<- data.frame()
+rf_confusion<- data.frame()
+acc_test<-data.frame()
+
+for (i in 1:1000) {
+    set.seed(i)
+message("Star Loop - ", i)
+  permuted_labels<- mts_maxnorm_dcast_no0Sd_removed_SCALE2%>%
+    mutate(expression_shuffle = sample(expression))
+  
+  
+    trainIndex_temp <- createDataPartition(permuted_labels$expression, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+  # trainIndex
+  train_set_temp <- permuted_labels[ trainIndex_temp,]
+  test_set_temp  <- permuted_labels[-trainIndex_temp,]
+
   
   # # lets see if we don't shuffle tst
   #   train_set <- train_test_split(test_ts_dcast_no0Sd)[[1]]%>%
@@ -768,118 +956,27 @@ for (i in 1:20) {
   # train model
   
   
+message("Fit RF - ", i)
+  r.forest_temp <- train(expression_shuffle ~ PC1 + PC2 + PC3, 
+                data = train_set_temp, 
+                method = "rf",
+                ntree = 30)
+  
+  rf_results_df<- bind_rows(rf_results_df,  r.forest_temp$results)
+  rf_finalmodel<- bind_rows(rf_finalmodel,  as.data.frame(r.forest_temp$finalModel$err.rate))
+  rf_confusion<- bind_rows(rf_confusion,  as.data.frame(r.forest_temp$finalModel$confusion))
 
-  r.forest <- train(expression_shuffle ~ PC1 + PC2 + PC3, 
-                data = train_set, 
-                method = "rf")
-  rf_result<- bind_rows(rf_result,  r.forest$results)
+  # test set
+  test_set_temp$prediction <- predict(r.forest_temp, test_set_temp)
   
-  
-  
-  # Random Forest
-  # do we we ned to shuffle the test as well?
-test_set$prediction<- predict(r.forest, test_set)
+acc_temp <- sum(test_set_temp$prediction == test_set_temp$expression_shuffle)/length(test_set_temp$expression_shuffle)
 
-# acc
-acc_testp <- sum(test_set$prediction == test_set$expression_shuffle)/length(test_set$expression_shuffle)
+acc_test<- bind_rows(acc_test,as.data.frame(acc_temp))
+message("Done Loop - ", i)
 
-acc_test<- bind_rows(acc_test,as.data.frame(acc_testp))
-
-# test_set$expression_shuffle
-  
-  # ?createFolds
-# cv_folds <- createFolds(test_ts_dcast_no0Sd$expression, k = 5, returnTrain = TRUE)
-  
 }
 
 
-acc_test[101:120,]
-# fit one model properly
-
-
-acc_test[101:120,]$
-
-train_set <- train_test_split(permuted_labels)[[1]]
-  test_set <- train_test_split(permuted_labels)[[2]]
-  
-  # fit therandom forest here
-  # set.seed(1234)
-  
-  # Unshuffled model
-  # train model
-  set.seed(1)
-
-  
-    set.seed(1)
-  trainIndex <- createDataPartition(test_ts_dcast_no0Sd$expression, p = .8, 
-                                  list = FALSE, 
-                                  times = 1)
-  trainIndex
-  train_set <- test_ts_dcast_no0Sd[ trainIndex,]
-  test_set  <- test_ts_dcast_no0Sd[-trainIndex,]
-  
-  
-  table(train_set$expression)
-  
-  table(test_set$expression)
-?train
-  
-  
-  # fit the model
-  
-  
-    
-  
-  ?trainControl
-  
-  fitControl <- trainControl(## 10-fold CV
-                           method = "repeatedcv",
-                           number = 10,
-                           ## repeated ten times
-                           repeats = 100,
-                           p = .80)
-  
-  rfc = RandomForestClassifier(random_state=1)
-  
-  r.forest_tr <- train(expression ~ PC1 + PC2 + PC3, 
-                data = train_set%>%
-                  ungroup%>%mutate(PC1 = scale(PC1),PC2 = scale(PC2), PC3 = scale(PC3)), 
-                method = "rf",
-                ntree = 35)
-  
-  r.forest_tr
-  
-r.forest_tr$finalModel 
-  test_set$prediction<- predict(r.forest_tr, test_set%>%
-                                  ungroup%>%mutate(PC1 = scale(PC1),PC2 = scale(PC2), PC3 = scale(PC3)))
-  
-
-r.forest_tr$results
-
-# 
-# r.forest_tr$metric
-# r.forest_tr$finalModel
-# 
-# r.forest_tr$finalModel$err.rate
-# 
-# r.forest_tr$trainingData
-  
-Acc_unshuff<- sum(test_set$prediction == test_set$expression)/length(test_set$expression)
-
-# now we get exactly the same
-
-# now results are much closer
-
-# can i have more trees than rows random forest?
-
-
-
-note: only 2 unique complexity parameters in default grid. Truncating the grid to 2 .
-100-25.95
-100-27.85
-library(randomForest)
-randomForest
-boundary(r.forest_tr, x, class = "Species", main = "Random Forest")
 ```
 
 # p value will be the number of time acc in shuffled dataset is greater than observed accuracy
