@@ -344,16 +344,11 @@ sum(diag(tab))/sum(tab)
 
 # timeseries classification test
 # Install from GitHub using devtools package
+install.packages("devtools")
 devtools::install_github("fjbaldan/CMFMTS")
 
 library(CMFMTS)
 ?CMFMTS::cmfmts
-
-
-
-
-?CMFMTS::cmfmts
-dataset	
 # Data to process (data.frame). Each row contains a time series.
 
 
@@ -369,19 +364,27 @@ train_gather$timersies_unique <- paste0(train_gather$filename,paste0(train_gathe
 unique(train_gather$timersies_unique)
 
 
-
-
-
 # train_gather_comp1 <- train_gather%>%subset(timersies_unique == "./cut_posed_angry_day1_p10.csvk3_comp1")
 # i need to dcast time ids to rows, because this fucntion needs each row to be a timeseries
-colnames(train_gather_comp1)
 
+ts_order<- c(paste0("t_",(1:100)))
+
+(ts_order)
+warnings()
+
+
+colnames(train_gather_comp1)
+unique(train_gather$bin_frame)
 train_gather_dcast<- train_gather%>%
+  arrange(filename,nm_comp,bin_frame)%>%
   mutate(bin_frame = paste0("t_", paste0(bin_frame)))%>%
  data.table::dcast(timersies_unique+filename+subject+expression+drug.placebo+subject+nm_comp~bin_frame, value.var = "nmf_comp_value")
 
 
+colnames(train_gather_dcast)
+ts_order
 
+train_gather_dcast<- bind_cols(train_gather_dcast[,1:7], train_gather_dcast[,c(ts_order)])
 
 # now derive param,eters for the timeseries
 colnames(train_gather_dcast)
@@ -394,9 +397,49 @@ colnames(train_gather_dcast)
 
 # we could do somethign similar where we create the features ourselves
 # e.g. displacement, speed, RMSSD, jerk, etc, this gives a smaller set of data compared to 
+max_min_norm()
+
+range(maxnorm(train_gather_dcast$t_1),na.rm = T)
+?max_min_norm
+range(max_min_norm(train_gather_dcast$t_1),na.rm = T)
+
+bind_cols(maxnorm(train_gather_dcast$t_1),max_min_norm(train_gather_dcast$t_1))%>%
+  ggplot(aes(x =...1, y = ...2))+
+  geom_point()
+  geom_point(x = maxnorm(train_gather_dcast$t_1),y =  max_min_norm(train_gather_dcast$t_1))
+
+
+  colnames(train_gather_dcast)
+# max norm
+  
+train_gather_dcast_maxnorm<- train_gather%>%
+  group_by(subject)%>%
+  mutate(nmf_comp_value = maxnorm(nmf_comp_value))
+  
+  
+train_gather_dcast_maxnorm_dcast<-  train_gather_dcast_maxnorm%>%
+  ungroup()%>%
+  mutate(bin_frame = paste0("t_", paste0(bin_frame)))%>%
+ data.table::dcast(timersies_unique+filename+subject+expression+drug.placebo+subject+nm_comp~bin_frame, value.var = "nmf_comp_value")
+
+  colnames(train_gather_dcast)
+  
+  # reorder timeseries columns
+  
+  train_gather_dcast_maxnorm_dcast<- bind_cols(train_gather_dcast_maxnorm_dcast[,1:7], train_gather_dcast_maxnorm_dcast[,c(ts_order)])
+
+colnames(train_gather_dcast[,8:107])
 
 test_ts <- CMFMTS::cmfmts(dataset = train_gather_dcast[,8:107],
                 na = TRUE)
+
+colnames(train_gather_dcast_maxnorm_dcast)
+
+library(CMFMTS)
+mts_maxnorm<-  CMFMTS::cmfmts(dataset = train_gather_dcast_maxnorm_dcast[,8:107],
+                na = TRUE)
+
+train_gather_dcast_maxnorm_dcast
 
 # note some variables are constant and may need to be excluded for classification
 # e.g lenght, seasonality
@@ -671,19 +714,15 @@ library(caTools)
 # Train Test Split on both Iris and Mtcars
 train_test_split <- function(df) {
   set.seed(42)
-  sample = sample.split(df, SplitRatio = 0.7)
+  sample = sample.split(df, SplitRatio = 0.8#install.packages("caTools")
   train = subset(df, sample == TRUE)
   test  = subset(df, sample == FALSE)
   return (list(train, test))
 }
 
-
+library(caTools)
 # Unwrapping mtcars
-mtcars_train <- train_test_split(mtcars)[[1]]
-mtcars_test <- train_test_split(mtcars)[[2]]
-# Unwrapping iris
-iris_train <- train_test_split(iris)[[1]]
-iris_test <- train_test_split(iris)[[2]]
+
 ?caret::train()
 
  r.forest$results
@@ -692,6 +731,12 @@ rf_result<- data.frame()
 acc_test<- data.frame()
 
 # sample(test_ts_dcast_no0Sd$expression)
+install.packages("caret")
+library(caret)
+install.packages("creditmodel")
+library(creditmodel)
+
+
 
 for (i in 1:20) {
     set.seed(i)
@@ -702,7 +747,8 @@ for (i in 1:20) {
   permuted_labels$expression_shuffle
   #
   # colnames(train_set)
-  train_set <- train_test_split(permuted_labels)[[1]]
+  set.seed(1)
+  train_set <- train_test_split(permuted_labels$expression)[[1]]
   test_set <- train_test_split(permuted_labels)[[2]]
   test_set <- test_set%>%
     mutate(expression_shuffle = expression)
@@ -720,9 +766,12 @@ for (i in 1:20) {
   # fit therandom forest here
   # set.seed(1234)
   # train model
+  
+  
+
   r.forest <- train(expression_shuffle ~ PC1 + PC2 + PC3, 
                 data = train_set, 
-                method = "ranger")
+                method = "rf")
   rf_result<- bind_rows(rf_result,  r.forest$results)
   
   
@@ -758,14 +807,80 @@ train_set <- train_test_split(permuted_labels)[[1]]
   
   # Unshuffled model
   # train model
-  r.forest_tr <- train(expression ~ PC1 + PC2 + PC3, 
-                data = train_set, 
-                method = "ranger")
-  
-  test_set$prediction<- predict(r.forest_tr, test_set)
+  set.seed(1)
 
   
+    set.seed(1)
+  trainIndex <- createDataPartition(test_ts_dcast_no0Sd$expression, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+  trainIndex
+  train_set <- test_ts_dcast_no0Sd[ trainIndex,]
+  test_set  <- test_ts_dcast_no0Sd[-trainIndex,]
+  
+  
+  table(train_set$expression)
+  
+  table(test_set$expression)
+?train
+  
+  
+  # fit the model
+  
+  
+    
+  
+  ?trainControl
+  
+  fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 100,
+                           p = .80)
+  
+  rfc = RandomForestClassifier(random_state=1)
+  
+  r.forest_tr <- train(expression ~ PC1 + PC2 + PC3, 
+                data = train_set%>%
+                  ungroup%>%mutate(PC1 = scale(PC1),PC2 = scale(PC2), PC3 = scale(PC3)), 
+                method = "rf",
+                ntree = 35)
+  
+  r.forest_tr
+  
+r.forest_tr$finalModel 
+  test_set$prediction<- predict(r.forest_tr, test_set%>%
+                                  ungroup%>%mutate(PC1 = scale(PC1),PC2 = scale(PC2), PC3 = scale(PC3)))
+  
+
+r.forest_tr$results
+
+# 
+# r.forest_tr$metric
+# r.forest_tr$finalModel
+# 
+# r.forest_tr$finalModel$err.rate
+# 
+# r.forest_tr$trainingData
+  
 Acc_unshuff<- sum(test_set$prediction == test_set$expression)/length(test_set$expression)
+
+# now we get exactly the same
+
+# now results are much closer
+
+# can i have more trees than rows random forest?
+
+
+
+note: only 2 unique complexity parameters in default grid. Truncating the grid to 2 .
+100-25.95
+100-27.85
+library(randomForest)
+randomForest
+boundary(r.forest_tr, x, class = "Species", main = "Random Forest")
+```
 
 # p value will be the number of time acc in shuffled dataset is greater than observed accuracy
 Acc_unshuff
@@ -938,7 +1053,7 @@ df_OF_output_AUsW_unblind_spoken1_binned$drug.placebo
  df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
   
-      group_by(filename,component,subject,expression)%>%
+      group_by(component,subject)%>%
   mutate(coef_max = max(coef),
          coef = coef/coef_max) %>%
   
@@ -1124,7 +1239,31 @@ df_OF_output_AUsW_unblind_spoken1_binned_ma$k3_comp1 = as.data.frame(res_k3_spok
 df_OF_output_AUsW_unblind_spoken1_binned_ma$k3_comp2 = as.data.frame(res_k3_spoken1_ma@fit@W)$V2
 df_OF_output_AUsW_unblind_spoken1_binned_ma$k3_comp3 = as.data.frame(res_k3_spoken1_ma@fit@W)$V3
 
+max(df_OF_output_AUsW_unblind_spoken1_binned_ma$k3_comp1)
 
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma%>%
+  group_by(subject)%>%
+  
+  ggplot(aes(bin_frame, maxnorm(k3_comp1)))+
+  geom_smooth()+
+  geom_smooth(aes(y = maxnorm(k3_comp2)))+
+  geom_smooth(aes(y = maxnorm(k3_comp3)))+
+  facet_grid(~expression)
+
+
+df_OF_output_AUsW_unblind_spoken1_binned_ma%>%
+  group_by(subject)%>%
+  
+  ggplot(aes(bin_frame, k3_comp1))+
+  geom_smooth()+
+  geom_smooth(aes(y = k3_comp2))+
+  geom_smooth(aes(y = k3_comp3))+
+  facet_grid(~expression)
+
+```
+  
+  
 
 # visualisation based on time
 
