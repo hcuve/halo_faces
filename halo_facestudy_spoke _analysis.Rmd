@@ -517,13 +517,330 @@ posed_spoken_bindrows_ts%>%
   
  # aggregated wirth kiematic features
  
- colnames(posed_spoken_bindrows_ts_agg)
+
+
+pcatest
+colnames(test_ts_dcast)
+test_ts_dcast
+
+
+
+# delete columns with constant variance
+
+# Identify the numerical columns
+num_cols <- sapply(test_ts_dcast, is.numeric)
+
+num_col_names <- names(test_ts_dcast[,num_cols])
+
+
+# Calculate the standard deviation of each column
+
+
+# Calculate the sd for the selected columns
+sd_values <- apply(test_ts_dcast[, num_col_names], 2, sd, na.rm = T)
+
+
+# Identify the columns with a standard deviation of zero
+zero_sd_cols <- names(which(sd_values == 0))
+
+# Drop the columns with a standard deviation of zero
+test_ts_dcast_no0Sd <- test_ts_dcast%>%select(-zero_sd_cols)
+View(test_ts_dcast_no0Sd)
+
+
+# run the PCA
+test_ts_dcast_no0Sd
+ colnames(test_ts_dcast_no0Sd)
  
-pcatest<- prcomp(posed_spoken_bindrows_ts_agg[,c(14:16,20:28)])$x[,1:2]
-posed_spoken_bindrows_ts_agg$PC1<- pcatest[,1]
-posed_spoken_bindrows_ts_agg$PC2<- pcatest[,2]
-pcatest$x[,1:2]
+
+
+
+# where is the infinitiy coming from
+
+
+# Identify the infinite and missing values
+inf_values <- is.infinite(as.data.frame(test_ts_dcast_no0Sd$))
+na_values <- is.na(test_ts_dcast_no0Sd)
+table(na_values)
+
+# Replace the infinite and missing values with the median of the dataset
+
+# Replace NA values with the column average
+test_ts_dcast_no0Sd<- test_ts_dcast_no0Sd %>%
+  mutate_if(is.numeric,funs(ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+na_values <- is.na(test_ts_dcast_no0Sd)
+table(na_values)
+
+
  
+pca_ts<- prcomp(as.data.frame(test_ts_dcast_no0Sd[,c(5:118)]))
+
+rotatest<-promax(pca_ts$rotation)
+
+
+rpt_load<- rotatest$loadings[,1:3]
+
+rpt_rotma<- rotatest$rotmat[,1:3]
+install.packages("psych")
+library(psych)
+
+?principal
+princtewst <-psych::principal(test_ts_dcast_no0Sd[,c(5:118)],3,rotate="promax", scores = TRUE)
+
+summary(princtewst)
+
+princtewst$scores
+
+load_test<- (as.matrix(princtewst$loadings))
+
+test_ts_dcast_no0Sd$PC1<- 
+as.matrix(princtewst$scores)[,1]
+test_ts_dcast_no0Sd$PC2<- 
+as.matrix(princtewst$scores)[,2]
+
+test_ts_dcast_no0Sd$PC3<- 
+as.matrix(princtewst$scores)[,3]
+
+
+write_csv(test_ts_dcast_no0Sd, "test_ts_dcast_no0Sd_tsfeturesPCA.csv")
+  
+
+psych::fa.sort(princtewst)
+
+
+
+# Load the Rtsne and ggplot2 packages
+library(Rtsne)
+library(ggplot2)
+
+# Load the dataset
+
+# Calculate the low-dimensional representation of the data using t-SNE
+colnames(test_ts_dcast_no0Sd)
+
+set.seed(44)
+
+table(test_ts_dcast_no0Sd$expression)
+tsne_results <- Rtsne(test_ts_dcast_no0Sd[,119:121], PCA = FALSE,
+                      perplexity=30,theta=0.0)
+
+# Create a t-SNE plot using ggplot2
+
+?Rtsne
+
+ggplot(as.data.frame(tsne_results$Y), aes(V1, V2)) +
+  geom_point(aes(color = test_ts_dcast_no0Sd$expression), size = 1.5)+
+  theme(legend.position = "none")
+
+
+# tsne with all the variables
+?Rtsne
+tsne_results2 <- Rtsne(test_ts_dcast_no0Sd[,5:120], PCA = FALSE)
+
+ggplot(as.data.frame(tsne_results2$Y), aes(V1, V2)) +
+  geom_point(aes(color = test_ts_dcast_no0Sd$expression), size = 1.5)+
+  theme(legend.position = "none")
+
+
+
+# Load the Rtsne and plotly packages
+library(Rtsne)
+install.packages("plotly")
+
+library(plotly)
+
+plotly::plot_ly()
+
+# Create a t-SNE plot using plotly
+?plot_ly
+
+?plot_ly
+plot_ly(as.data.frame(tsne_results$Y), x = ~V1, y = ~V2, type = "scatter", mode = "markers",
+        name = test_ts_dcast_no0Sd$expression, colors = c('#636EFA','#EF553B','#00CC96'))
+  scale_color_brewer(palette = "Dark2")
+  
+  
+  
+unique(test_ts_dcast_no0Sd$filename)
+
+?sample
+
+
+library(caTools)
+# Train Test Split on both Iris and Mtcars
+train_test_split <- function(df) {
+  set.seed(42)
+  sample = sample.split(df, SplitRatio = 0.7)
+  train = subset(df, sample == TRUE)
+  test  = subset(df, sample == FALSE)
+  return (list(train, test))
+}
+
+
+# Unwrapping mtcars
+mtcars_train <- train_test_split(mtcars)[[1]]
+mtcars_test <- train_test_split(mtcars)[[2]]
+# Unwrapping iris
+iris_train <- train_test_split(iris)[[1]]
+iris_test <- train_test_split(iris)[[2]]
+?caret::train()
+
+ r.forest$results
+ 
+rf_result<- data.frame()
+acc_test<- data.frame()
+
+# sample(test_ts_dcast_no0Sd$expression)
+
+for (i in 1:20) {
+    set.seed(i)
+
+  permuted_labels<- test_ts_dcast_no0Sd%>%
+    mutate(expression_shuffle = sample(expression))
+
+  permuted_labels$expression_shuffle
+  #
+  # colnames(train_set)
+  train_set <- train_test_split(permuted_labels)[[1]]
+  test_set <- train_test_split(permuted_labels)[[2]]
+  test_set <- test_set%>%
+    mutate(expression_shuffle = expression)
+  
+  # # lets see if we don't shuffle tst
+  #   train_set <- train_test_split(test_ts_dcast_no0Sd)[[1]]%>%
+  #   
+  #    # train_set<- train_set%>%
+  #   mutate(expression_shuffle = sample(expression))
+  #    
+  # test_set <- train_test_split(test_ts_dcast_no0Sd)[[2]]%>%
+  #   mutate(expression_shuffle = sample(expression))
+  
+  
+  # fit therandom forest here
+  # set.seed(1234)
+  # train model
+  r.forest <- train(expression_shuffle ~ PC1 + PC2 + PC3, 
+                data = train_set, 
+                method = "ranger")
+  rf_result<- bind_rows(rf_result,  r.forest$results)
+  
+  
+  
+  # Random Forest
+  # do we we ned to shuffle the test as well?
+test_set$prediction<- predict(r.forest, test_set)
+
+# acc
+acc_testp <- sum(test_set$prediction == test_set$expression_shuffle)/length(test_set$expression_shuffle)
+
+acc_test<- bind_rows(acc_test,as.data.frame(acc_testp))
+
+# test_set$expression_shuffle
+  
+  # ?createFolds
+# cv_folds <- createFolds(test_ts_dcast_no0Sd$expression, k = 5, returnTrain = TRUE)
+  
+}
+
+
+acc_test[101:120,]
+# fit one model properly
+
+
+acc_test[101:120,]$
+
+train_set <- train_test_split(permuted_labels)[[1]]
+  test_set <- train_test_split(permuted_labels)[[2]]
+  
+  # fit therandom forest here
+  # set.seed(1234)
+  
+  # Unshuffled model
+  # train model
+  r.forest_tr <- train(expression ~ PC1 + PC2 + PC3, 
+                data = train_set, 
+                method = "ranger")
+  
+  test_set$prediction<- predict(r.forest_tr, test_set)
+
+  
+Acc_unshuff<- sum(test_set$prediction == test_set$expression)/length(test_set$expression)
+
+# p value will be the number of time acc in shuffled dataset is greater than observed accuracy
+Acc_unshuff
+
+
+sum(acc_test[1:101,] >.33)/100
+sum(acc_test$acc_testp>Acc_unshuff)/length(acc_test$acc_testp)
+
+p <.001
+acc_test<- bind_rows(acc_test,as.data.frame(acc_testp))
+
+
+# for confidence interval it's a bit diference, we want to boostrap - sample with replacement
+
+
+
+
+test_ts_dcast_no0Sd%>%
+  # subset(subject == 15)
+
+install.packages("devtools")
+
+require(devtools)
+install_version("randomForest", version = "4.6.14", repos = "http://cran.us.r-project.org")
+
+library(randomForest)
+```
+
+```{r}
+options(warn = -1)
+fig <-  plot_ly(data = as.data.frame(tsne_results$Y) ,x =  ~V1, y = ~V2, z = ~V2, color = ~test_ts_dcast_no0Sd$expression, colors = c('#636EFA','#EF553B','#00CC96') ) %>% 
+  add_markers(size = 8) %>%
+  layout( 
+    xaxis = list(
+      zerolinecolor = "#ffff",
+      zerolinewidth = 2,
+      gridcolor='#ffff'), 
+    yaxis = list(
+      zerolinecolor = "#ffff",
+      zerolinewidth = 2,
+      gridcolor='#ffff'),
+    scene =list(bgcolor = "#e5ecf6"))
+fig
+  
+  
+```
+summary(pca_ts)
+
+?princomp
+pca_ts_2<- princomp(as.data.frame(scale(test_ts_dcast_no0Sd[,c(5:118)])))
+
+pca_ts_2$loadings
+
+pca_ts_2$scores[,1:3]
+
+# prcomp(scale(test_ts_dcast_no0Sd[,c(5:118)]))
+
+
+pca_ts$rotation
+
+pca_ts$x
+
+```
+
+
+svd_results <- svd(test_ts_dcast_no0Sd, nu = 0, nv = k)
+
+
+
+pcatest<- prcomp(scale(posed_spoken_bindrows_ts_agg[,c(14:16,20:28)]))$x[,1:3]
+
+
+pcatest<- prcomp(scale(posed_spoken_bindrows_ts_agg[,c(14:16,20:28)]))$x[,1:3]
+
+
   write_csv(posed_spoken_bindrows_ts_agg, "posed_spoken_bindrows_ts_agg.csv")
   
   # i gues we can also include trend, non linearity
