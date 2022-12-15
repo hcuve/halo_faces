@@ -727,8 +727,17 @@ mts_maxnorm_dcast_no0Sd_removed_SCALE2$PC1<-   PCA_maxnormpsych$scores[,1]
 mts_maxnorm_dcast_no0Sd_removed_SCALE2$PC2<-   PCA_maxnormpsych$scores[,2]
 mts_maxnorm_dcast_no0Sd_removed_SCALE2$PC3<-   PCA_maxnormpsych$scores[,3]
 
+colnames(mts_maxnorm_dcast_no0Sd_removed_SCALE2)
+
+mts_maxnorm_dcast_no0Sd_removed_SCALE2_forlmer <- mts_maxnorm_dcast_no0Sd_removed_SCALE2[,c(1:4,69:71)]%>%
+  group_by(filename)%>%
+  gather(comp, nmf_PCA_comp_value, -c(1:4))
+
+
+
   
-  write_csv(mts_maxnorm_dcast_no0Sd_removed_SCALE2, "mts_maxnorm_dcast_no0Sd_removed_SCALE2.csv")
+write_csv(mts_maxnorm_dcast_no0Sd_removed_SCALE2, "mts_maxnorm_dcast_no0Sd_removed_SCALE2.csv")
+  write_csv(mts_maxnorm_dcast_no0Sd_removed_SCALE2_forlmer, "mts_maxnorm_dcast_no0Sd_removed_SCALE2_forlmer.csv")
   
 
 # test_ts_dcast_no0Sd$PC1<- 
@@ -926,6 +935,11 @@ rf_finalmodel<- data.frame()
 rf_confusion<- data.frame()
 acc_test<-data.frame()
 
+library(caret)
+library(randomForest)
+
+
+
 for (i in 1:1000) {
     set.seed(i)
 message("Star Loop - ", i)
@@ -976,13 +990,452 @@ message("Done Loop - ", i)
 
 }
 
+rep(1:1000, each = 2)
+rf_results_df$sim<- rep(1:1000, each = 2)
+
+rf_finalmodel$sim<- rep(1:1000, each = 30)
+rf_finalmodel$tree<- rep(1:30,times = 1000)
+rf_confusion$sim<- rep(1:1000, each = 3)
+acc_test$sim<- 1:1000
+
+
+rf_results_df
+
+
+Acc_unshuff
+
+acc_test$acc_temp
+
+
+acc_test<- acc_test%>%
+ mutate(acc_test_z = scale(acc_temp))
+
+acc_test%>%
+  subset(acc_test_z > 1.63)
+# 0.4766667
+  mutate(cutoff = if_else(acc_test_z == 1.64, acc_temp, NULL))
+  
+  # p < .05 one tailed == 1.93
+  acc_test%>%
+  ggplot(aes(acc_temp)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0.47, linetype = "dashed", color = "red")+
+  
+  geom_vline(aes(xintercept = Acc_unshuff), color = "green")
+  geom_histogram(bins = 100)
+  
+  
+  
+  # for each
+
+
+rf_finalmodel
+
+r.forest_mts
+as.data.frame(r.forest_mts$finalMode$err.rate)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
+
+rf_finalmodel%>%
+  group_by(sim)%>%
+
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+    gather(key, value, -sim, -tree)%>%
+  ggplot(aes(value, color = key)) +
+  geom_histogram()+
+  # facet_grid(~key)+
+    geom_vline(xintercept = .3)
+# rhe lowest error we have in the real is .3
+
+
+rf_results_df
+
+
+rf_results_df %>%
+  ggplot(aes(Accuracy)) +
+  geom_histogram()+
+  # facet_grid(~key)+
+    geom_vline(xintercept = .76) #r.forest_mts$results
+
+rf_confusion$class<-substring(rownames(rf_confusion), 1,3)
+
+rf_confusion%>%
+  group_by(class)%>%summarise_if(is.numeric, mean, na.rm = T)
+
+r.forest_mts$finalModel$confusion
+
+
+
+
+
+# p value will be the number of time acc in shuffled dataset is greater than observed accuracy
+```
+
+
+boostraping CIs
+
+
+```{r}
+rf_results_df_ci<- data.frame()
+rf_finalmodel_ci<- data.frame()
+rf_confusion_ci<- data.frame()
+acc_test_ci<-data.frame()
+
+library(caret)
+library(randomForest)
+
+
+install.packages("fabricatr")
+
+?fabricatr::resample_data
+
+
+
+ci_data_resamp_test<- fabricatr::resample_data(mts_maxnorm_dcast_no0Sd_removed_SCALE2, 
+                                  N = 43,
+                                  ID_labels = "subject",
+                                  unique_labels = FALSE#this tedn to reat isues when true
+                                  )
+
+ci_data_resamp_test
+
 
 ```
 
-# p value will be the number of time acc in shuffled dataset is greater than observed accuracy
+
+# options(scipen = 999)
+# mean(abs(ci_data_resamp_test$aproximation_entropyk3_comp2))
+# mean(abs(mts_maxnorm_dcast_no0Sd_removed_SCALE2$aproximation_entropyk3_comp2))
+
+```{r}
+
+unique(as.factor(as.character(ci_data_resamp_test$subject)))
+
+ci_data_resamp_test
+
+# i = 1
+
+unique(ci_data_resamp_test$expression)
+
+for (i in 1:5000) {
+    set.seed(i)
+message("Star Loop - ", i)
+
+ci_data_resamp_test<- fabricatr::resample_data(mts_maxnorm_dcast_no0Sd_removed_SCALE2, 
+                                  N = 43,
+                                  ID_labels = "subject",
+                                  unique_labels = FALSE)#this tedn to reat isues when true
+  
+  
+    trainIndex_temp <- createDataPartition(ci_data_resamp_test$expression, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+  # trainIndex
+  train_set_temp <- ci_data_resamp_test[ trainIndex_temp,]
+  test_set_temp  <- ci_data_resamp_test[-trainIndex_temp,]
+
+  
+  # # lets see if we don't shuffle tst
+  #   train_set <- train_test_split(test_ts_dcast_no0Sd)[[1]]%>%
+  #   
+  #    # train_set<- train_set%>%
+  #   mutate(expression_shuffle = sample(expression))
+  #    
+  # test_set <- train_test_split(test_ts_dcast_no0Sd)[[2]]%>%
+  #   mutate(expression_shuffle = sample(expression))
+  
+  
+  # fit therandom forest here
+  # set.seed(1234)
+  # train model
+  
+  
+message("Fit RF - ", i)
+  r.forest_temp <- train(expression ~ PC1 + PC2 + PC3, 
+                data = train_set_temp, 
+                method = "rf",
+                ntree = 30)
+  
+  rf_results_df_ci<- bind_rows(rf_results_df_ci,  r.forest_temp$results)
+  
+  rf_finalmodel_ci<- bind_rows(rf_finalmodel_ci,  as.data.frame(r.forest_temp$finalModel$err.rate))
+  
+  rf_confusion_ci<- bind_rows(rf_confusion_ci,  as.data.frame(r.forest_temp$finalModel$confusion))
+
+  # test set
+  test_set_temp$prediction <- predict(r.forest_temp, test_set_temp)
+  
+acc_temp <- sum(test_set_temp$prediction == test_set_temp$expression)/length(test_set_temp$expression)
+
+acc_test_ci<- bind_rows(acc_test_ci,as.data.frame(acc_temp))
+message("Done Loop - ", i)
+
+}
+
+
+  r.forest_mts <- train(expression ~ PC1 + PC2 + PC3, 
+                data = train_set, 
+                method = "rf",
+                ntree = 30)
+  
+  r.forest_tr
+  
+r.forest_tr$finalModel 
+
+  test_set$prediction <- predict(r.forest_mts, test_set)
+  
+
+```
+
+
+```{r}
+library(boot)
+
+
+  boot.kn <- function(data, indices, formula, newdata, k){
+  d <- data[indices, ]
+  fit <- knnreg(formula, data = d)
+  predict(fit, newdata = newdata)
+}
+
+set.seed(2021)
+R <- 1e4
+bs <- boot(df1, boot.kn, R = R, formula = b ~ a, newdata = newdata, k = k)
+ci <- boot.ci(bs, level = 0.95, type = "bca")
+
+#https://stackoverflow.com/questions/69641922/how-can-i-perform-bootstrap-to-find-the-confidence-interval-for-a-k-nn-model-in
+boot.kn <- function(data, indices, formula, newdata, k){
+  d <- data[indices, ]
+  fit <- knnreg(formula, data = d)
+  predict(fit, newdata = newdata)
+}
+
+set.seed(2021)
+R <- 1e4
+bs <- boot(df1, boot.kn, R = R, formula = b ~ a, newdata = newdata, k = k)
+ci <- boot.ci(bs, level = 0.95, type = "bca")
+
+
+```
+
+
+
+```{r}
+rf_results_df_ci$sim<- rep(1:5000, each = 2)
+
+rf_finalmodel_ci$sim<- rep(1:5000, each = 30)
+rf_finalmodel_ci$tree<- rep(1:30,times = 5000)
+rf_confusion_ci$sim<- rep(1:5000, each = 3)
+acc_test_ci$sim<- 1:5000
+
+
+rf_results_df
+
+
 Acc_unshuff
 
+acc_test$acc_temp
 
+
+acc_test<- acc_test%>%
+ mutate(acc_test_z = scale(acc_temp))
+
+
+  # subset(acc_test_z > 1.63)
+# 0.4766667
+  # mutate(cutoff = if_else(acc_test_z == 1.64, acc_temp, NULL))
+  
+  # p < .05 one tailed == 1.93
+max(acc_test_ci$acc_temp)
+
+percent_rank()
+quantile(96%)
+
+quantile(acc_test_ci$acc_temp, .25)
+acc_test_ci%>%
+  ggplot(aes(acc_temp)) +
+  geom_histogram() +
+  # geom_vline(xintercept = 0.47, linetype = "dashed", color = "red")+
+  
+  geom_vline(aes(xintercept = quantile(acc_test_ci$acc_temp, .15)), color = "green")+
+  geom_vline(aes(xintercept = quantile(acc_test_ci$acc_temp, .95)), color = "green")+  
+
+  geom_histogram(bins = 100)
+  
+  
+  
+  # for each
+
+
+rf_finalmodel
+
+r.forest_mts
+as.data.frame(r.forest_mts$finalMode$err.rate)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
+
+rf_finalmodel_ci%>%
+  group_by(sim)%>%
+
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+    gather(key, value, -sim, -tree)%>%
+  ggplot(aes(value, color = key)) +
+  geom_histogram()
+  # facet_grid(~key)+
+    # geom_vline(xintercept = .3)
+# rhe lowest error we have in the real is .3
+
+
+rf_results_df
+
+
+rf_results_df_ci %>%
+  ggplot(aes(Accuracy)) +
+  geom_histogram()+
+  # facet_grid(~key)+
+    geom_vline(xintercept = .76) #r.forest_mts$results
+
+rf_confusion$class<-substring(rownames(rf_confusion), 1,3)
+
+rf_confusion%>%
+  group_by(class)%>%summarise_if(is.numeric, mean, na.rm = T)
+
+r.forest_mts$finalModel$confusion
+
+
+
+
+
+rf_results_df
+
+
+Acc_unshuff
+
+acc_test$acc_temp
+
+
+acc_test<- acc_test%>%
+ mutate(acc_test_z = scale(acc_temp))
+
+
+  # p < .05 one tailed == 1.93
+  acc_test_ci%>%
+        mutate(perc_5 = quantile(acc_temp,.025, na.rm = TRUE), 
+         perc_95 = quantile(acc_temp,.975, na.rm = TRUE))%>%
+  ggplot(aes(acc_temp)) +
+  geom_histogram() +
+  # geom_vline(xintercept = 0.47, linetype = "dashed", color = "red")+
+    geom_vline(aes(xintercept =perc_5))+
+   geom_vline(aes(xintercept =perc_95))+
+  
+  geom_vline(aes(xintercept = Acc_unshuff), color = "green", linetype = "dashed")
+  # geom_histogram(bins = 100)
+  
+  
+  # note CIs wont always be symtric
+  # https://stats.stackexchange.com/questions/16574/are-confidence-intervals-always-symmetrical-around-the-point-estimate#:~:text=A%20confidence%20interval%20obtained%20from,on%20the%20natural%20log%20scale.
+  
+  
+  
+  # for each emotion
+  
+  rf_result
+  rf_finalmodel
+  rf_finalmodel
+  
+  
+  rf_confusion_ci
+ acc_test_ci%>%
+        mutate(perc_5 = quantile(acc_temp,.025, na.rm = TRUE), 
+         perc_95 = quantile(acc_temp,.975, na.rm = TRUE))%>%
+  ggplot(aes(acc_temp)) +
+  geom_histogram() +
+  # geom_vline(xintercept = 0.47, linetype = "dashed", color = "red")+
+    geom_vline(aes(xintercept =perc_5))+
+   geom_vline(aes(xintercept =perc_95))+
+  
+  geom_vline(aes(xintercept = Acc_unshuff), color = "green", linetype = "dashed") 
+  
+  
+  
+```
+
+
+```{r}
+rf_finalmodel
+
+r.forest_mts
+as.data.frame(r.forest_mts$finalMode$err.rate)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
+
+rf_finalmodel_ci%>%
+  group_by(sim)%>%
+
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+
+    gather(key, value, -sim, -tree)%>%
+  # subset(key == "OBB")%>%
+    group_by(key)%>%
+    mutate(perc_5 = quantile(value,.025, na.rm = TRUE), 
+         perc_95 = quantile(value,.975, na.rm = TRUE))%>%
+  mutate(err_test = if_else(key == "angry", 0.24590164,
+                  if_else(key == "happy", 0.09836066,
+                          if_else(key == "sad",0.36065574, 0.2319615))))%>%
+  ggplot(aes(value, color = key)) +
+  geom_histogram() +
+  facet_grid(~key) +
+    geom_vline(aes(xintercept =perc_5)) +
+   geom_vline(aes(xintercept =perc_95)) +
+    geom_vline(aes(xintercept = err_test), lintype ="dashed", color = "red")
+  
+  r.forest_mts$finalModel
+  geom_vline(xintercept = mean(r.forest_mts$finalModel$err.rate[,4]), linetype = "dashed", color = "red")
+# here we have some issue where the poitn estimate is oiutside the CI
+# https://stats.stackexchange.com/questions/388931/bootstrap-confidence-intervals-do-not-include-the-observed-mean-can-this-be
+# https://stats.stackexchange.com/questions/355781/is-it-true-that-the-percentile-bootstrap-should-never-be-used/357498#357498
+
+# rhe lowest error we have in the real is .3
+r.forest_mts$finalModel$err.rate
+r.forest_mts$results
+
+r.forest_mts
+
+r.forest_mts$trainingData
+(0.04/sqrt(183))+.77
+
+.77-(0.04/sqrt(183))
+
+```
+                 
+
+```{r}
+rf_results_df
+
+
+rf_results_df %>%
+  ggplot(aes(Accuracy)) +
+  geom_histogram()+
+  # facet_grid(~key)+
+    geom_vline(xintercept = .76) #r.forest_mts$results
+
+rf_confusion$class<-substring(rownames(rf_confusion), 1,3)
+
+rf_confusion%>%
+  group_by(class)%>%summarise_if(is.numeric, mean, na.rm = T)
+
+r.forest_mts$finalModel$confusion
+
+
+
+
+
+# p value will be the number of time acc in shuffled dataset is greater than observed accuracy
+
+
+
+```
+
+
+
+```{r}
 sum(acc_test[1:101,] >.33)/100
 sum(acc_test$acc_testp>Acc_unshuff)/length(acc_test$acc_testp)
 

@@ -264,7 +264,7 @@ res_k3_max_norm@fit@W
       
 pca_AUs<- as.data.frame(var.pca$Fixed.Data$ExPosition.Data$fj)
 
-pca_AUs$AU<- rownames(pca_AUs)
+pca_AUs$AU <- rownames(pca_AUs)
 # as.data.frame(res_k3@fit@H)
 as.data.frame(res_k3_max_norm@fit@H)%>%
   mutate(component = row_number()) %>%
@@ -471,6 +471,334 @@ as.data.frame(res_k3@fit@H)%>%
   p$graphstyle_int+
 guides(fill=guide_colorbar(ticks.colour = NA))
 
+
+
+library(readxl)
+LANDMARKNMF <- read_excel("Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/LANDMARKNMF.xlsx")
+View(LANDMARKNMF)
+LANDMARKNMF
+
+
+NMFresk3test<- as.data.frame(res_k3@fit@H)%>%
+  mutate(component = 1:n())%>%
+  gather(AU, coef, -component)%>%
+  group_by(component)%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )%>%
+  arrange(AU_code)
+
+
+
+LANDMARKNMF
+
+
+NMFresk3test
+
+LANDMARKNMF<- LANDMARKNMF1
+colnames(LANDMARKNMF)
+colnames(LANDMARKNMF[,c(1,8:9,12:31)])
+
+LANDMARKNMF_dcast<- LANDMARKNMF[,c(1,8:9,12:31)]%>%
+gather(AU, land1_0,-c(1:3,21:23))%>%
+gather(comp, land1_0_nmf, -c(1:3,7:8))
+
+library(ggvoronoi)
+
+left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
+         V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
+  group_by(lanmark_id, component, AU)%>%
+  summarise_if(is.numeric, mean, na.rm = T) %>%
+  mutate(coef2 = if_else(land1_0_nmf == 1, coef,0))%>%
+  ggplot(aes(V1_1, V2_2, color = coef2))+
+  geom_point(aes(size = coef2), alpha = .5)+
+  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
+  ggvoronoi::stat_voronoi(geom="path")+
+  geom_point(aes(x = V1, y = V2))+
+  # geom_point(aes(size = coef), alpha = .1)+
+  ylim(1,0)+
+  facet_grid(~component)+
+  scale_color_viridis_c(option = "magma")
+
+  
+LANDMARKNMF_dcast
+
+# 
+
+install.packages("ggforce")
+library(ggforce)
+left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
+         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
+  # group_by(lanmark_id)%>%
+  # summarise_if(is.numeric, mean, na.rm = T) %>%
+  mutate(coef2 = if_else(land1_0 == 1, coef,0))%>%
+  ggplot(aes(V1_1, V2_2, color = coef2, fill=coef2 ))+
+  geom_point(aes(size = coef2), alpha = .5)+
+    # ggvoronoi::stat_voronoi(geom="path" )
+  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
+
+  geom_point(aes(x = V1, y = V2))+
+  # geom_point(aes(size = coef), alpha = .1)+
+  ylim(1,0)+
+  facet_grid(~component)+
+    geom_delaunay_tile(aes(x =V1, V2, fill = lanmark_id), alpha = 0.3, colour = 'black')+
+  # geom_delaunay_segment2()+
+  scale_color_viridis_c(option = "magma")
+
+NMFresk3test$component
+LANDMARKNMF_dcast$component<- as.numeric(substr(LANDMARKNMF_dcast$comp,4,4))
+
+left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
+         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
+  # group_by(lanmark_id)%>%
+  # summarise_if(is.numeric, mean, na.rm = T) %>%
+  mutate(coef2 = if_else(land1_0 == 1, coef,0))%>%
+  ggplot(aes(V1_1, V2_2, color = coef2, fill=coef2 ))+
+  geom_point(aes(size = coef2), alpha = .5)+
+    # ggvoronoi::stat_voronoi(geom="path" )
+  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
+
+  geom_point(aes(x = V1, y = V2))+
+  # geom_point(aes(size = coef), alpha = .1)+
+  ylim(1,0)+
+  facet_grid(~component)+
+    geom_delaunay_tile(aes(x =V1, V2), alpha = 0.1, colour = 'black')+
+      geom_delaunay_segment2(aes(x =V1, V2, colour = coef2))+
+  # geom_delaunay_segment2()+
+  scale_color_viridis_c(option = "magma")
+
+
+```
+?geom_delaunay_tile
+
+
+```{r}
+
+test_del<-left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
+         V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
+    mutate(coloring = if_else(V1_1 == 1, 1,0)) %>%
+  subset(!(V1 == 0 & V2 == 0))%>%
+   # mutate(coef_max = )%>%
+    group_by(lanmark_id) %>%
+  mutate(coef = coef/max(coef)) %>%
+
+  mutate(coef2 = if_else(land1_0_nmf == 1, coef,0))%>%
+   mutate(coef2 = if_else(is.na(coef2), 0, coef2))%>%
+  summarise_if(is.numeric, mean, na.rm = T)
+
+SO<- test_del%>%
+  mutate(coef2 = coef2/max(coef2, na.rm = T))
+SO<- SO[,c(1:3,14)]
+
+SO%>%
+  mutate(coef2 = coef2/max(coef2))%>%
+  ggplot(aes(V1, V2))+
+
+   geom_delaunay_tile(aes(colour = coef2, fill = coef2), alpha = .5)+
+      geom_delaunay_segment2(aes(colour = coef2, fill = coef2))+
+    geom_point(aes(colour = coef2))+
+  ylim(1,0)+
+      scale_color_viridis_c(option = "magma")+
+ scale_fill_viridis_c(option = "magma")
+
+
+
+dput(SO)
+
+
+SO%>%
+  mutate(coef2 = coef2/max(coef2))%>%
+  ggplot(aes(V1, V2))+
+
+   geom_delaunay_tile(aes(colour = coef2, fill = coef2), alpha = .3)+
+      geom_delaunay_segment2(aes(colour = coef2, fill = coef2))+
+    geom_point(aes(colour = coef2))+
+  ylim(1,0)+
+      scale_color_viridis_c(option = "magma")+
+ scale_fill_viridis_c(option = "magma")+
+  theme_minimal()
+
+
+left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  
+
+
+  mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
+         V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
+    mutate(coloring = if_else(V1_1 == 1, 1,0)) %>%
+  subset(!(V1 == 0 & V2 == 0))%>%
+
+  mutate(coef2 = if_else(land1_0_nmf == 1, coef,0))%>%
+    group_by(lanmark_id, component)%>%
+      mutate(coef2 = coef2/max(coef2))%>%
+  # summarise_if(is.numeric, mean, na.rm = T)%>%
+  
+    # mutate(coef2 = coef2/max(coef2))%>%
+  ggplot(aes(V1, V2))+
+
+   geom_delaunay_tile(aes(colour = coef2, fill = coef2), alpha = .3)+
+      geom_delaunay_segment2(aes(colour = coef2, fill = coef2))+
+    geom_point(aes(colour = coef2))+
+  # geom_text(aes(label = lanmark_id,colour = coef2), size = 3)+
+  ylim(1,0)+
+  facet_grid(~component)+
+      scale_color_viridis_c(option = "magma")+
+ scale_fill_viridis_c(option = "magma")+
+  theme_minimal()
+
+
+
+SO%>%
+  ggplot(aes(V1, V2))+
+   geom_text(aes(label = lanmark_id,colour = coef2), size = 3)+
+  ylim(1,0)
+
+  
+
+```
+  
+
+left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
+         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
+    mutate(coloring = if_else(V1_1 == 1, 1,0)) %>%
+  subset(!(V1 == 0 & V2 == 0))%>%
+
+  mutate(coef2 = if_else(land1_0 == 1, coef,0))%>%
+    # group_by(lanmark_id, component, AU)%>%
+  # summarise_if(is.numeric, mean, na.rm = T) %>%
+  ungroup()%>%
+  ggplot(aes(V1, V2))+
+        geom_point(aes(color = coef2))+
+
+  ylim(1,0)+
+
+      # geom_delaunay_segment(aes(x =V1, y = V2, fill = coef, color = coef),
+      # lineend = 'round')+
+  # geom_delaunay_segment(aes(x =V1, y = V2, fill = coef, color = coef),
+      # lineend = 'round')+
+
+    facet_grid(~component)+
+
+
+   # geom_delaunay_tile(aes(x = V1_1, y = V2_2, fill = coef2), max.radius = 0.25)+
+    scale_color_viridis_c(option = "magma")
+
+
+
+
+     #                     lineend = 'round')+
+   geom_delaunay_tile(aes(fill = coef, color = coef))+
+
+    scale_color_viridis_c(option = "magma")
+    geom_delaunay_tile2(aes(x =V1, V2, color = coef2), alpha = 0.3)+
+  # geom_delaunay_segment2(colour = Species, group = -1)+
+
+
+
+View(triangle)
+
+
+
+
+  
+
+# use the NMC AU wights as a scaling parameter
+NMFresk3test
+    ggforce
+
+  
+  
+```
+
+NMFresk3test
+
+df_OF_output_AUsW_unblind_posed_binned$NMFtable
+
+
+df_OF_output_AUsW_unblind_posed_binned
+
+
+
+# FOR THE TIMESERIES NOW
+colnames(LANDMARKNMF)
+LANDMARKNMF$comp1<- LANDMARKNMF$NMF1
+ LANDMARKNMF$comp2<- LANDMARKNMF$NMF2
+LANDMARKNMF$comp3<- LANDMARKNMF$NMF3
+
+```
+```{r}
+  
+colnames(LANDMARKNMF[,c(1,7:8,31:33)])
+
+LANDMARKNMF_gatherts<-LANDMARKNMF[,c(1,7:8,31:33)]%>%
+  gather(component, land1_0,-c(1:3))
+
+df_OF_output%>%
+  subset(filename == "./cut_spoken2_sad_day2_p8.csv")%>%
+
+
+df_OF_output%>%
+  ggplot(aes())
+
+
+# gather(comp, land1_0_nmf, -c(1:3,7:8))
+colnames(df_OF_output_AUsW_unblind_posed_binned1_gather)
+df_OF_output_AUsW_unblind_posed_binned1_gather <-
+df_OF_output_AUsW_unblind_posed_binned1 [,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max)
+  
+  group_by(expression, component, bin_frame,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+  
+  
+  
+  left_join(LANDMARKNMF_gatherts,
+  df_OF_output_AUsW_unblind_posed_binned1_gather)%>%
+     mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
+         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
+  group_by(lanmark_id,component, expression) %>%
+  summarise_if(is.numeric, mean, na.rm = T) %>%
+  mutate(coef2 = if_else(land1_0 == 1, coef,0)) %>%
+     ggplot(aes(V1_1, V2_2, color = coef2 ))+
+  geom_point(aes(size = coef2), alpha = .5)+
+    # ggvoronoi::stat_voronoi(geom="path" )
+  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
+
+  geom_point(aes(x = V1, y = V2), color = "black", alpha = .1)+
+  # geom_point(aes(size = coef), alpha = .1)+
+  ylim(1,0)+
+  facet_grid(~component)+
+  scale_color_viridis_c(option = "magma")
+  
+  
+  ggforce
+  geom_delaunay_tile(alpha = 0.3, colour = 'black')
+
+
+```
+
+
 chool_talk$NMF_PCA<- chool_talk$AU_NM +theme(legend.position = "none") +(chool_talk$pca_AU+theme(axis.text.y = element_blank(),
                                          axis.title.y = element_blank()))
 
@@ -556,7 +884,7 @@ df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
 #   theme_classic()
 
 
-chool_talk$ts_smooth<- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+chool_talk$ts_smooth <- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
   
       group_by(filename,component,subject,expression)%>%
@@ -1823,7 +2151,96 @@ df_OF_output_AUsW_unblind_posed_binned1<- df_OF_output_AUsW_unblind_posed_binned
 #   mutate(df_OF_output_AUsW_unblind_posed_binned1, across(everything(), ~replace_na(.x, 0)))
 # 
 #   mutate_at(c("k4_comp1_speed", "k4_comp2_speed", "k4_comp3_speed", "k4_comp4_speed"), ~replace(., is.na(.), 0))
-```  
+
+
+unique(df_OF_output_AUsW_unblind_posed_binned1$filename)
+df_OF_output_AUsW_unblind_posed_binned1%>%
+  subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+  mutate(speed_diff = abs(k3_comp1_speed - lag(k3_comp1_speed)))%>%
+  ggplot(aes(bin_frame, k3_comp1_speed))+
+  geom_line()+
+  geom_line(aes(y  = speed_diff), color = "red")
+
+df_OF_output_AUsW_unblind_posed_binned
+
+```
+  ungroup()%>%
+  group_by(filename)%>%
+  ungroup()%>%
+  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  # select(c(2,38,42))%>%
+  mutate(k3_comp1_speed = (abs(lag(comp1) - comp1))/abs((lead(bin_frame)-bin_frame)),
+         k3_comp2_speed = (abs(lag(comp2) - comp2))/abs((lead(bin_frame)-bin_frame)),
+         k3_comp3_speed = (abs(lag(comp3) - comp3))/abs((lead(bin_frame)-bin_frame)),
+        
+         k3_comp1_diff = as.numeric(diff(zoo::zoo(comp1), na.pad = TRUE)),
+         k3_comp2_diff =as.numeric(diff(zoo::zoo(comp2), na.pad = TRUE)),
+         k3_comp3_diff =as.numeric(diff(zoo::zoo(comp3), na.pad = TRUE)),
+         
+         # moving averages
+         k3_comp1_diff_ma = as.numeric(zoo::rollmean(k3_comp1_diff, k = 5, fill = NA)),
+         k3_comp2_diff_ma = as.numeric(zoo::rollmean(k3_comp2_diff, k = 5, fill = NA)),
+         k3_comp3_diff_ma = as.numeric(zoo::rollmean(k3_comp3_diff, k = 5, fill = NA)),
+           
+          k3_comp1_speed_ma = as.numeric(zoo::rollmean(k3_comp1_speed, k = 5, fill = NA)),
+        k3_comp2_speed_ma = as.numeric(zoo::rollmean(k3_comp2_speed, k = 5, fill = NA)),
+         k3_comp3_speed_ma = as.numeric(zoo::rollmean(k3_comp3_speed, k = 5, fill = NA)))%>%
+    ungroup()%>%
+  mutate(idno = rep(1:228, each = 100))
+  
+quick tst lmer approach
+```{r}
+colnames(df_OF_output_AUsW_unblind_posed_binned1)
+
+lmermodels<-list()
+
+posed_forlmertest_maxnorm <- df_OF_output_AUsW_unblind_posed_binned1[c(1:3,9:10,34:36)] %>%
+  group_by(filename)%>%
+  gather(comp, nmf_comp_value, -c(1:5))%>%
+    group_by(subject)%>%
+    mutate(nmf_comp_value = maxnorm(nmf_comp_value))
+
+library(lmerTest)
+
+posed_forlmertest_maxnorm$nmf_comp_value
+posed_forlmertest_maxnorm$comp
+
+
+posed_forlmertest_maxnorm$bin_frame_z <- scale(posed_forlmertest_maxnorm$bin_frame)
+
+lmermodels$moel1<- lmer(nmf_comp_value ~ expression * comp  *drug.placebo +bin_frame_z
+       (1 +expression * comp+bin_frame_z | subject),
+     REML = FALSE,
+     data = posed_forlmertest_maxnorm,
+     # optimizer="nloptwrap",
+     control = lmerControl(calc.derivs = FALSE),
+     verbose = T)
+
+summary(lmermodels$moel1)
+
+lmermodels$moel2<- lmer(nmf_comp_value ~ expression * comp  *drug.placebo +bin_frame_z+
+       (1 +expression * comp+bin_frame_z | subject),
+     REML = FALSE,
+     data = posed_forlmertest_maxnorm,
+     # optimizer="nloptwrap",
+     control = lmerControl(calc.derivs = FALSE),
+     verbose = T)
+summary(lmermodels$moel2)
+write.csv(posed_forlmertest_maxnorm, "posed_forlmertest_maxnorm.csv")
+
+lmermodels$moel3<- lmer(nmf_comp_value ~ expression * comp  *drug.placebo +bin_frame_z+
+       (1 +expression * comp*drug.placebo+bin_frame_z | subject),
+     REML = FALSE,
+     data = posed_forlmertest_maxnorm,
+     # optimizer="nloptwrap",
+     control = lmerControl(calc.derivs = FALSE),
+     verbose = T)
+summary(lmermodels$moel2)
+
+
+
+```
+
 
 
 spatiotemporal clustering using k-means 
@@ -1922,9 +2339,190 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
 
 # scald
 
+df_OF_output
+df_OF_output_AUsW_unblind_posed_binned1$timestamp
+colnames(df_OF_output)
+
+colnames(df_OF_output[,c(1,3,300:435,715)])
+
+unique(df_OF_output$filename)
+
+df_OF_output_land<- df_OF_output[,c(1,3,300:435,715)]
+
+
+# avarage and normalise
+df_OF_output_land
+
+library(data.table)
+
+df_OF_output_land_f10<- df_OF_output_land%>%
+subset(frame == 10)
+
+df_OF_output_land_f10_dcast<-df_OF_output_land_f10%>%
+  group_by(filename)%>%
+  gather(key, value, -frame, -timestamp,-filename) %>%
+  mutate(coordinate = substr(key,1,1))%>%
+  mutate(lanmark_id = substr(key,3,4)) %>%
+  dcast(filename+lanmark_id+frame+timestamp~coordinate, value.var = "value",  mean)
+
+
+
+maxnormalize <- function(x, ...) {
+    return((x - min(x, ...)) /(max(x, ...) - min(x, ...))) }
+
+df_OF_output_land_f10_dcast_norm<- df_OF_output_land_f10_dcast%>%
+    group_by(filename,frame)%>%
+  mutate(x_new_norm = maxnormalize(x),
+         y_new_norm = maxnormalize(y))
+
+df_OF_output_land_f10_dcast_norm%>%
+  group_by(lanmark_id)%>%
+summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(x_new_norm, y_new_norm))+
+  geom_point()+
+  ylim(1,0)
+
+
+
+df_OF_output_land_f10_dcast_normagg<-df_OF_output_land_f10_dcast_norm%>%
+  group_by(lanmark_id)%>%
+summarise_if(is.numeric, mean, na.rm = T)
+
+
+
+# First, isolate the points of interest (the subject's left and right eyes)
+
+left_eye  <- df_OF_output_land_f10_dcast_normagg[df_OF_output_land_f10_dcast_normagg$lanmark_id == 42,]
+right_eye <- df_OF_output_land_f10_dcast_normagg[df_OF_output_land_f10_dcast_normagg$lanmark_id == 39,] 
+
+# Now find the difference in the y co-ordinates and x co-ordinates between these two points:
+
+diff_x <- left_eye$x_new_norm - right_eye$x_new_norm
+diff_y <- left_eye$y_new_norm - right_eye$y_new_norm
+
+
+# The arctangent of the ratio will be the angle you need to rotate all the points by:
+
+theta  <- atan2(-diff_y, diff_x)
+
+mat <- matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), 2)
+
+df_OF_output_land_f10_dcast_normagg[,8:9] <- t(apply(df_OF_output_land_f10_dcast_normagg[,6:7], 1, function(x) mat %*% x))
+
+
+df_OF_output_land_f10_dcast_normagg %>%
+  ggplot(aes(V1, V2, label = lanmark_id)) + 
+  geom_point(color = 'gray') +
+  geom_text() +
+  scale_y_reverse() +
+  theme_bw()
+
+
+df_OF_output_land_f10_dcast_normagg
+
+
+install.packages("ggvoronoi")
+
+?ggvoronoi::stat_voronoi
+write_csv(df_OF_output_land_f10_dcast_normagg, "df_OF_output_land_f10_dcast_normagg.csv")
+df_OF_output_land_f10_dcast_normagg %>%
+  arrange(lanmark_id)%>%
+  ggplot(aes(V1, V2, label = lanmark_id)) + 
+  ggvoronoi::stat_voronoi(geom="path", outline = c(df_OF_output_land_f10_dcast_normagg$V1, df_OF_output_land_f10_dcast_normagg$V2)) +
+  geom_point()+
+  ylim(1,0)
+
+
+write_csv(pca_AUs, "pca_AUs.csv")
+
+
+# coded landmarks
+library(readxl)
+codeLandmarksAUs <- read_excel("codeLandmarksAUs.xlsx")
+View(codeLandmarksAUs)
+codeLandmarksAUs%>%
+  arrange(lanmark_id)%>%
+  ggplot(aes(V1, V2, label = lanmark_id)) + 
+  # geom_path()+
+  # ggvoronoi::stat_voronoi(geom="path", outline = c(df_OF_output_land_f10_dcast_normagg$V1, df_OF_output_land_f10_dcast_normagg$V2)) +
+  geom_point()+
+  ylim(1,0)+
+  theme_bw()
+
+codeLandmarksAUs
+
+
+df_OF_output_AUsW_unblind_posed_binned1
+
+library(readxl)
+LANDMARKNMF <- read_excel("LANDMARKNMF.xlsx")
+View(LANDMARKNMF)
+
+LANDMARKNMF[is.na(LANDMARKNMF)] <- 0
 
 ```
 
+```
+```{r}
+
+#Replace NA avalues with 0
+LANDMARKNMF <- replace(as.data.frame(LANDMARKNMF),is.na(as.data.frame(LANDMARKNMF)),0)
+LANDMARKNMF
+
+LANDMARKNMF%>%
+  # mutate()
+  arrange(lanmark_id)%>%
+  ggplot(aes(V1, V2, label = lanmark_id, color = NMF1)) + 
+  # geom_path()+
+  # ggvoronoi::stat_voronoi(geom="path", outline = c(df_OF_output_land_f10_dcast_normagg$V1, df_OF_output_land_f10_dcast_normagg$V2)) +
+  geom_point()+
+  ylim(1,0)+
+  theme_bw()
+
+
+LANDMARKNMF$frame<-NULL
+
+LANDMARKNMF
+
+
+
+```
+for (f in 1:length(filename_unique)) {
+  # f = 2
+  # video = filename_video[f]
+  temp_df <- df_OF_select%>%
+    subset(Stimuli_frame == filename_unique[f])
+  
+    # start
+  message(paste0("running video no_: ", f), paste0("_",filename_unique[f]))
+
+
+  
+  # First, isolate the points of interest (the subject's left and right eyes)
+  left_eye  <- temp_df[temp_df$lanmark_id == 42,]
+  right_eye <- temp_df[temp_df$lanmark_id == 39,] 
+  
+  # now find the difference in the y co-ordinates and x co-ordinates between these two points:
+  diff_x <- left_eye$x - right_eye$x
+  diff_y <- left_eye$y - right_eye$y
+  
+   message(paste0("angle - ratio - transform"))
+  # The arctangent of the ratio will be the angle you need to rotate all the points by:
+  theta  <- atan2(-diff_y, diff_x)
+  
+# print("matrix") 
+# To transform the points, you need to create a rotation matrix, which is a specific two-by-two matrix which you can use to rotate the original points:
+# 
+# enter image description here - https://stackoverflow.com/questions/74493141/align-x-and-y-coordinates-of-face-landmarks-in-r/74493424?noredirect=1#comment131500839_74493424
+  mat <- matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), 2)
+
+# Now we multiply each x, y point by this matrix to get our rotated points, and write it back into our original data frame:
+  temp_df[,9:10] <- t(apply(temp_df[,6:7], 1, function(x) mat %*% x))
+  
+   message(paste0("bind datasets"))
+  
+    temp_df_bind<- bind_rows(temp_df_bind,temp_df)
+    }
 ```
 
 ```{r}
@@ -1966,6 +2564,8 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
   # facet_grid(expression~component)+
   theme_classic()+
   facet_grid(var_type~.)
+
+
 
 
 ```
