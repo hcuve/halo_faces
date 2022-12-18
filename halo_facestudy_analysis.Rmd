@@ -1019,6 +1019,7 @@ plot_annotation(title = "POSED EXPRESSIONS")
 #        width = 10, height = 7, dpi = 800)
 paper_plots$NMF_panel_posed/paper_plots$NMF_panel_posed
 
+paper_plots$NMF_panel_posed
 ggsave("fig2_NMF_panel_posed.tiff", paper_plots$NMF_panel_posed, device = "tiff",
        width = 14, height = 7, dpi = 800)
 
@@ -1029,7 +1030,25 @@ ggsave("fig2_NMF_panel_posed.tiff", paper_plots$NMF_panel_posed, device = "tiff"
 
 
 
-# 
+# plot compoent classification of emotion
+
+```{r}
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  group_by(filename,component)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max)%>%
+  # mutate_at(c("coef"), scale)%>%
+  group_by(component, filename, expression)%>%
+
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(component, coef, group = expression, color = expression))+
+  stat_summary(geom = "pointrange", position = position_dodge(1))+
+  ggpubr::stat_compare_means()+
+  geom_jitter( position = position_dodge2( width = .))
+
+
+```
 
 ```{r}
 colnames(df_OF_output_AUsW_unblind_posed_binned_k2)
