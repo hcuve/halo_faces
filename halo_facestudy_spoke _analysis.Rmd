@@ -1018,7 +1018,9 @@ Acc_unshuff<- sum(test_set$prediction == test_set$expression)/length(test_set$ex
 
 # we can get acuracy p value and uper lower bounds ysing a binomial test
 # https://rdrr.io/cran/caret/man/confusionMatrix.html
-confusionMatrix(test_set_temp$prediction , as.factor(test_set_temp$expression), mode = "everything", positive="1")[["overall"]][["Accuracy"]]
+
+# get evaluation metris with SD
+confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "everything", positive="1")
 
 # some idea about boostraping on repeated measures
 # https://colauttilab.github.io/EcologyTutorials/bootstrap.html
@@ -1048,12 +1050,15 @@ rf_finalmodel<- data.frame()
 rf_confusion<- data.frame()
 acc_test<-data.frame()
 
+by_class_df_perm<-data.frame()
+conf_mat_df_perm<-data.frame()
+
 library(caret)
 library(randomForest)
 
 
 
-for (i in 1:1000) {
+for (i in 1:2000) {
     set.seed(i)
 message("Star Loop - ", i)
   permuted_labels<- mts_maxnorm_dcast_no0Sd_removed_SCALE2%>%
@@ -1096,9 +1101,28 @@ message("Fit RF - ", i)
   # test set
   test_set_temp$prediction <- predict(r.forest_temp, test_set_temp)
   
-acc_temp <- sum(test_set_temp$prediction == test_set_temp$expression_shuffle)/length(test_set_temp$expression_shuffle)
+  
+  # acc_temp <- sum(test_set_temp$prediction == test_set_temp$expression_shuffle)/length(test_set_temp$expression_shuffle)
 
-acc_test<- bind_rows(acc_test,as.data.frame(acc_temp))
+
+  acc_temp <- confusionMatrix(test_set_temp$prediction , as.factor(test_set_temp$expression), mode = "everything", positive="1")[["overall"]][["Accuracy"]]
+  
+  acc_test<- bind_rows(acc_test,as.data.frame(acc_temp))
+  
+  # sum(test_set_temp$prediction == test_set_temp$expression)/length(test_set_temp$expression)
+
+# confusionMatrix(pred, actual, mode = "everything", positive="1")
+
+# library(caret)
+conf_mat_temp_perm <- as.data.frame(confusionMatrix(test_set_temp$prediction , as.factor(test_set_temp$expression), mode = "everything", positive="1")[["table"]])
+
+conf_mat_df_perm<- bind_rows(conf_mat_df_perm,conf_mat_temp_perm)
+
+  
+  by_class_temp_perm<- t(as.data.frame(confusionMatrix(test_set_temp$prediction, as.factor(test_set_temp$expression), mode = "everything", positive="1")[["byClass"]]))
+  
+by_class_df_perm <- bind_rows(as.data.frame(by_class_df), as.data.frame(by_class_temp_perm))
+
 message("Done Loop - ", i)
 
 }
@@ -1280,7 +1304,10 @@ message("Fit RF - ", i)
   test_set_temp$prediction <- predict(r.forest_temp, test_set_temp)
   
 acc_temp <- confusionMatrix(test_set_temp$prediction , as.factor(test_set_temp$expression), mode = "everything", positive="1")[["overall"]][["Accuracy"]]
+
+# test_set$prediction
   
+
   # sum(test_set_temp$prediction == test_set_temp$expression)/length(test_set_temp$expression)
 
 # confusionMatrix(pred, actual, mode = "everything", positive="1")
@@ -1294,10 +1321,8 @@ by_class_temp<- t(as.data.frame(confusionMatrix(test_set_temp$prediction, as.fac
 
 by_class_df<- bind_rows(as.data.frame(by_class_df), as.data.frame(by_class_temp))
 
-# test_set$prediction
-  
 
-acc_test_ci<- bind_rows(acc_test_ci,as.data.frame(acc_temp))
+
 message("Done Loop - ", i)
 
 }
@@ -1317,6 +1342,140 @@ r.forest_tr$finalModel
 
 ```
 
+
+
+```{r}
+conf_mat_df
+
+by_class_temp
+
+
+# as.data.frame(r.forest_mts$finalMode$err.rate)%>%
+rnames<- row.names(by_class_df)
+
+by_class_df$sim<- rep(1:1000, each = 10)
+
+library(tidyverse)
+
+by_class_df%>%
+  mutate(row_name = substr(rnames,1,8)) %>%
+  subset(row_name == "Balanced")%>%
+
+    gather(key, value, -sim, -row_name) %>%
+    group_by(key)%>%
+    mutate(perc_5 = quantile(value,.025, na.rm = TRUE),
+         perc_95 = quantile(value,.975, na.rm = TRUE))%>%
+  # 0.8833       0.9500     0.9167
+
+
+  mutate(acc_test = if_else(key == "Class: angry", .88,
+                  if_else(key == "Class: happy", .95,
+                          if_else(key == "Class: sad",.91, NULL))))%>%
+  group_by(key)%>%
+  # summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(log(value+.1), color = key)) +
+  geom_histogram() +
+  facet_grid(~key) +
+    geom_vline(aes(xintercept = log(perc_5+.1))) +
+   geom_vline(aes(xintercept =log(perc_95+.1))) +
+    geom_vline(aes(xintercept = log(acc_test+.1)), linetype ="dashed", color = "red")\
+
+
+
+# bar plots
+by_class_df %>%
+  mutate(row_name = substr(rnames,1,8)) %>%
+  subset(row_name == "Balanced")%>%
+    gather(key, value, -sim, -row_name) %>%
+    group_by(key)%>%
+    mutate(perc_5 = quantile(value,.025, na.rm = TRUE),
+         perc_95 = quantile(value,.975, na.rm = TRUE))%>%
+  mutate(serror = sd(value) / sqrt(n())) %>%
+
+  # 0.8833       0.9500     0.9167
+
+  mutate(acc_test = if_else(key == "Class: angry", .88,
+                  if_else(key == "Class: happy", .95,
+                          if_else(key == "Class: sad",.91, NULL)))) %>%
+  group_by(key)%>%
+  summarise_if(is.numeric, mean, na.rm = T) %>%
+  ggplot(aes(key, value, color = key)) +
+   geom_bar(stat="identity")+
+  geom_errorbar( aes(x=key, ymin=perc_5, ymax=perc_95), width=0.4, colour="orange", alpha=0.9, size=1.3)+
+  coord_cartesian(ylim=c(.7,1))
+  # ylim(.30,1)
+  facet_grid(~key) +
+    geom_vline(aes(xintercept = log(perc_5+.1))) +
+   geom_vline(aes(xintercept =log(perc_95+.1))) +
+    geom_vline(aes(xintercept = log(acc_test+.1)), linetype ="dashed", color = "red")
+
+```
+
+CHAT GPT bootsraped CIs for random forest
+```{r}
+# Load the necessary packages
+library(randomForest)
+
+# Create a function to calculate the three-way classification accuracy
+calculate_accuracy <- function(data, model) {
+  # Make predictions on the data using the model
+  predictions <- predict(model, data)
+  
+  # Calculate the three-way classification accuracy
+  accuracy <- sum(predictions == data$class) / nrow(data)
+  
+  return(accuracy)
+}
+
+# Load the data and fit the random forest model
+data <- read.csv("data.csv")
+model <- randomForest(class ~ ., data = data)
+
+# Set the number of bootstrapped samples
+n <- 1000
+
+# Initialize a vector to store the accuracy values
+accuracy_values <- rep(NA, n)
+
+# Generate the indices for the bootstrapped samples
+indices <- sample(nrow(data), size = n, replace = TRUE)
+
+# Iterate over the indices and calculate the three-way classification accuracy
+for (i in 1:n) {
+  # Create a bootstrapped sample
+  sample_data <- data[indices[i], ]
+  
+  # Calculate the three-way classification accuracy
+  accuracy_values[i] <- calculate_accuracy(sample_data, model)
+}
+
+# Calculate the standard error
+standard_error <- sd(accuracy_values) / sqrt(n)
+
+# Print the standard error
+print(standard_error)
+
+
+  
+  r.forest_mts$finalModel
+  geom_vline(xintercept = mean(r.forest_mts$finalModel$err.rate[,4]), linetype = "dashed", color = "red")
+# here we have some issue where the poitn estimate is oiutside the CI
+# https://stats.stackexchange.com/questions/388931/bootstrap-confidence-intervals-do-not-include-the-observed-mean-can-this-be
+# https://stats.stackexchange.com/questions/355781/is-it-true-that-the-percentile-bootstrap-should-never-be-used/357498#357498
+
+# rhe lowest error we have in the real is .3
+r.forest_mts$finalModel$err.rate
+r.forest_mts$results
+
+r.forest_mts
+
+r.forest_mts$trainingData
+(0.04/sqrt(183))+.77
+
+.77-(0.04/sqrt(183))
+
+
+```
 
 ```{r}
 library(boot)
@@ -1379,9 +1538,10 @@ acc_test<- acc_test%>%
 max(acc_test_ci$acc_temp)
 
 percent_rank()
-quantile(96%)
+# quantile(96%)
 
 quantile(acc_test_ci$acc_temp, .25)
+
 acc_test_ci%>%
   ggplot(aes(acc_temp)) +
   geom_histogram() +
@@ -1392,8 +1552,7 @@ acc_test_ci%>%
 
   geom_histogram(bins = 100)
   
-  
-  
+
   # for each
 
 
@@ -1414,15 +1573,18 @@ rf_finalmodel_ci%>%
     # geom_vline(xintercept = .3)
 # rhe lowest error we have in the real is .3
 
+```
+
 
 rf_results_df
 
-
+```{r}
 rf_results_df_ci %>%
   ggplot(aes(Accuracy)) +
   geom_histogram()+
   # facet_grid(~key)+
     geom_vline(xintercept = .76) #r.forest_mts$results
+
 
 rf_confusion$class<-substring(rownames(rf_confusion), 1,3)
 
@@ -1430,9 +1592,6 @@ rf_confusion%>%
   group_by(class)%>%summarise_if(is.numeric, mean, na.rm = T)
 
 r.forest_mts$finalModel$confusion
-
-
-
 
 
 rf_results_df
@@ -1451,21 +1610,22 @@ acc_test<- acc_test%>%
   acc_test_ci%>%
         mutate(perc_5 = quantile(acc_temp,.025, na.rm = TRUE), 
          perc_95 = quantile(acc_temp,.975, na.rm = TRUE))%>%
-  ggplot(aes(acc_temp)) +
-  geom_histogram() +
+  ggplot(aes(log(acc_temp+.1))) +
+  geom_histogram() 
   # geom_vline(xintercept = 0.47, linetype = "dashed", color = "red")+
-    geom_vline(aes(xintercept =perc_5))+
-   geom_vline(aes(xintercept =perc_95))+
+   #  geom_vline(aes(xintercept =perc_5))+
+   # geom_vline(aes(xintercept =perc_95))+
   
   geom_vline(aes(xintercept = Acc_unshuff), color = "green", linetype = "dashed")
   # geom_histogram(bins = 100)
   
+```
   
+```{r}
   # note CIs wont always be symtric
   # https://stats.stackexchange.com/questions/16574/are-confidence-intervals-always-symmetrical-around-the-point-estimate#:~:text=A%20confidence%20interval%20obtained%20from,on%20the%20natural%20log%20scale.
   
-  
-  
+
   # for each emotion
   
   rf_result
