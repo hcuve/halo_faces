@@ -80,9 +80,9 @@ some custom visualisations
 custom visalisation of H (mixing components)
 ```{r}
 # chool_talk$AU_NM 
-
-as.data.frame(res_k3_spoken1@fit@H)%>%
-  mutate(component = 1:n())%>%
+paper_plots$spoken_NMF_hm <-
+as.data.frame(res_k3_spoken1@fit@H) %>%
+  mutate(component = c(1,3,2)) %>%
   gather(AU, coef, -component)%>%
   group_by(component)%>%
   mutate(max_comp = max(coef),
@@ -95,10 +95,17 @@ as.data.frame(res_k3_spoken1@fit@H)%>%
   geom_tile()+
   theme_classic()+
   # scale_fill_viridis_()
-  scale_fill_viridis_c(option = "inferno")+
+   scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
   xlab("K")+
   p$graphstyle_int+
-guides(fill=guide_colorbar(ticks.colour = NA))
+guides(fill=guide_colorbar(ticks.colour = NA))+
+    xlab("Component (K)")+
+  ggtitle("SPOKEN EXPRESSIONS")
+  
+
+paper_plots$spoken_NMF_hm
+
 
 ```
 
@@ -191,6 +198,7 @@ df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
   p$graphstyle_int+
   guides(fill=guide_colorbar(ticks.colour = NA))+
   theme(panel.spacing = unit(1, "cm"))
+  
 
 
 
@@ -231,9 +239,12 @@ posed_NMF$posed_spoken<- "posed"
 spoken_NMF$posed_spoken<- "spoken"
 
 
-bind_rows(posed_NMF, spoken_NMF)%>%
+# bind_rows(posed_NMF, spoken_NMF)%>%
+paper_plots$spoken_NMF <-
+  spoken_NMF%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename,-posed_spoken)%>%
-  subset(expression!= "neutral")%>%
+  # subset(expression!= "neutral")%>%
+    mutate(component = substring(component,4,8))%>%
   
       group_by(filename,component,subject,expression,posed_spoken)%>%
   mutate(coef_max = max(coef),
@@ -246,12 +257,89 @@ bind_rows(posed_NMF, spoken_NMF)%>%
   geom_smooth()+
   # geom_smooth(aes(group = subject), se = F)+
   # stat_summary(aes(group = subject, color = component), geom = "smooth")+
-  facet_grid(posed_spoken~expression )+
+  facet_grid(~expression )+
   theme_classic()+
    xlab("time bin")+
   p$graphstyle_int+
-   scale_color_viridis_d(option = "magma")
+   scale_color_viridis_d(option = "magma")+
+    scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+    scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+  theme(panel.spacing.x = unit(1.5, "lines"))+
+  theme(legend.position = "top")
+  
+  paper_plots$spoken_NMF
+  
+  
+  
+  # ts heatmap
+  # df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
+ paper_plots$spoken_NMF_ts_hm <- 
+  spoken_NMF%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename,-posed_spoken)%>%
+  # subset(expression!= "neutral")%>%
+    mutate(component = substring(component,4,8))%>%
+    mutate(expression = factor(expression, levels = c('angry', 'happy', 'sad', 'neutral')))%>%
+  
+      group_by(filename,component,subject,expression,posed_spoken)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  # 
+  # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  # group_by(filename,component)%>%
+  # mutate(coef_max = max(coef),
+  #        coef = coef/coef_max)%>%
 
+  group_by(component, expression, bin_frame)%>%
+
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, component, fill= coef))+
+  geom_tile()+
+  xlab("time bin")+
+      scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  # scale_fill_viridis_c(option = "magma")+
+  # geom_smooth(se = F)+
+  facet_grid(~expression)+
+  theme_classic()+
+  p$graphstyle_int+
+  guides(fill=guide_colorbar(ticks.colour = NA))+
+  # theme(panel.spacing = unit(1, "cm"))+
+    scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+  theme(panel.spacing.x = unit(1.5, "lines"))
+
+  paper_plots$spoken_NMF_ts_hm
+  
+  
+  # panespoken_NMF_ts_hm paper_plots$spoken_NMF_ts_hm
+  paper_plots$NMF_panel_spoken <-
+(paper_plots$spoken_NMF_hm |
+  (paper_plots$spoken_NMF/paper_plots$spoken_NMF_ts_hm))+
+  plot_layout(ncol = 2, widths = c(.7,2))+
+    plot_annotation(title = "SPOKEN EXPRESSIONS")
+
+    paper_plots$NMF_panel_spoken
+    
+    
+ggsave("fig2_NMF_panel_spokjen.tiff", paper_plots$NMF_panel_spoken, device = "tiff",
+       width = 14, height = 7, dpi = 800)
+
+
+paper_plots$panel_fig2_posed_spoken_panel<- 
+  ((paper_plots$NMF_panel_posed+ggtitle("POSED EXPRESSIONS")) /(paper_plots$NMF_panel_spoken+ggtitle("SPOKEN EXPRESSIONS")))+
+  plot_annotation(tag_levels = 'A')
+
+paper_plots$NMF_panel_posed +
+  ggtitle("posed")
+  
+ggsave("panel_fig2_posed_spoken_panel.tiff", paper_plots$panel_fig2_posed_spoken_pane, device = "tiff",
+       width = 20, height = 14, dpi = 800)
+
+```
+
+
+
+```{r}
 posed_spoken_bindrows<- bind_rows(posed_NMF, spoken_NMF)%>%
   group_by(filename,posed_spoken, expression, drug.placebo,subject)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE)
@@ -633,7 +721,7 @@ mts_maxnorm_dcast_no0Sd <- mts_maxnorm_dcast%>%select(-zero_sd_cols)
 # run the PCA
 
 # Identify the infinite and missing values
-inf_values <- is.infinite(as.data.frame(test_ts_dcast_no0Sd$))
+inf_values <- is.infinite(as.data.frame(test_ts_dcast_no0Sd))
 na_values <- is.na(test_ts_dcast_no0Sd)
 table(na_values)
 
@@ -675,7 +763,7 @@ library(psych)
 
 ?psych::principal
 PCA_maxnormpsych <-psych::principal(mts_maxnorm_dcast_no0Sd[,c(5:118)],3, scores = TRUE)
-
+PCA_maxnormpsych
 
 mts_maxnorm_dcast_no0Sd
 
@@ -809,7 +897,7 @@ plot_ly(as.data.frame(tsne_results$Y), x = ~V1, y = ~V2, type = "scatter", mode 
 ```
   
   
-  
+Train Randim forest for plotting SDs  
 
 
 library(caTools)
@@ -889,6 +977,15 @@ r.forest_tr$finalModel
 
   test_set$prediction <- predict(r.forest_mts, test_set)
   
+  
+  #create confusion matrix and calculate metrics related to confusion matrix
+confusionMatrix(pred, actual, mode = "everything", positive="1")
+
+library(caret)
+test<- confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "everything", positive="1")
+
+ test_set$prediction
+  
 
 r.forest_mts$results
 
@@ -897,6 +994,12 @@ r.forest_mts$bestTune
 r.forest_mts$resample
 
 r.forest_mts$finalModel
+r.forest_mts$results
+r.forest_mts$finalModel$err.rate
+
+r.forest_mts$finalModel$confusion
+r.forest_mts$finalModel$
+r.forest_mts$finalModel$forest
 # obb
 # 100-23.5 = 76.5 #matches jasp
 
@@ -912,6 +1015,16 @@ r.forest_mts$finalModel
 Acc_unshuff<- sum(test_set$prediction == test_set$expression)/length(test_set$expression)
 # Acc_unshuff = 0.8888889 = approximate to what we have
 # now we get exactly the same
+
+# we can get acuracy p value and uper lower bounds ysing a binomial test
+# https://rdrr.io/cran/caret/man/confusionMatrix.html
+confusionMatrix(test_set_temp$prediction , as.factor(test_set_temp$expression), mode = "everything", positive="1")[["overall"]][["Accuracy"]]
+
+# some idea about boostraping on repeated measures
+# https://colauttilab.github.io/EcologyTutorials/bootstrap.html
+# http://math.furman.edu/~dcs/courses/math47/R/library/Hmisc/html/rm.boot.html
+# i think this is what I did for my other paper on autonomic coherence
+
 
 
 
@@ -1079,12 +1192,14 @@ rf_results_df_ci<- data.frame()
 rf_finalmodel_ci<- data.frame()
 rf_confusion_ci<- data.frame()
 acc_test_ci<-data.frame()
+by_class_df<- data.frame()
+conf_mat_df<- data.frame()
 
 library(caret)
 library(randomForest)
 
 
-install.packages("fabricatr")
+# install.packages("fabricatr")
 
 ?fabricatr::resample_data
 
@@ -1116,7 +1231,7 @@ ci_data_resamp_test
 
 unique(ci_data_resamp_test$expression)
 
-for (i in 1:5000) {
+for (i in 1:10000) {
     set.seed(i)
 message("Star Loop - ", i)
 
@@ -1164,7 +1279,23 @@ message("Fit RF - ", i)
   # test set
   test_set_temp$prediction <- predict(r.forest_temp, test_set_temp)
   
-acc_temp <- sum(test_set_temp$prediction == test_set_temp$expression)/length(test_set_temp$expression)
+acc_temp <- confusionMatrix(test_set_temp$prediction , as.factor(test_set_temp$expression), mode = "everything", positive="1")[["overall"]][["Accuracy"]]
+  
+  # sum(test_set_temp$prediction == test_set_temp$expression)/length(test_set_temp$expression)
+
+# confusionMatrix(pred, actual, mode = "everything", positive="1")
+
+# library(caret)
+conf_mat_temp<- as.data.frame(confusionMatrix(test_set_temp$prediction , as.factor(test_set_temp$expression), mode = "everything", positive="1")[["table"]])
+
+conf_mat_df<- bind_rows(conf_mat_df,conf_mat_temp)
+
+by_class_temp<- t(as.data.frame(confusionMatrix(test_set_temp$prediction, as.factor(test_set_temp$expression), mode = "everything", positive="1")[["byClass"]]))
+
+by_class_df<- bind_rows(as.data.frame(by_class_df), as.data.frame(by_class_temp))
+
+# test_set$prediction
+  
 
 acc_test_ci<- bind_rows(acc_test_ci,as.data.frame(acc_temp))
 message("Done Loop - ", i)

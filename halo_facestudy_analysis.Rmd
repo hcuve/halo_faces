@@ -466,12 +466,22 @@ as.data.frame(res_k3@fit@H)%>%
   geom_tile()+
   theme_classic()+
   # scale_fill_viridis_()
-  scale_fill_viridis_c(option = "inferno")+
+    scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
   xlab("K")+
   p$graphstyle_int+
 guides(fill=guide_colorbar(ticks.colour = NA))
 
 
+chool_talk$AU_NM
+
+
+
+```
+
+
+Lanmarking
+```{r}
 
 library(readxl)
 LANDMARKNMF <- read_excel("Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/LANDMARKNMF.xlsx")
@@ -663,60 +673,55 @@ SO%>%
 
 ```
   
+  GPT
+```{r}
+# First, install and load the deldir library:
+# install.packages("deldir")
+library(deldir)
 
-left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
-  mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
-         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
+# install.packages("deldir")
+install.packages("tricol")
+
+
+
+
+
+
+traing_fordeldir <- left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  
+
+
+  mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
+         V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
     mutate(coloring = if_else(V1_1 == 1, 1,0)) %>%
   subset(!(V1 == 0 & V2 == 0))%>%
 
-  mutate(coef2 = if_else(land1_0 == 1, coef,0))%>%
-    # group_by(lanmark_id, component, AU)%>%
-  # summarise_if(is.numeric, mean, na.rm = T) %>%
-  ungroup()%>%
-  ggplot(aes(V1, V2))+
-        geom_point(aes(color = coef2))+
-
-  ylim(1,0)+
-
-      # geom_delaunay_segment(aes(x =V1, y = V2, fill = coef, color = coef),
-      # lineend = 'round')+
-  # geom_delaunay_segment(aes(x =V1, y = V2, fill = coef, color = coef),
-      # lineend = 'round')+
-
-    facet_grid(~component)+
+  mutate(coef2 = if_else(land1_0_nmf == 1, coef,0))%>%
+    group_by(lanmark_id, component)%>%
+      mutate(coef2 = coef2/max(coef2))%>%
+  group_by(lanmark_id)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
 
 
-   # geom_delaunay_tile(aes(x = V1_1, y = V2_2, fill = coef2), max.radius = 0.25)+
-    scale_color_viridis_c(option = "magma")
+traing_fordeldir
+
+tri<- deldir(traing_fordeldir$V1, traing_fordeldir$V2)
 
 
 
 
-     #                     lineend = 'round')+
-   geom_delaunay_tile(aes(fill = coef, color = coef))+
+# Generate some random colors for the vertices:
 
-    scale_color_viridis_c(option = "magma")
-    geom_delaunay_tile2(aes(x =V1, V2, color = coef2), alpha = 0.3)+
-  # geom_delaunay_segment2(colour = Species, group = -1)+
-
-
-
-View(triangle)
+colors <- rainbow(length(traing_fordeldir$component))
+colors <- rainbow(length(traing_fordeldir$V1))
 
 
 
 
-  
 
-# use the NMC AU wights as a scaling parameter
-NMFresk3test
-    ggforce
-
-  
-  
 ```
 
+```{r}
 NMFresk3test
 
 df_OF_output_AUsW_unblind_posed_binned$NMFtable
@@ -733,6 +738,8 @@ LANDMARKNMF$comp1<- LANDMARKNMF$NMF1
 LANDMARKNMF$comp3<- LANDMARKNMF$NMF3
 
 ```
+
+
 ```{r}
   
 colnames(LANDMARKNMF[,c(1,7:8,31:33)])
@@ -799,16 +806,17 @@ df_OF_output_AUsW_unblind_posed_binned1 [,c(1,2:3,9:10,34:36)]%>%
 ```
 
 
-chool_talk$NMF_PCA<- chool_talk$AU_NM +theme(legend.position = "none") +(chool_talk$pca_AU+theme(axis.text.y = element_blank(),
-                                         axis.title.y = element_blank()))
 
-ggsave("NMF_PCA.tiff", chool_talk$NMF_PCA, device = "tiff", width = 10, height = 7, dpi = 800)
-  
-  
+Figure 2
 
+
+  
+```{r}
 chool_talk$AU_NM2<- chool_talk$AU_NM+
   theme(axis.text.y = element_blank())+
   ylab("Motor Action Unit")
+
+chool_talk$AU_NM2
 chool_talk$ts_smooth
 
 ggsave("AU_NMF2.tiff",chool_talk$AU_NM2, device = "tiff", width = 5, height = 8, dpi = 800)
@@ -906,6 +914,7 @@ chool_talk$ts_smooth <- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:
    
    
 chool_talk$ts_smooth
+
 chool_talk$ts_pca_smooth<-
     df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,48:50)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
@@ -948,9 +957,9 @@ chool_talk$AU_NM
 
 ```
 
-
+heatmap + timeseries + timeseries heatmap
 ```{r}
-chool_talk$ts_hm<-
+chool_talk$ts_hm <-
 df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
   group_by(filename,component)%>%
@@ -964,7 +973,8 @@ df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
   ggplot(aes(bin_frame, component, fill= coef))+
   geom_tile()+
   xlab("time bin")+
-  scale_fill_viridis_c(option = "magma")+
+  scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
   # geom_smooth(se = F)+
   facet_grid(~expression)+
   theme_classic()+
@@ -972,16 +982,49 @@ df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
   guides(fill=guide_colorbar(ticks.colour = NA))+
   theme(panel.spacing = unit(1, "cm"))
 
+chool_talk$ts_hm 
+
 library(patchwork)
 
 chool_talk$ts_nmf_heat_NMF <- (chool_talk$ts_smooth/
   chool_talk$ts_hm)+
   plot_layout(heights = c(1,2))
 
-chool_talk$ts_nmf_heat_NMF
+# soace out values in x axis
+chool_talk$ts_smooth <- chool_talk$ts_smooth + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+    scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+  theme(panel.spacing.x = unit(1.5, "lines"))+
+  theme(legend.position = "top")
 
-ggsave("ts_nmf_heat_NMF.tiff", chool_talk$ts_nmf_heat_NMF, device = "tiff",
-       width = 10, height = 7, dpi = 800)
+
+chool_talk$ts_hm <- chool_talk$ts_hm +scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+  theme(panel.spacing.x = unit(1.5, "lines"))
+
+chool_talk$AU_NM<- chool_talk$AU_NM +
+  xlab("Component (K)")+
+  ggtitle("POSED EXPRESSIONS")
+
+
+paper_plots<- list()
+
+# panel
+paper_plots$NMF_panel_posed <-
+(chool_talk$AU_NM |
+  (chool_talk$ts_smooth/chool_talk$ts_hm))+
+  plot_layout(ncol = 2, widths = c(.7,2))+
+plot_annotation(title = "POSED EXPRESSIONS")
+
+
+# ggsave("ts_nmf_heat_NMF.tiff", chool_talk$ts_nmf_heat_NMF, device = "tiff",
+#        width = 10, height = 7, dpi = 800)
+paper_plots$NMF_panel_posed/paper_plots$NMF_panel_posed
+
+ggsave("fig2_NMF_panel_posed.tiff", paper_plots$NMF_panel_posed, device = "tiff",
+       width = 14, height = 7, dpi = 800)
+
+
+# spoken
+
 ```
 
 
@@ -1005,6 +1048,16 @@ df_OF_output_AUsW_unblind_posed_binned_k2[,c(1,2:3,9:10, 49:50)]%>%
 ```
 
 
+PCA
+```{r}
+chool_talk$NMF_PCA <- chool_talk$AU_NM +theme(legend.position = "none") +(chool_talk$pca_AU+theme(axis.text.y = element_blank(),
+                                         axis.title.y = element_blank()))
+
+
+ggsave("NMF_PCA.tiff", chool_talk$NMF_PCA, device = "tiff", width = 10, height = 7, dpi = 800)
+
+```
+  
 visualise time NMF
 
 
