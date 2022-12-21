@@ -888,7 +888,6 @@ ggplot(as.data.frame(tsne_results$Y), aes(V1, V2)) +
   geom_point(aes(color = test_ts_dcast_no0Sd$expression), size = 1.5)+
   theme(legend.position = "none")
 
-```
 
 
 
@@ -926,7 +925,7 @@ plot_ly(as.data.frame(tsne_results$Y), x = ~V1, y = ~V2, type = "scatter", mode 
 ```
   
   
-Train Randim forest for plotting SDs  
+Train Random forest for plotting SDs  
 
 
 library(caTools)
@@ -1005,7 +1004,7 @@ train_set <- train_test_split(permuted_labels)[[1]]
 r.forest_tr$finalModel 
 
   test_set$prediction <- predict(r.forest_mts, test_set)
-  
+  r.forest_mts
   
   #create confusion matrix and calculate metrics related to confusion matrix
 confusionMatrix(pred, actual, mode = "everything", positive="1")
@@ -1381,6 +1380,7 @@ message("Done Loop - ", i)
   r.forest_mts <- train(expression ~ PC1 + PC2 + PC3, 
                 data = train_set, 
                 method = "rf",
+                type = "raw",
                 ntree = 30)
   
   r.forest_tr
@@ -1391,6 +1391,371 @@ r.forest_tr$finalModel
   
 
 ```
+
+to do: Bopundary maps
+
+```{r}
+
+mts_maxnorm_dcast_no0Sd_removed_SCALE2
+
+install.packages("ggRandomForests")
+library(ggRandomForests)
+# ?ggRandomForests::calc_auc()
+
+
+## Taken from the gg_roc example
+rfsrc_iris <- rfsrc(Species ~ ., data = iris)
+
+## Not run: 
+gg_dta <- gg_roc(rfsrc_iris, which_outcome=1)
+
+calc_auc(gg_dta)
+plot.gg_roc(gg_dta)
+
+data(rfsrc_iris, package="ggRandomForests")
+
+# ROC for setosa
+gg_dta <- gg_roc(rfsrc_iris, which_outcome=1)
+
+
+
+
+# test https://stackoverflow.com/questions/55936315/decision-boundary-plots-in-ggplot2
+library(randomForest)
+library(tidyverse)
+library(caret)
+# install.packages("dslabs")
+library(dslabs)
+# install.packages("ggthemes")
+library(ggthemes)
+
+View(mnist_27)
+model<- randomForest(y~., data = mnist_27$train)
+data<- mnist_27$train %>% select(x_1, x_2, y)
+class<- "y"
+#predict_type = "class"
+resolution = 75
+
+
+  if(!is.null(class)) cl <- data[,class] else cl <- 1
+  data <- data[,1:2]
+
+
+
+
+  r <- sapply(data, range, na.rm = TRUE)
+  xs <- seq(r[1,1], r[2,1], length.out = resolution)
+  ys <- seq(r[1,2], r[2,2], length.out = resolution)
+  
+  g <- cbind(rep(xs, each=resolution), rep(ys, time = resolution))
+  colnames(g) <- colnames(r)
+  g <- as.data.frame(g)
+
+  q<- predict(model, g, type = "class")
+  p <- predict(model, g, type = "prob")
+  p<- p %>% as.data.frame() %>% mutate(p=if_else(`2`>=`2`, '2', '7'))
+  p<- p %>% mutate(pred= as.integer(q))
+
+p
+
+
+
+
+
+  ggplot()+
+    geom_raster(data= g, aes(x= x_1, y=x_2, fill=p$`2` ), interpolate = TRUE)+
+    geom_contour(data= NULL, aes(x= g$x_1, y=g$x_2, z= p$pred), breaks=c(1.5), color="black", size=1)+
+    theme_few()+
+    scale_colour_manual(values = cols)+
+    labs(colour = "", fill="")+
+    scale_fill_gradient2(low="#338cea", mid="white", high="#dd7e7e", 
+                         midpoint=0.5, limits=range(p$`2`))+
+    theme(legend.position = "none")
+  
+  
+  
+  # try with y data
+    q<- predict(r.forest_mts, g, type = "class")
+  p <- predict(model, g, type = "prob")
+  
+  q<- predict(r.forest_mts, bind_rows(test_set,train_set), type = "raw")
+  p<- predict(r.forest_mts, bind_rows(test_set,train_set),type = "prob")
+  
+  # test_set$prediction <- predict(r.forest_mts, test_set)
+  # r.forest_mts
+  
+  
+
+  # p<- p %>% as.data.frame() %>% mutate(p=if_else(`2`>=`2`, '2', '7'))
+  max.col(p[,1:3])
+    p<- p %>% as.data.frame() %>% mutate(p= max.col(p[,1:3]))
+  p
+    p<- p %>% mutate(pred= as.integer(q))
+    
+    
+ bind_train_test<-   bind_rows(test_set,train_set)
+ 
+ bind_train_test$PC1
+    ggplot()+
+    geom_tile(data= bind_train_test    , 
+                aes(x= PC1, y=PC2, color=p$angry ))+
+    
+    
+    geom_contour(data= NULL, aes(x= bind_train_test$PC1, y=bind_train_test$PC2, z= p$pred),
+                 breaks=c(1.5), color="black", size=1)+
+    theme_few()+
+    # scale_colour_manual(values = cols)+
+    labs(colour = "", fill="")+
+    # scale_fill_gradient2(low="#338cea", mid="white", high="#dd7e7e", 
+    #                      midpoint=0.5, limits=range(p$happy))+
+    theme(legend.position = "none")
+  
+  # input: 
+# model: classification model
+# data: training set
+# class: response variable
+
+boundary_func <- function(model, data, class = NULL, predict_type = "class",
+  resolution = 100, showgrid = TRUE, ...) {
+
+  if(!is.null(class)) cl <- data[,class] else cl <- 1
+  data <- data[,1:2]
+  k <- length(unique(cl))
+
+  plot(data, col = as.integer(cl)+1L, pch = as.integer(cl)+1L, ...)
+
+  # make grid
+  r <- sapply(data, range, na.rm = TRUE)
+  xs <- seq(r[1,1], r[2,1], length.out = resolution)
+  ys <- seq(r[1,2], r[2,2], length.out = resolution)
+  g <- cbind(rep(xs, each=resolution), rep(ys, time = resolution))
+  colnames(g) <- colnames(r)
+  g <- as.data.frame(g)
+
+  ### guess how to get class labels from predict
+  ### (unfortunately not very consistent between models)
+  p <- predict(model, g, type = predict_type)
+  if(is.list(p)) p <- p$class
+  p <- as.factor(p)
+
+  if(showgrid) points(g, col = as.integer(p)+1L, pch = ".")
+
+  z <- matrix(as.integer(p), nrow = resolution, byrow = TRUE)
+  contour(xs, ys, z, add = TRUE, drawlabels = FALSE,
+    lwd = 2, levels = (1:(k-1))+.5)
+
+  invisible(z)
+}
+
+colnames(bind_train_test)
+testrfneew<- as.matrix(as.data.frame(train_set[,c(69:71)])) 
+
+testrfneew<- as.data.frame(train_set[,c(69:71,3)])
+testrfneew$PC1
+
+?randomForest::randomForest
+model7 <- randomForest::randomForest(expression ~ ., data= testrfneew[,1:3],
+                                     importance=TRUE,
+                        proximity=TRUE)
+
+  boundary_func(r.forest_mts, train_set[,c(69:71,3)], class = "expression", 
+                main = "Random Forest", 
+                type = "raw")
+  
+  # randomForestSRC::plot.rfsrc()
+  
+  
+  
+  
+  
+  
+  
+  
+```
+
+No packages attempt
+
+```{r}
+# library(randomForest)
+View(bind_train_test)
+
+unique(bind_train_test$expression)
+
+
+?randomForest::randomForest
+
+set.seed(1)
+rf <-randomForest::randomForest(as.factor(expression) ~ PC1 + PC2 + PC3, data = bind_train_test,
+                   proximity = TRUE,
+                   ntree = 35,
+                   # mtry = 2
+                   )
+
+
+  
+  rf <- train(expression ~ PC1 + PC2 + PC3, 
+                data = bind_train_test, 
+                method = "rf",
+                ntree = 35,
+               proximity = TRUE)
+  
+# 
+# Now we just create a grid of all x, y values in the range of the data using expand.grid, and get the predicted species at each pair:
+bind_train_test
+
+# breask
+getPrettyAxisBreaks(bind_train_test$PC1)
+# min max
+x_min <- min(bind_train_test$PC1 + 0.5)
+x_max <- max(bind_train_test$PC1 + 0.5)
+
+y_min <- min(bind_train_test$PC2 + 0.5)
+y_max <- max(bind_train_test$PC2 + 0.5)
+
+z_min <- min(bind_train_test$PC3 + 0.5)
+z_max <- max(bind_train_test$PC3 + 0.5)
+
+  # breaks
+xBreaks <- getPrettyAxisBreaks(bind_train_test$PC1, min.n = 4)
+  
+yBreaks <- getPrettyAxisBreaks(bind_train_test$PC2, min.n = 4)
+zBreaks <- getPrettyAxisBreaks(bind_train_test$PC3, min.n = 4)
+  
+  x_min <- xBreaks[1]
+  x_max <- xBreaks[length(xBreaks)]
+  y_min <- yBreaks[1]
+  y_max <- yBreaks[length(yBreaks)]
+  
+   z_min <- zBreaks[1]
+  z_max <- zBreaks[length(zBreaks)]
+  # Adjust the graining
+  hs <- min(c(diff(range(xBreaks)), diff(range(yBreaks)))) / 50
+  hs_z <- min(c(diff(range(yBreaks)), diff(range(zBreaks)))) / 50
+  
+  grid <- as.data.frame(expand.grid(seq(x_min, x_max, by = hs), 
+                                    seq(y_min, y_max, by = hs),
+                                    seq(z_min, z_max, by = hs_z),
+                                    ))
+  
+  # (predictors[, 1], min.n = 4)
+  # yBreaks <- jaspGraphs::getPrettyAxisBreaks(predictors[, 2], min.n = 4)
+  # 
+
+
+df <- expand.grid(PC1 = seq(x_min, x_max, 
+                                            by = hs
+                            # length.out = 100
+                            ),
+                  PC2 = seq(y_min, y_max,
+                                              by = hs
+                           # length.out = 100 
+                           ),
+                  
+                  PC3 = seq(z_min, z_max ,
+                                             by = hs_z
+                            # length.out = 100
+                            )
+                  )
+
+df 
+
+ # hs <- min(c(diff(range(xBreaks)), diff(range(yBreaks)))) / 50
+
+# df$expression<-NULL
+
+df$expression <- predict(rf, df)
+
+# bind_train_test$prediction <- predict(rf, bind_train_test)
+# Now we plot the boundary with geom_raster
+
+library(ggplot2)
+
+ggplot(bind_train_test, aes(PC1, PC2, fill = expression)) +
+  geom_raster(data = df, alpha = 0.5) +
+  geom_point(shape = 21, size = 3) +
+  theme_minimal()
+
+
+ggplot(bind_train_test, aes(PC1, PC3, fill = expression)) +
+  geom_raster(data = df, alpha = 0.5) +
+  geom_point(shape = 21, size = 3) +
+  theme_minimal()
+
+ggplot(bind_train_test, aes(PC2, PC3, fill = expression)) +
+  geom_raster(data = df, alpha = 0.5) +
+  geom_point(shape = 21, size = 3) +
+  theme_minimal()
+
+
+```
+
+
+```{r}
+#' @title Compute axis breaks
+#' @param x the object to compute axis breaks for
+#'
+#' @param ... if x is numeric, this is passed to pretty
+#' @details this is just a wrapper for pretty.
+#'
+#' @export
+#' 
+getPrettyAxisBreaks <- function(x, ...) {
+  force(x)
+  UseMethod("getPrettyAxisBreaks", x)
+}
+
+#' @export
+getPrettyAxisBreaks.numeric <- function(x, ...) {
+  return(base::pretty(x, ...))
+}
+
+#' @export
+getPrettyAxisBreaks.factor <- function(x, ...) {
+  return(unique(x))
+}
+
+#' @export
+getPrettyAxisBreaks.character <- function(x, ...) {
+  return(unique(x))
+}
+
+#' @export
+getPrettyAxisBreaks.default <- function(x, ...) {
+  if (is.numeric(x))
+    return(pretty(x, ...))
+  else return(unique(x))
+}
+```
+
+
+JASP recreation attempt
+  
+  
+# JASP
+  
+  
+  data.frame(x = predictors[, 1], y = predictors[, 2], target = target, shapes = shapes)
+  p <- ggplot2::ggplot(data = gridData, mapping = ggplot2::aes(x = x, y = y)) +
+    ggplot2::geom_raster(mapping = ggplot2::aes(fill = predictions), alpha = 0.3, show.legend = FALSE) +
+    ggplot2::labs(fill = options[["target"]]) +
+    ggplot2::scale_fill_manual(values = .mlColorScheme(n = length(unique(target)))) +
+    ggplot2::scale_x_continuous(name = NULL, breaks = xBreaks, limits = range(xBreaks)) +
+    ggplot2::scale_y_continuous(name = NULL, breaks = yBreaks, limits = range(yBreaks))
+  
+  
+  bind_train_test
+  
+  # point data
+ jasp_boundarytest<-   data.frame(x = bind_train_test$PC1, y = bind_train_test$PC2, target = bind_train_test$expression, shapes = as.integer(as.factor(bind_train_test$expression)))
+  
+    
+jasp_boundarytest%>%
+  ggplot2::ggplot(data = gridData, mapping = ggplot2::aes(x = x, y = y)) +
+    ggplot2::geom_raster(mapping = ggplot2::aes(fill = predictions), alpha = 0.3, show.legend = FALSE) +
+    ggplot2::labs(fill = options[["target"]]) +
+    ggplot2::scale_fill_manual(values = .mlColorScheme(n = length(unique(target)))) +
+    ggplot2::scale_x_continuous(name = NULL, breaks = xBreaks, limits = range(xBreaks)) +
+    ggplot2::scale_y_continuous(name = NULL, breaks = yBreaks, limits = range(yBreaks))
 
 ```
 
@@ -1407,7 +1772,7 @@ by_class_df$sim<- rep(1:1000, each = 10)
 
 library(tidyverse)
 
-by_class_df%>%
+by_class_df %>%
   mutate(row_name = substr(rnames,1,8)) %>%
   subset(row_name == "Balanced")%>%
 
@@ -1999,7 +2364,7 @@ df_OF_output_AUsW_unblind_spoken1_binned$drug.placebo
 
 ```
 
-
+```
 heatmap - confusion maps
 
 

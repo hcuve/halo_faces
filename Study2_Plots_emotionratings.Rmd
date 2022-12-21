@@ -1,0 +1,710 @@
+---
+title: "Predicting emotion ratings plots"
+author: "Helio"
+date: "05/04/2021"
+output: html_document
+---
+
+
+
+work with: load("D:/OneDrive - Nexus365/Face Morph Paper/Data/Study2_plots.RData"
+
+to do: fix typos and clean
+Style
+
+
+Plotting
+
+
+```{r}
+
+# Plotting preferences
+sf = 1
+p$graphstyle <-  theme(#base plot theme
+  # axis
+  axis.line.y = element_line(),
+  axis.line.x = element_line(),
+  axis.text.x = element_text(size = 15+(sf+.5), family = "sans", colour = "black", hjust = .8), #angle = 45,
+  axis.text.y = element_text(size = 15+(sf+.5), family = "sans", colour = "black"),
+  #axis.ticks = element_blank(),
+  #axis.text.y = element_text(size= 18, family = "Arial Narrow", colour="black"),
+  axis.title.y=element_text(size = 16*(sf+.7), margin=margin(0,5,0,0)),
+  axis.title.x=element_text(size = 16*(sf+.7), margin=margin(0,5,0,0)),
+  
+  # strips
+  strip.background = element_blank(),
+  strip.text.x = element_text(size = 12*(sf+.5),  colour = "black"),
+  strip.text.y = element_text(size = 12*(sf+.5),  colour = "black"),
+  
+  # panel
+  # panel.background = element_rect(colour = NA),
+  # plot.background = element_rect(colour = NA),
+  # panel.border = element_rect(colour = NA),
+  # panel.border = element_blank(),
+  # panel.grid.major = element_blank(),
+  # panel.grid.minor = element_blank(),
+  # panel.background = element_blank(),
+  
+  # legend
+  # legend.title = element_text(size = 10*(sf+.3)),
+  legend.position = "top",
+  legend.direction = "horizontal",
+  #legend.key.size = unit(.5, "cm"),
+  #legend.text = element_text(size = 10*sf),
+  legend.title=element_blank(),
+  #legend.text = element_blank(),
+  legend.key = element_rect(colour = "transparent", fill="transparent"),
+  # text
+  text=element_text(size = 16*(sf+.4), family = "sans"))
+ 
+# 
+install.packages("grid")
+   library(grid)
+    library(ggthemes)
+theme_Publication <- function(base_size=14, base_family="helvetica") {
+   
+      (theme_foundation(base_size=base_size, base_family=base_family)
+       + theme(plot.title = element_text(face = "bold",
+                                         size = rel(1.2), hjust = 0.5),
+               text = element_text(),
+               panel.background = element_rect(colour = NA),
+               plot.background = element_rect(colour = NA),
+               panel.border = element_rect(colour = NA),
+               axis.title = element_text(face = "bold",size = rel(1)),
+               axis.title.y = element_text(angle=90,vjust =2),
+               axis.title.x = element_text(vjust = -0.2),
+               axis.text = element_text(), 
+               axis.line = element_line(colour="black"),
+               axis.ticks = element_line(),
+               panel.grid.major = element_line(colour="#f0f0f0"),
+               panel.grid.minor = element_blank(),
+               legend.key = element_rect(colour = NA),
+               legend.position = "bottom",
+               legend.direction = "horizontal",
+               legend.key.size= unit(0.2, "cm"),
+               legend.margin = unit(0, "cm"),
+               legend.title = element_text(face="italic"),
+               plot.margin=unit(c(10,5,5,5),"mm"),
+               strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
+               strip.text = element_text(face="bold")
+          ))
+      
+}
+
+scale_fill_Publication <- function(...){
+      library(scales)
+      discrete_scale("fill","Publication",manual_pal(values = c("#386cb0","#fdb462","#7fc97f","#ef3b2c","#662506","#a6cee3","#fb9a99","#984ea3","#ffff33")), ...)
+
+}
+
+scale_colour_Publication <- function(...){
+      library(scales)
+      discrete_scale("colour","Publication",manual_pal(values = c("#386cb0","#fdb462","#7fc97f","#ef3b2c","#662506","#a6cee3","#fb9a99","#984ea3","#ffff33")), ...)
+
+}
+```
+
+
+
+Valence
+
+```{r}
+paper_plots$ADFES_valence<- subset(db_ASC_NT, db_ASC_NT $Group == "NT" & db_ASC_NT$DATASET == 'ADFES')%>%
+  filter(outlier_valence == FALSE)%>%
+  group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  mutate(mean_in = mean(AnswerRating_Valence, na.rm = TRUE))%>%
+  group_by(ParticipantPrivateID,group_pp_emotion, VideoType,Emotion,Emotion2,DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Emotion2, AnswerRating_Valence, colour = VideoType))+
+  ggplot(aes(VideoType, AnswerRating_Valence, 
+             color = VideoType, fill = VideoType))+
+  geom_split_violin(color = FALSE, alpha = .3)+
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+    facet_grid(~Emotion2)+
+  geom_smooth(aes(group = Emotion2),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+  theme_classic()+
+  # xlab("Emotion")+
+  ylab("Valence")+
+  ggtitle("High prototypicality")
+
+paper_plots$ADFES_valence
+
+paper_plots$ADFES_valence<- paper_plots$ADFES_valence +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(0, 50,100), limits = c(0,100))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank())
+paper_plots$ADFES_valence
+
+
+
+
+
+```
+
+paper_plots$JEFFE_valence
+
+```{r}
+paper_plots$JEFFE_valence<- subset(db_ASC_NT, db_ASC_NT $Group == "NT" & db_ASC_NT$DATASET == 'JEFFE')%>%
+  filter(outlier_valence == FALSE)%>%
+  group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  mutate(mean_in = mean(AnswerRating_Valence, na.rm = TRUE))%>%
+  group_by(ParticipantPrivateID, VideoType,Emotion,Emotion2,DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(VideoType, AnswerRating_Valence, 
+             color = VideoType, fill = VideoType))+
+  geom_split_violin(color = FALSE, alpha = .3)+
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+    facet_grid(~Emotion2)+
+  geom_smooth(aes(group = Emotion2),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+  theme_classic()+
+  # xlab("Emotion")+
+  ylab("Valence")+
+  ggtitle("Low protypicality")
+
+
+
+paper_plots$JEFFE_valence <- paper_plots$JEFFE_valence +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(0, 50,100), limits = c(0,100))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank())
+
+paper_plots$JEFFE_valence
+```
+
+intensity
+
+
+```{r}
+paper_plots$ADFES_intensity<- subset(db_ASC_NT, db_ASC_NT$Group == "NT" 
+                                     & db_ASC_NT$DATASET == 'ADFES')%>%
+  filter(outlier_intensity == FALSE)%>%
+  group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  mutate(mean_in = mean(AnswerRating_Intensity, na.rm = TRUE))%>%
+  group_by(ParticipantPrivateID, VideoType,Emotion,Emotion2,DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(VideoType, AnswerRating_Intensity, 
+             color = VideoType, fill = VideoType))+
+  geom_split_violin(color = FALSE, alpha = .3)+
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+    facet_grid(~Emotion2)+
+  geom_smooth(aes(group = Emotion2),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+  theme_classic()+
+  ylab("Intensity")+
+  ggtitle("High protypicality")
+  # scale_fill_viridis_d()+
+
+paper_plots$ADFES_intensity<- paper_plots$ADFES_intensity +
+  p$graphstyle+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank())
+paper_plots$ADFES_intensity
+paper_plots$JeFEE_intensity
+
+
+```
+
+
+```{r}
+
+paper_plots$JeFEE_intensity <- subset(db_ASC_NT, db_ASC_NT$Group == "NT" &
+                                        db_ASC_NT$DATASET == 'JEFFE')%>%
+  filter(outlier_intensity == FALSE)%>%
+  group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  mutate(mean_in = mean(AnswerRating_Intensity, na.rm = TRUE))%>%
+  group_by(ParticipantPrivateID, VideoType,Emotion,Emotion2,DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(VideoType, AnswerRating_Intensity, 
+             color = VideoType, fill = VideoType))+
+  geom_split_violin(color = FALSE, alpha = .3)+
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+    facet_grid(~Emotion2)+
+  geom_smooth(aes(group = Emotion2),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+  theme_classic()+
+  ylab("Intensity")+
+  ggtitle("Low prototypicality")
+  # scale_fill_viridis_d()+
+
+  
+  
+  # scale_colour_Publication()+
+paper_plots$JeFEE_intensity<- paper_plots$JeFEE_intensity +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(0, 50,100), limits = c(0,100))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank())
+paper_plots$JeFEE_intensity
+
+
+
+
+```
+
+
+Naturality
+
+<!-- paper_plots$ADFES_Naturality -->
+```{r}
+
+paper_plots$ADFES_Naturality<- 
+  # keep just NT sample and a specific dataset to plot
+  subset(db_ASC_NT, db_ASC_NT $Group == "NT"&  db_ASC_NT$DATASET == 'ADFES')%>%
+  
+  # filter out outliers
+  filter(outlier_naturality == FALSE)%>%
+  # summarize across participants
+  group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  mutate(mean_in = mean(AnswerRating_Naturality, na.rm = TRUE))%>%
+  # summarise within participant
+  group_by(ParticipantPrivateID, VideoType,Emotion,Emotion2,DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  
+  # 
+  ggplot(aes(VideoType, AnswerRating_Naturality, 
+             color = VideoType, fill = VideoType))+
+  # create half violins splits
+  geom_split_violin(color = FALSE, alpha = .3)+
+  
+  # represent participant variability
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  # each point is a single participant
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  # plot mean per conditions
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+    facet_grid(~Emotion2)+
+  # average trend
+   geom_smooth(aes(group = Emotion),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+  theme_classic()+
+  ylab("Naturality")+
+  ggtitle("High prototypicality")
+
+
+paper_plots$ADFES_Naturality<- paper_plots$ADFES_Naturality +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(0, 50,100), limits = c(0,100))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.text.x = element_blank(), axis.title.x = element_blank())
+paper_plots$ADFES_Naturality
+
+
+
+```
+
+<!-- paper_plots$JEFFE_Naturality -->
+```{r}
+install.packages("see")
+
+library(see)
+
+paper_plots$JEFFE_Naturality
+
+
+paper_plots$JEFFE_Naturality<- subset(db_ASC_NT, db_ASC_NT $Group == "NT" & db_ASC_NT$DATASET == 'JEFFE')%>%
+  filter(outlier_naturality == FALSE)%>%
+  group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  mutate(mean_in = mean(AnswerRating_Naturality, na.rm = TRUE))%>%
+  group_by(ParticipantPrivateID, VideoType,Emotion,Emotion2,DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(VideoType, AnswerRating_Naturality, 
+             color = VideoType, fill = VideoType))+
+  geom_split_violin(color = FALSE, alpha = .3)+
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+    facet_grid(~Emotion2)+
+  geom_smooth(aes(group = Emotion2),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+  theme_classic()+
+  xlab("Emotion")+
+  ylab("Naturality")+
+  ggtitle("Low prototypicality")
+
+  
+
+paper_plots$JEFFE_Naturality<- paper_plots$JEFFE_Naturality +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(0, 50,100), limits = c(0,100))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.text.x = element_blank(), axis.title.x = element_blank())
+paper_plots$JEFFE_Naturality
+
+
+```
+
+
+
+Accuracy
+
+Accuracy
+
+```{r}
+
+paper_plots$ADFES_acc <- subset(db_ASC_NT, db_ASC_NT$Group == "NT"
+                                & db_ASC_NT$DATASET == 'ADFES')%>%
+  # filter(outlier_valence == FALSE)%>%
+  group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  mutate(mean_acc = mean(Recognacc, na.rm = TRUE))%>%
+  group_by(ParticipantPrivateID, VideoType,Emotion,Emotion2,DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(VideoType, Recognacc, 
+             color = VideoType, fill = VideoType))+
+  geom_split_violin(color = FALSE, alpha = .3)+
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+    facet_grid(~Emotion2)+
+  geom_smooth(aes(group = Emotion2),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+  theme_classic()+
+  ylab("Accuracy")+
+  ggtitle("High prototypicality")
+
+paper_plots$ADFES_acc
+
+paper_plots$ADFES_acc<- paper_plots$ADFES_acc +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(0, .5,1), limits = c(0,1))+
+ scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.text.x = element_blank(), axis.title.x = element_blank())
+paper_plots$ADFES_acc
+
+
+
+
+```
+
+paper_plots$JEFFE_acc
+
+```{r}
+
+paper_plots$JEFFE_acc<- subset(db_ASC_NT, db_ASC_NT $Group == "NT" 
+                               & db_ASC_NT$DATASET == 'JEFFE')%>%
+  filter(outlier_valence == FALSE)%>%
+  group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  mutate(mean_acc = mean(Recognacc, na.rm = TRUE))%>%
+  group_by(ParticipantPrivateID, VideoType,Emotion,Emotion2,DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(VideoType, Recognacc, 
+             color = VideoType, fill = VideoType))+
+  geom_split_violin(color = FALSE, alpha = .3)+
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+    facet_grid(~Emotion2)+
+  geom_smooth(aes(group = Emotion2),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+  theme_classic()+
+  ylab("Accuracy")+
+  ggtitle("Low Prototypicality")
+
+
+
+paper_plots$JEFFE_acc<- paper_plots$JEFFE_acc +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(0, .5,1), limits = c(0,1))+
+ scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.text.x = element_blank(), axis.title.x = element_blank())
+
+paper_plots$ADFES_acc
+paper_plots$JEFFE_acc
+
+
+
+```
+
+
+
+aggregated accuracy across emotions
+
+
+
+```{r}
+
+
+db_ASC_NT$DATASETnew<- if_else(db_ASC_NT$DATASET == "ADFES", "High prototypicality",
+                               "Low prototypicality")
+paper_plots$acc_agg1<- subset(db_ASC_NT, db_ASC_NT $Group == "NT")%>%
+  filter(outlier_valence == FALSE)%>%
+  # group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  # mutate(mean_acc = mean(Recognacc, na.rm = TRUE))%>%
+  group_by(ParticipantPrivateID, VideoType,DATASETnew)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(VideoType, Recognacc, 
+             color = VideoType, fill = VideoType))+
+  
+  geom_split_violin(color = FALSE, alpha = .3)+
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+  geom_smooth(aes(group = DATASETnew),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+    facet_grid(~DATASETnew)+
+  geom_smooth(aes(group = VideoType),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+  
+  theme_classic()+
+  ylab("Accuracy")
+
+paper_plots$acc_agg1
+paper_plots$acc_agg1<- paper_plots$acc_agg1 +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(.2, .6,1), limits = c(.2,1))+
+ scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.text.x = element_blank(), axis.title.x = element_blank())
+
+paper_plots$acc_agg1
+
+```
+
+
+
+```{r}
+paper_plots$acc_agg2<- subset(db_ASC_NT, db_ASC_NT $Group == "NT")%>%
+  filter(outlier_valence == FALSE)%>%
+  # group_by(VideoType,Emotion, Emotion2, DATASET)%>%
+  # mutate(mean_acc = mean(Recognacc, na.rm = TRUE))%>%
+  group_by(ParticipantPrivateID, VideoType,DATASETnew)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(DATASETnew, Recognacc, 
+             color = VideoType, fill = VideoType))+
+  
+  geom_split_violin(color = FALSE, alpha = .3)+
+  geom_smooth(aes(group = ParticipantPrivateID), method = 'lm', se = F, 
+              color = "gray80", alpha = .5,size = .5)+
+  geom_point(fill = NA, pch = 21, position = position_jitterdodge(), alpha = .5)+
+  stat_summary(fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+               color = "black", alpha = .8,position=position_dodge(width=0.3)) +
+  stat_summary(fun.data = mean_se, geom='errorbar', width = 0,
+               size = .5, color = "black",alpha = .8, linetype = 'solid',
+               position=position_dodge(width=0.3)) +
+  geom_smooth(aes(group = DATASETnew),method = 'lm', se = F, color = "Black",
+               alpha = .8,size = 1)+
+    # facet_grid(~DATASET)+
+  geom_smooth(aes(group = VideoType),method = 'lm', se = F,
+               alpha = .8,size = 1)+
+  
+  theme_classic()+
+  ylab("Accuracy")
+
+
+paper_plots$acc_agg2
+paper_plots$acc_agg2<- paper_plots$acc_agg2 +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(.2, .6,1), limits = c(.2,1))+
+ scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme( axis.title.x = element_blank())
+
+paper_plots$acc_agg2
+
+
+paper_plots$panel_acc_agg <- 
+ (paper_plots$acc_agg1+ paper_plots$acc_agg2)+
+ 
+  plot_layout(guides = "collect") & theme(legend.position = 'top')
+
+paper_plots$panel_acc_agg <- paper_plots$panel_acc_agg+
+  plot_annotation(tag_levels = 'A')
+
+# paper_plots$acc_agg2
+paper_plots$panel_acc_agg
+
+ggsave("panel_acc_agg.png", paper_plots$panel_acc_agg, 
+       device = 'png', width = 12, height =6, dpi = 900)
+
+```
+
+Panel - valence,naturality, intensity and accuracy
+
+
+```{r}
+library(patchwork)
+
+paper_plots$panel_allratings<- 
+  ( 
+    paper_plots$ADFES_valence+ paper_plots$JEFFE_valence+
+   paper_plots$ADFES_intensity+  paper_plots$JeFEE_intensity+
+   paper_plots$ADFES_Naturality+  paper_plots$JEFFE_Naturality+ 
+  paper_plots$ADFES_acc+  paper_plots$JEFFE_acc)+
+  # theme(legend.position = 'top')+
+  plot_layout(ncol = 2)+
+  plot_annotation(tag_levels = 'A')
+
+  
+
+paper_plots$panel_allratings
+
+
+```
+
+
+
+Panel seems too tight
+
+Panel Valence
+
+
+```{r}
+paper_plots$panel_valence <- 
+ paper_plots$ADFES_valence+ paper_plots$JEFFE_valence+
+ 
+  plot_layout(guides = "collect") & theme(legend.position = 'top')
+
+paper_plots$panel_valence <-paper_plots$panel_valence+
+  plot_annotation(tag_levels = 'A')
+
+paper_plots$panel_valence
+
+ggsave("panel_valence.png", paper_plots$panel_valence, 
+       device = 'png', width = 12, height =6, dpi = 900) 
+
+```
+
+
+
+Pane Intensity
+
+Panel Valence
+
+
+```{r}
+paper_plots$panel_intensity <- 
+ paper_plots$ADFES_intensity+ paper_plots$JeFEE_intensity+
+ 
+  plot_layout(guides = "collect") & theme(legend.position = 'top')
+
+# plot annotation needs to be used after using plot layout
+
+paper_plots$panel_intensity <-paper_plots$panel_intensity+
+  plot_annotation(tag_levels = 'A')
+
+paper_plots$panel_intensity
+
+ggsave("panel_intensity.png", paper_plots$panel_intensity, 
+       device = 'png', width = 12, height =6, dpi = 900) 
+
+```
+
+
+
+naturality
+
+
+```{r}
+
+paper_plots$panel_maturality <- 
+ paper_plots$ADFES_Naturality + paper_plots$JEFFE_Naturality +
+ 
+  plot_layout(guides = "collect") & theme(legend.position = 'top')
+
+# plot annotation needs to be used after using plot layout
+
+paper_plots$panel_maturality  <-paper_plots$panel_maturality +
+  plot_annotation(tag_levels = 'A')
+
+paper_plots$panel_maturality 
+
+ggsave("panel_maturality .png", paper_plots$panel_maturality , 
+       device = 'png', width = 12, height =6, dpi = 900) 
+
+```
+
+
+accurcay panel
+
+```{r}
+
+paper_plots$panel_accuracy <- 
+ paper_plots$ADFES_acc + paper_plots$JEFFE_acc +
+ 
+  plot_layout(guides = "collect") & theme(legend.position = 'top')
+
+# plot annotation needs to be used after using plot layout
+
+paper_plots$panel_accuracy  <- paper_plots$panel_accuracy +
+  plot_annotation(tag_levels = 'A')
+
+paper_plots$panel_accuracy
+
+ggsave("panel_accuracy.png", paper_plots$panel_accuracy , 
+       device = 'png', width = 12, height =6, dpi = 900) 
+
+
+```
+
+
+Store into image
+```{r}
+save(paper_analyses, paper_plots, plots_paper, p, db_ASC_NT, 
+     file = "Study2_plots.RData")
+
+
+```
