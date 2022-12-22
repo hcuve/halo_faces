@@ -1758,41 +1758,144 @@ plot_style<- theme(#base plot theme
   #axis.ticks = element_blank(),
 )
 
-boundaryplots$pc1_2<- ggplot(df, aes(PC1, PC2, fill = expression)) +
+# pc1 and 2
+boundaryplots$pc1_2
+
+# ggplot(df, aes(PC1, PC2, fill = expression)) +
+# 
+#   geom_tile(alpha = 0.01, size = 0) +
+# 
+#    geom_point(data =bind_train_test,aes( colour =expression)) +
+#   geom_point(data = bind_train_test, shape = 21, size = 3) +
+# 
+# 
+#   theme_bw() +
+#       plot_style+
+# 
+#     scale_color_viridis_d()+
+#     scale_fill_viridis_d()+
+# 
+#   base_breaks_x(df$PC1) +
+#   base_breaks_y(df$PC2)+
+#   ylab("comp2")
+
+
+boundaryplots$pc1_2 <- 
+ggplot(df, aes(PC1, PC2, fill = expression)) +
     # geom_raster(alpha = 0.5, interpolate=FALSE) +
   # geom_density_2d_filled(show.legend = FALSE,alpha = .1) 
   geom_tile(alpha = 0.01, size = 0) +
   # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+   geom_point(data =bind_train_test,aes( colour =expression)) +
   geom_point(data = bind_train_test, shape = 21, size = 3) +
   # theme_minimal()
   # theme_void()+
 
   theme_bw() +
       plot_style+
+  scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
+    # scale_color_viridis_d()+
+    # scale_fill_viridis_d()+
   # theme(panel.border = element_blank(),
   #      panel.grid.major = element_blank(),
   #      panel.grid.minor = element_blank())+
   base_breaks_x(df$PC1) +
-  base_breaks_y(df$PC2)
+  base_breaks_y(df$PC2)+
+  ylab("comp2")
+
+# fprside toside
+boundaryplots$pc1_2 <- 
+ggplot(df, aes(PC1, PC2,fill = expression)) +
+    # geom_raster(alpha = 0.5, interpolate=FALSE) +
+  # geom_density_2d_filled(show.legend = FALSE,alpha = .1) 
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+  # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+   geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
+  geom_point(data = bind_train_test, shape = 21, size = 3) +
+  # theme_minimal()
+  # theme_void()+
+
+  theme_bw() +
+      plot_style+
+  scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
+    # scale_color_viridis_d()+
+    # scale_fill_viridis_d()+
+  # theme(panel.border = element_blank(),
+  #      panel.grid.major = element_blank(),
+  #      panel.grid.minor = element_blank())+
+  base_breaks_x(df$PC1) +
+  base_breaks_y(df$PC2)+
+  ylab("comp2")+
+  xlab("comp1")
+
+
+
+
+# ggside
+
+# ggplot(df, aes(PC1, PC2,fill = expression)) +
+# 
+#   geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+# 
+#    geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
+#   geom_point(data = bind_train_test, shape = 21, size = 3) +
+# 
+#   geom_xsidedensity(data = bind_train_test,aes(x =PC1, fill = expression), alpha = 0.5)+
+#   geom_ysideboxplot(data = bind_train_test,aes(x =PC2, fill = expression), alpha = 0.5, orientation = "x")
+#   
+
+
+boundaryplots$pc1_2
+
+
+
 
 # put x axis label io top
- boundaryplots$pc1_2<-  boundaryplots$pc1_2+
-     # theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)))
-ggtitle("PC1") +
-  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5), 
-        axis.title.x = element_blank())
- 
-  
-  
+boundaryplots$pc1_2<-  boundaryplots$pc1_2 +
 
-boundaryplots$pc1_3<-ggplot(df, aes(PC1, PC3, fill = expression)) +
-    # geom_raster(alpha = 0.5, interpolate=FALSE) +
-  # geom_density_2d_filled(show.legend = FALSE,alpha = .1) 
-  geom_tile(alpha = 0.01, size = 0) +
+# ggtitle("comp1") +
+  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5),
+        # axis.title.x = element_blank(),
+       legend.position = "none"
+       )
+
+ # boundaryplots$pc1_2 <-  boundaryplots$pc1_2 +
+ #   ggtitle("comp1") +
+ #    theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)),
+ #          legend.position = "top")
+
+ 
+ 
+boundaryplots$pc1_2_box <- ggMarginal(boundaryplots$pc1_2,groupFill = T,groupColour = T, type = c("boxplot"))
+boundaryplots$pc1_2_dens <- ggMarginal(boundaryplots$pc1_2,groupFill = T, groupColour = T,type = "density")
+
+boundaryplots$pc1_2_box$grobs[boundaryplots$pc1_2_box$layout$name == "topMargPlot"]<-boundaryplots$pc1_2_dens$grobs[boundaryplots$pc1_2_dens$layout$name == "topMargPlot"]
+
+boundaryplots$pc1_2_box
+
+# boundaryplots$pc1_2
+```
+  ggMarginal(piris, groupColour = TRUE, groupFill = TRUE)
+
+
+  # pc 1 and 3
+  
+  
+```{r}
+
+
+df$expression<- as.factor(df$expression)
+bind_train_test$expression<- as.factor(bind_train_test$expression)
+
+boundaryplots$pc1_3 <- ggplot(df, aes(PC3, PC1,fill = expression)) +
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
   # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+   geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
   geom_point(data = bind_train_test, shape = 21, size = 3) +
+  
   # theme_minimal()
-  # theme_void()+
 
   theme_bw() +
       plot_style+
@@ -1800,78 +1903,271 @@ boundaryplots$pc1_3<-ggplot(df, aes(PC1, PC3, fill = expression)) +
   #      panel.grid.major = element_blank(),
   #      panel.grid.minor = element_blank())+
   base_breaks_x(df$PC1) +
-  base_breaks_y(df$PC3)
+  base_breaks_y(df$PC3)+
+    ylab("comp1")+
+  xlab("comp3")+
+  # scale_color_viridis_d(option = "inferno")+
+  #  scale_fill_viridis_d(option = "inferno")
+   scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")
+
+# ggside
 
 
- boundaryplots$pc1_3<-  boundaryplots$pc1_3+
-     # theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)))
-# ggtitle("PC1") +
-  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5), 
-        axis.title.x = element_blank())
+# as.factor(bind_train_test$expression)
+# 
+# boundaryplots$pc1_3 
+# 
+# ggplot(df, aes(PC3, PC1,fill = expression)) +
+#   geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+#   # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+#    geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +  
+#   geom_xsidedensity(data = bind_train_test,aes(x =PC3, fill = expression), alpha = 0.5)+
+#   geom_ysideboxplot(data = bind_train_test,aes(x =PC1, fill = expression), alpha = 0.5, orientation = "x")
+
+# format
+ boundaryplots$pc1_3 <-  boundaryplots$pc1_3+
+     theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)))+
+# ggtitle("comp3") +
+  theme(
+    plot.title = element_text(size = 16*(sf+.5), hjust = 0.5),
+        # axis.title.x = element_blank(),
+       legend.position = "none")
+ 
+# boundaryplots$pc1_3<-  ggExtra::ggMarginal(  boundaryplots$pc1_3, groupFill = T)
+
+ 
+boundaryplots$pc1_3
 
 
 
-boundaryplots$pc2_3<-ggplot(df, aes(PC2, PC3, fill = expression)) +
-    # geom_raster(alpha = 0.5, interpolate=FALSE) +
-  # geom_density_2d_filled(show.legend = FALSE,alpha = .1) 
-  geom_tile(alpha = 0.01, size = 0) +
+library(ggExtra)
+
+boundaryplots$pc1_3_box <- ggMarginal(boundaryplots$pc1_3,groupFill = T,type = c("boxplot"),
+                                       margins = 'both',
+  size = 5)
+ 
+boundaryplots$pc1_3_den <- ggMarginal(boundaryplots$pc1_3,groupFill = T, type = "density")
+
+
+  
+# pd$grobs[ph$layout$name == "topMargPlot"]<-ph$grobs[ph$layout$name == "topMargPlot"]
+
+boundaryplots$pc1_3_box$grobs[ boundaryplots$pc1_3_box$layout$name == "topMargPlot"]<-
+    boundaryplots$pc1_3_den$grobs[ boundaryplots$pc1_3_den$layout$name == "topMargPlot"] 
+
+  boundaryplots$pc1_3_box
+  # boundaryplots$pc1_3_den
+```
+
+```{r eval=FALSE, include=FALSE}
+install.packages("ggside")
+library(ggside)
+boundaryplots$pc1_3+
+geom_xsideboxplot(aes(y =class), orientation = "y") +
+  scale_xsidey_discrete() + #In order to use xsideboxplot with a main panel that uses
+  #continuous data, force y axis in xside panel to be discrete
+  # geom_ysidedensity(aes(x = after_stat(density)), position = "stack") +
+    geom_ysidedensity() 
+
+
+
+  # scale_ysidex_continuous(guide = guid
+boundaryplots$pc1_3
+
+# contour
+# boundaryplots$pc1_3.v2<- ggplot(df, aes(PC1, PC3, fill = expression)) +
+#    # geom_tile(alpha = 0.01, size = 0) +
+# 
+#      # stat_density_2d_filled(aes(alpha = ..piece..)) +
+#   stat_density_2d(geom = "polygon",
+#                   aes(alpha = .1, fill = expression),
+#                   bins = 4) 
+#      geom_point(data =bind_train_test,aes( colour =expression)) +
+#   geom_point(data = bind_train_test, shape = 21, size = 3) +
+# 
+# 
+#   # stat_density_2d(aes(alpha = ..piece..)) +
+# theme_bw() +
+#       plot_style+
+#   theme(axis.title.x = element_blank(),
+#         legend.position = "none")+
+#   base_breaks_x(df$PC1) +
+#   base_breaks_y(df$PC3)+
+    ylab("comp3")
+
+# ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+boundaryplots$pc1_3
+# boundaryplots$pc1_3.v2  
+              
+```
+
+
+
+```{r}
+# pc2 and 3
+
+factor(df2$variable,
+    levels = c('vph.shr','vnu.shr'),ordered = TRUE)
+
+df$expression<- factor(df$expression,
+    levels = c('angry','happy', 'sad'),ordered = TRUE)
+bind_train_test$expression<-factor(bind_train_test$expression,
+    levels = c('angry','happy', 'sad'),ordered = TRUE)
+
+boundaryplots$pc2_3<- ggplot(df, aes(PC2, PC3, fill = expression)) +
+   geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
   # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+   geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
   geom_point(data = bind_train_test, shape = 21, size = 3) +
   # theme_minimal()
-  # theme_void()+
-
   theme_bw() +
       plot_style+
   # theme(panel.border = element_blank(),
   #      panel.grid.major = element_blank(),
   #      panel.grid.minor = element_blank())+
   base_breaks_x(df$PC2) +
-  base_breaks_y(df$PC3)
+  base_breaks_y(df$PC3)+
+   scale_color_brewer(palette = "Dark2") +
+    scale_fill_brewer(palette = "Dark2")+
+      ylab("comp3")+
+  xlab("comp2")
 
- boundaryplots$pc2_3<-  boundaryplots$pc2_3+
-     # theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)))
-ggtitle("PC2") +
-  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5), 
-        axis.title.x = element_blank())
 
-library(patchwork)
+# ggside
 
-design <- "
-AB
-CD
-" 
+# ggplot(df, aes(PC2, PC3, fill = expression)) +
+#    geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+#   # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+#    geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
+#   geom_point(data = bind_train_test, shape = 21, size = 3) +
+# 
+#  geom_xsidedensity(data = bind_train_test,aes(x =PC2, fill = expression), alpha = 0.5)+
+#   geom_ysideboxplot(data = bind_train_test,aes(x =PC3, fill = expression), alpha = 0.5, orientation = "x")
 
- boundaryplots$panel_posed <- ((boundaryplots$pc1_2+
-  plot_spacer())+
-boundaryplots$pc1_3+
-   boundaryplots$pc2_3)+
-    plot_layout(ncol = 2)
+
+boundaryplots$pc2_3 <-  boundaryplots$pc2_3+
+     theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)))+
+# ggtitle("comp2") +
+  theme(
+    plot.title = element_text(size = 16*(sf+.5), hjust = 0.5),
+        # axis.title.x = element_blank(),
+        # axis.title.y = element_blank(),
+         legend.position = "none")
+
+
+# legendtop<- boundaryplots$pc2_3+
+#      # theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)))
+# # ggtitle("comp2") +
+#   theme(
+#     # plot.title = element_text(size = 16*(sf+.5), hjust = 0.5), 
+#         # axis.title.x = element_blank(),
+#         # axis.title.y = element_blank(),
+#          legend.position = "top")
+#  
+#  # boundaryplots$pc2_3<-  ggExtra::ggMarginal(  boundaryplots$pc2_3, groupFill = T)
+#  
+#  # addsides
  
+  boundaryplots$pc2_3_box <- ggMarginal(boundaryplots$pc2_3,groupColour  =T, groupFill = T, type = c("boxplot"))
+ boundaryplots$pc2_3_den <- ggMarginal(boundaryplots$pc2_3,groupColour =T,groupFill = T, type = "density")
 
-  boundaryplots$panel_posed 
+
+
+ boundaryplots$pc2_3_box$grobs[ boundaryplots$pc2_3_box$layout$name == "topMargPlot"]<-
+    boundaryplots$pc2_3_den$grobs[ boundaryplots$pc2_3_den$layout$name == "topMargPlot"]
+
+boundaryplots$pc2_3_box
+
+# library(patchwork)
+  
+```
+
  
+panel
+
+
+```{r}
  # axis.title.x = element_text(margin = margin(t = 15, b = 5)))
  # 
  # You can use something like cowplot::get_legend() to make the legend its own grob, then use something like patchwork::wrap_plots to place the legend as if it were a graph. (After you extract the legend make the graphs without a legend.) 
  # install.packages("cowplot")
- 
-getleg <-cowplot::get_legend(boundaryplots$pc1_3) 
+legendtop<- boundaryplots$pc1_3+plot_style+theme(legend.position = "top",
+                                      legend.title = element_text(size=30),
+                                      legend.text = element_text(size=16+(sf*10)),
+                                      plot.title = element_blank()
+                                      # legend.key.size = unit(2, 'cm'))
+                                      # legend.key.height= unit(2, 'cm'),
+        # legend.key.width= unit(2, 'cm')
+        )+
+  guides(color = guide_legend(override.aes = list(size = sf*5)))
 
-getleg+ggtitle("PC2") +
-  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5), 
-        axis.title.x = element_blank())
+legendtop
 
-boundaryplots$pc1_2<-boundaryplots$pc1_2+theme(legend.position = "none")
-boundaryplots$pc1_3<-boundaryplots$pc1_3+theme(legend.position = "none")
-boundaryplots$pc2_3<-boundaryplots$pc2_3+theme(legend.position = "none")
+```
+```{r}
+getleg <-cowplot::get_legend(legendtop) 
 
-boundaryplots$panel_posed<- (boundaryplots$pc1_2+
- getleg+
-boundaryplots$pc1_3+
-   boundaryplots$pc2_3)+
-    plot_layout(ncol = 2)
+getleg <-cowplot::get_legend(legendtop) 
+legendtop
+
+getleg+ggtitle("comp2") +
+  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5) )
+        # axis.title.x = element_blank())
+
+# boundaryplots$pc1_2<-boundaryplots$pc1_2+theme(legend.position = "none")
+# boundaryplots$pc1_3<-boundaryplots$pc1_3+theme(legend.position = "none")
+# boundaryplots$pc2_3<-boundaryplots$pc2_3+theme(legend.position = "none")
+
+# boundaryplots$panel_posed<- (boundaryplots$pc1_2+
+#  getleg+
+# boundaryplots$pc1_3+
+#    boundaryplots$pc2_3)+
+#     plot_layout(ncol = 2)
 
 boundaryplots$panel_posed
+
+
+
+# simpler solutio without grob
+
+# boundaryplots$panel_posed<- patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+#  getleg +
+#   patchwork::wrap_elements(boundaryplots$pc1_3_den) + 
+#   patchwork::wrap_elements(boundaryplots$pc2_3_box) +
+#   plot_layout(ncol = 2) +
+#   plot_layout(guides = "collect")
+
+
+
+# put legend on top
+
+boundaryplots$panel_posed2 <-
+  
+  (patchwork::wrap_elements(getleg)/
+(patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+  patchwork::wrap_elements(boundaryplots$pc2_3_box)+
+    patchwork::wrap_elements(boundaryplots$pc1_3_box)))+ 
+   plot_layout(nrow = 2, heights = c(.1,2))
+   
+
+
+boundaryplots$panel_posed2+
+  # margin=margin(10,5,0,0)
+inset_element(patchwork::wrap_elements(getleg),left = -0.5,  right = 0,
+              bottom = 1, top = 1,
+              
+              on_top = TRUE,align_to = 'full')
+  
+plot_layout(ncol = 4) 
+  plot_layout(guides = "collect")
+
+# install.packages("ggExtra")
+
+boundaryplots$panel_posed
+  
+
+
 
 # caretprobFunction(
 
@@ -1882,7 +2178,7 @@ install.packages("MLeval")
 library(MLeval)
 
 evalm(r.forest_mts$)
-res <- evalm(list(fit1,fit2,fit3),gnames=c('1','2','3'))
+res <- evalm(list(fit1,fit2,fit3),gnames=c('1','2','3'),align_to = 'full')
 
 res$roc
 ```
