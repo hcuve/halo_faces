@@ -1671,7 +1671,7 @@ df$expression <- predict(rf, df)
 library(ggplot2)
 
 ggplot(bind_train_test, aes(PC1, PC2, fill = expression)) +
-  geom_raster(data = df, alpha = 0.5) +
+  geom_tile(data = df, alpha = 0.1) +
   geom_point(shape = 21, size = 3) +
   theme_minimal()
 
@@ -1686,11 +1686,346 @@ ggplot(bind_train_test, aes(PC2, PC3, fill = expression)) +
   geom_point(shape = 21, size = 3) +
   theme_minimal()
 
+?geom_raster
+boundaryplots<- list()
+
+p$gr
+
+
+base_breaks_x <- function(x){
+  b <- pretty(x)
+  d <- data.frame(y=-Inf, yend=-Inf, x=min(b), xend=max(b))
+  list(geom_segment(data=d, aes(x=x, y=y, xend=xend, yend=yend), inherit.aes=FALSE),
+       scale_x_continuous(breaks=b))
+}
+base_breaks_y <- function(x){
+  b <- pretty(x)
+  d <- data.frame(x=-Inf, xend=-Inf, y=min(b), yend=max(b))
+  list(geom_segment(data=d, aes(x=x, y=y, xend=xend, yend=yend), inherit.aes=FALSE),
+       scale_y_continuous(breaks=b))
+}
+
+
+
+# plot style new
+
+plot_style<- theme(#base plot theme
+  
+  # axis lines
+  # axis.line.y = element_line(color="black", size = 1.5),
+  # axis.line.x = element_line(color="black", size = 1,5),
+  
+  axis.title.y=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)),
+  axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)),
+  
+  # text
+  strip.text.x = element_text(size = 12*(sf+.5),  colour = "black"),
+  strip.text.y = element_text(size = 12*(sf+.5),  colour = "black"),
+  
+  text=element_text(size = 14),
+  axis.text.x = element_text(size = 14*(sf+.5), colour = "black",),
+  axis.text.y = element_text(size = 14*(sf+.5), colour = "black"),
+  
+  
+  # panel
+  panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  
+  # panel.grid.major = element_blank(),
+  # panel.background = element_blank(),
+  # panel.background = element_rect(fill="transparent"),
+  # panel.border = element_rect(fill="transparent"),
+  # strip shades (reco rectagles)
+   # strip.background = element_blank(),
+  
+  # legend
+  # legend.position = "top",
+  legend.key = element_rect(colour = "transparent", fill="transparent"),
+  # axis.ticks = element_blank(),
+  # legend.k
+  #legend.direction = "horizontal",
+
+  legend.text = element_text(size = 10*(sf+.3)),
+  # legend.title = element_text(size = 10*(sf+.3)),
+  # legend line tends to be really small in print so adjust here
+  # legend.key.height = unit(.5, "cm"),
+  # legend.key.width = unit(2, "cm"),
+  
+  #legend.text = element_text(size = 10*sf),
+  # legend.title=element_blank(),
+  #legend.text = element_blank(),
+  #axis.ticks = element_blank(),
+)
+
+boundaryplots$pc1_2<- ggplot(df, aes(PC1, PC2, fill = expression)) +
+    # geom_raster(alpha = 0.5, interpolate=FALSE) +
+  # geom_density_2d_filled(show.legend = FALSE,alpha = .1) 
+  geom_tile(alpha = 0.01, size = 0) +
+  # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+  geom_point(data = bind_train_test, shape = 21, size = 3) +
+  # theme_minimal()
+  # theme_void()+
+
+  theme_bw() +
+      plot_style+
+  # theme(panel.border = element_blank(),
+  #      panel.grid.major = element_blank(),
+  #      panel.grid.minor = element_blank())+
+  base_breaks_x(df$PC1) +
+  base_breaks_y(df$PC2)
+
+# put x axis label io top
+ boundaryplots$pc1_2<-  boundaryplots$pc1_2+
+     # theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)))
+ggtitle("PC1") +
+  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5), 
+        axis.title.x = element_blank())
+ 
+  
+  
+
+boundaryplots$pc1_3<-ggplot(df, aes(PC1, PC3, fill = expression)) +
+    # geom_raster(alpha = 0.5, interpolate=FALSE) +
+  # geom_density_2d_filled(show.legend = FALSE,alpha = .1) 
+  geom_tile(alpha = 0.01, size = 0) +
+  # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+  geom_point(data = bind_train_test, shape = 21, size = 3) +
+  # theme_minimal()
+  # theme_void()+
+
+  theme_bw() +
+      plot_style+
+  # theme(panel.border = element_blank(),
+  #      panel.grid.major = element_blank(),
+  #      panel.grid.minor = element_blank())+
+  base_breaks_x(df$PC1) +
+  base_breaks_y(df$PC3)
+
+
+ boundaryplots$pc1_3<-  boundaryplots$pc1_3+
+     # theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)))
+# ggtitle("PC1") +
+  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5), 
+        axis.title.x = element_blank())
+
+
+
+boundaryplots$pc2_3<-ggplot(df, aes(PC2, PC3, fill = expression)) +
+    # geom_raster(alpha = 0.5, interpolate=FALSE) +
+  # geom_density_2d_filled(show.legend = FALSE,alpha = .1) 
+  geom_tile(alpha = 0.01, size = 0) +
+  # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+  geom_point(data = bind_train_test, shape = 21, size = 3) +
+  # theme_minimal()
+  # theme_void()+
+
+  theme_bw() +
+      plot_style+
+  # theme(panel.border = element_blank(),
+  #      panel.grid.major = element_blank(),
+  #      panel.grid.minor = element_blank())+
+  base_breaks_x(df$PC2) +
+  base_breaks_y(df$PC3)
+
+ boundaryplots$pc2_3<-  boundaryplots$pc2_3+
+     # theme(axis.title.x=element_text(size = 16*(sf+.5), margin=margin(10,5,0,0)))
+ggtitle("PC2") +
+  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5), 
+        axis.title.x = element_blank())
+
+library(patchwork)
+
+design <- "
+AB
+CD
+" 
+
+ boundaryplots$panel_posed <- ((boundaryplots$pc1_2+
+  plot_spacer())+
+boundaryplots$pc1_3+
+   boundaryplots$pc2_3)+
+    plot_layout(ncol = 2)
+ 
+
+  boundaryplots$panel_posed 
+ 
+ # axis.title.x = element_text(margin = margin(t = 15, b = 5)))
+ # 
+ # You can use something like cowplot::get_legend() to make the legend its own grob, then use something like patchwork::wrap_plots to place the legend as if it were a graph. (After you extract the legend make the graphs without a legend.) 
+ # install.packages("cowplot")
+ 
+getleg <-cowplot::get_legend(boundaryplots$pc1_3) 
+
+getleg+ggtitle("PC2") +
+  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5), 
+        axis.title.x = element_blank())
+
+boundaryplots$pc1_2<-boundaryplots$pc1_2+theme(legend.position = "none")
+boundaryplots$pc1_3<-boundaryplots$pc1_3+theme(legend.position = "none")
+boundaryplots$pc2_3<-boundaryplots$pc2_3+theme(legend.position = "none")
+
+boundaryplots$panel_posed<- (boundaryplots$pc1_2+
+ getleg+
+boundaryplots$pc1_3+
+   boundaryplots$pc2_3)+
+    plot_layout(ncol = 2)
+
+boundaryplots$panel_posed
+
+# caretprobFunction(
+
+?pROC
+
+## run MLeval
+install.packages("MLeval")
+library(MLeval)
+
+evalm(r.forest_mts$)
+res <- evalm(list(fit1,fit2,fit3),gnames=c('1','2','3'))
+
+res$roc
+```
+ 
+
+
+plot(getleg)
+boundaryplots$pc1_2 +
+     plot_spacer() +
+
+boundaryplots$pc1_3+  
+
+ 
+boundaryplots$pc2_3+
+  
+  
+
+   guide_area()+
+  plot_layout(guides = "collect")
+
+  
+  boundaryplots$panel_posed+
+ guide_area()+
+  plot_layout(guides = "none")
+  theme(legend.position =1)
+  
+  
+(boundaryplots$pc1_2+
+       plot_spacer()+
+
+
+boundaryplots$pc1_3+
+        
+   boundaryplots$pc2_3)+
+    guide_area()+
+  plot_layout(guides = "collect")
+  
+    plot_layout(ncol = 2, guides = "collect")
+    
+
+?  guide_area()
+```
+
+JASP fucntions
+```{r}
+
+# grid
+ grid <- as.data.frame(expand.grid(seq(x_min, x_max, by = hs), 
+                                   seq(y_min, y_max, by = hs),
+                                   seq(z_min, z_max, by = hs_z)))
+
+View(grid)
+colnames(bind_train_test)
+  
+colnames(grid) <- colnames(bind_train_test[,c(69:71)])
+rf$results
+classificationResult <- rf$results
+  
+  # jaspResults[["classificationResult"]]$object
+  
+
+# RF
+  # else if (type == "randomForest") {
+    fit <- randomForest::randomForest(
+      x = bind_train_test[,c(69:71)], y = bind_train_test$expression,
+      
+      # rf$finalModel$ntree,
+      # ntree = classificationResult[["noOfTrees"]], mtry = classificationResult[["predPerSplit"]],
+      # sampsize = classificationResult[["baggingFraction"]], importance = TRUE, keep.forest = TRUE
+      # 
+       ntree =  rf$finalModel$ntree, 
+       mtry =  rf$finalModel$mtry,
+      sampsize = rf$finalModel$votes,
+         # classificationResult[["baggingFraction"]], 
+         importance = TRUE, keep.forest = TRUE
+    )
+    
+    
+    df$expression <- predict(rf, df)
+    predictions <- predict(fit, newdata = grid)
+
+
+gridData
+
+
+gridData <- data.frame(x = grid[, 1], y = grid[, 2])
+pointData <- data.frame(x = bind_train_test$PC1, y = bind_train_test$PC2, 
+                        target = bind_train_test$expression, shapes = bind_train_test$expression)
+  
+ggplot2::ggplot(data = gridData, mapping = ggplot2::aes(x = x, y = y)) +
+    ggplot2::geom_tile(mapping = ggplot2::aes(fill = predictions), alpha = 0.01, show.legend = FALSE) +
+    ggplot2::labs(fill =pointData$target) +
+    # ggplot2::scale_fill_manual(values = (n = length(unique(pointData$target)))) +
+    ggplot2::scale_x_continuous(name = NULL, breaks = xBreaks, limits = range(xBreaks)) +
+    ggplot2::scale_y_continuous(name = NULL, breaks = yBreaks, limits = range(yBreaks))+
+  theme_minimal()+
+    # geom_point(aes(color = predictions),shape = 21, size = 2, alpha = .001)+
+    geom_point(data =pointData, alpha = 0.5) 
+
+# points
+
+# .legendPlot <- function(dataset, options, col) {
+  target <- dataset[, options[["target"]]]
+  predictors <- dataset[, options[["predictors"]]]
+  predictors <- predictors[, 1]
+  plotData <- data.frame(target = bind_train_test$expression, predictors = bind_train_test[,69:71])
+  
+  
+  # plotest+
+  plotData$x<- plotData$predictors.PC1
+  plotData$y = plotData$predictors.PC2
+  
+  gridData$target<- predictions
+  plotData%>%
+    ggplot(aes (x = x, y = y, fill = target, color = target)) +
+
+    
+    # ggplot2::ggplot(data = gridData, mapping = ggplot2::aes(x = x, y = y)) +
+    geom_raster(data = gridData, alpha = 0.1)+
+      geom_point(alpha = 0.5)
+    # ggplot2::labs(fill =pointData$target) +
+    # ggplot2::scale_fill_manual(values = (n = length(unique(pointData$target)))) +
+    ggplot2::scale_x_continuous(name = NULL, breaks = xBreaks, limits = range(xBreaks)) +
+    ggplot2::scale_y_continuous(name = NULL, breaks = yBreaks, limits = range(yBreaks))+
+  theme_minimal()+
+    geom_point(aes(color = predictions),shape = 21, size = 2, alpha = .001)
+    
+    
+    
+    
+    # jaspGraphs::geom_rangeframe(sides = "") +
+    # jaspGraphs::themeJaspRaw(legend.position = "left") +
+    ggplot2::theme(axis.ticks = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.text.y = ggplot2::element_blank()) +
+    ggplot2::guides(fill = ggplot2::guide_legend(override.aes = list(alpha = 1)))
+  return(p)
+
+
+
 
 ```
 
 
-```{r}
+
 #' @title Compute axis breaks
 #' @param x the object to compute axis breaks for
 #'
@@ -1727,11 +2062,6 @@ getPrettyAxisBreaks.default <- function(x, ...) {
 }
 ```
 
-
-JASP recreation attempt
-  
-  
-# JASP
   
   
   data.frame(x = predictors[, 1], y = predictors[, 2], target = target, shapes = shapes)

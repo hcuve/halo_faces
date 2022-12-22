@@ -1,0 +1,937 @@
+---
+title: "Similarity and confusion plots"
+author: "Helio"
+date: "12/04/2021"
+output: html_document
+---
+
+
+<!-- load("D:/OneDrive - Nexus365/Face Morph Paper/Data/Fig10Plots.RData") -->
+
+```{r}
+confusion_byds_vt_full$Em<- substr(confusion_byds_vt_full$Emotion, 1,2)
+confusion_byds_vt_full$Pr<- substr(confusion_byds_vt_full$Prediction, 1,2)
+
+
+paper_plots$CMatrix_byGroup_global <-confusion_byds_vt_full %>%
+  subset(Emotion != "Neutral")%>%
+  mutate(pair = paste0(Emotion, Prediction))%>%
+  # mutate(Emotion = as.factor(Emotion))%>%
+  # mutate(Emotion = relevel(Emotion, ref = "Anger"))%>%
+  # mutate(Prediction = as.factor(Prediction))%>%
+  # mutate(Prediction = relevel(Prediction, ref = "Anger"))%>%
+  group_by(pair, Emotion,Prediction, Em, Pr, VideoType)%>%
+  summarise_at(c('Freq', 'Prop'), mean, na.rm = TRUE)%>%
+  ggplot(aes(Em, Pr))+
+  geom_raster(aes(fill = Prop, stat = 'identity'))+
+  facet_grid(~VideoType)+
+    theme_classic()+
+  ylab("All")+
+  xlab("Emotion")+
+  p$graphstyle1+
+  scale_fill_viridis_c(option = "plasma", breaks = c(0, .5, 1), limits = c(0,1))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+paper_plots$CMatrix_byGroup_global
+
+
+
+```
+
+
+
+```{r}
+
+confusion_byds_vt_full$Em
+
+dataset_labs<- c("High prot.", "Low prot.")
+names(dataset_labs)<- c("ADFES", "JEFFE")
+
+paper_plots$CMatrix_byGroup <-
+  confusion_byds_vt_full%>%
+  subset(Emotion != "Neutral")%>%
+  mutate(pair = paste0(Emotion, Prediction))%>%
+  mutate(Emotion = as.factor(Emotion))%>%
+  mutate(Emotion = relevel(Emotion, ref = "Anger"))%>%
+  mutate(Prediction = as.factor(Prediction))%>%
+  mutate(Prediction = relevel(Prediction, ref = "Anger"))%>%
+  group_by(pair, Emotion,Prediction,Em,Pr, VideoType, DATASET)%>%
+  summarise_at(c('Freq', 'Prop'), mean, na.rm = TRUE)%>%
+  ggplot(aes(Em, Pr))+
+  geom_raster(aes(fill = Prop, stat = 'identity'))+
+  facet_grid(DATASET~VideoType,
+             # facet_grid(Dataset~morph,
+             labeller = labeller(morph = confusion_byds_vt_full$VideoType, 
+                                 DATASET = dataset_labs))+
+  xlab("Emotion")+
+  ylab("Response")
+
+paper_plots$CMatrix_byGroup
+
+
+paper_plots$CMatrix_byGroup<- paper_plots$CMatrix_byGroup+
+  theme_classic()+
+  p$graphstyle1+
+  scale_fill_viridis_c(option = "plasma", breaks = c(0, .4, .8), limits = c(0,.8))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+paper_plots$CMatrix_byGroup
+# confusion_byds_vt_full2<-
+# confusion_byds_vt_full%>%
+#   subset(Emotion != "Neutral")%>%
+#   mutate(pair = paste0(Emotion, Prediction))%>%
+#   mutate(Emotion = as.factor(Emotion))%>%
+#   mutate(Emotion = relevel(Emotion, ref = "Anger"))%>%
+#   mutate(Prediction = as.factor(Prediction))%>%
+#   mutate(Prediction = relevel(Prediction, ref = "Anger"))%>%
+#   group_by(pair, Emotion,Prediction, VideoType)
+# max(confusion_byds_vt_full2$Prop )
+
+paper_plots$CMatrix_byGroup
+
+
+```
+
+
+
+```{r}
+
+# create high - low morph
+
+
+confusion_byds_vt_full
+unique(confusion_byds_vt_full$DATASET)
+unique(confusion_byds_vt_full$VideoType)
+
+write.csv( confusion_byds_vt_full, "confusion_byds_vt_full.csv")
+high_vs_low_morph<- left_join(
+subset(confusion_byds_vt_full, DATASET == "ADFES" & VideoType == "Morph"),
+subset(confusion_byds_vt_full, DATASET != "ADFES" & VideoType == "Morph"),
+by = c('Participant', 'Em', 'Pr', 'Emotion', 'Prediction'))%>%
+  subset(Emotion != "Neutral")%>%
+  mutate(pair = paste0(Emotion, Prediction))%>%
+  mutate(Emotion = as.factor(Emotion))%>%
+  mutate(Emotion = relevel(Emotion, ref = "Anger"))%>%
+  mutate(Prediction = as.factor(Prediction))%>%
+  mutate(Prediction = relevel(Prediction, ref = "Anger"))%>%
+  group_by(pair, Emotion,Prediction,Em,Pr)%>%
+  summarise_at(c( 'Prop.x', 'Prop.y'), mean, na.rm = TRUE)%>%
+  ggplot(aes(Em, Pr))+
+  geom_raster(aes(fill = Prop.x-Prop.y, stat = 'identity'))+
+  # # facet_grid(DATASET~VideoType,
+  #            # facet_grid(Dataset~morph,
+  #            labeller = labeller(morph = confusion_byds_vt_full$VideoType, 
+  #                                DATASET = dataset_labs))+
+  xlab("Emotion")+
+  ylab("Prediction")+
+  ggtitle("Morph (high - low prot)")
+
+high_vs_low_morph <- high_vs_low_morph +
+  theme_classic()+
+  p$graphstyle1 +
+  scale_fill_viridis_c(option = "plasma", breaks = c(-.8, 0, .8), limits = c(-.8,.8))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.y = element_blank(),
+        plot.title = element_text(size = 14),
+        legend.position = "none") +
+    guides(fill = guide_colourbar(ticks = FALSE, barwidth = 10, barheight = .5))
+
+
+high_vs_low_morph
+```
+
+
+# original - high - low
+
+```{r}
+
+high_vs_low_original<-
+left_join(
+subset(confusion_byds_vt_full, DATASET == "ADFES" & VideoType != "Morph"),
+subset(confusion_byds_vt_full, DATASET != "ADFES" & VideoType != "Morph"),
+by = c('Participant', 'Em', 'Pr', 'Emotion', 'Prediction'))%>%
+  subset(Emotion != "Neutral")%>%
+  mutate(pair = paste0(Emotion, Prediction))%>%
+  mutate(Emotion = as.factor(Emotion))%>%
+  mutate(Emotion = relevel(Emotion, ref = "Anger"))%>%
+  mutate(Prediction = as.factor(Prediction))%>%
+  mutate(Prediction = relevel(Prediction, ref = "Anger"))%>%
+  group_by(pair, Emotion,Prediction,Em,Pr)%>%
+  summarise_at(c( 'Prop.x', 'Prop.y'), mean, na.rm = TRUE)%>%
+  ggplot(aes(Em, Pr))+
+  geom_raster(aes(fill = Prop.x-Prop.y, stat = 'identity'))+
+  ggtitle("Original (high - low prot)")
+  # # facet_grid(DATASET~VideoType,
+  #            # facet_grid(Dataset~morph,
+  #            labeller = labeller(morph = confusion_byds_vt_full$VideoType, 
+  #                                DATASET = dataset_labs))+
+  # xlab("Emotion")+
+  # ylab("Prediction")+
+
+
+high_vs_low_original <- high_vs_low_original +
+ theme_classic()+
+  p$graphstyle1 +
+  scale_fill_viridis_c(option = "plasma", breaks = c(-.8, 0, .8), limits = c(-.8,.8))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        plot.title = element_text(size = 14)) +
+    guides(fill = guide_colourbar(ticks = FALSE, barwidth = 10, barheight = .5))
+
+high_vs_low_original
+```
+
+# High - original - morph
+
+
+```{r}
+original_vs_morph_ADFES<-  left_join(
+subset(confusion_byds_vt_full, DATASET == "ADFES" & VideoType != "Morph"),
+subset(confusion_byds_vt_full, DATASET == "ADFES" & VideoType == "Morph"),
+by = c('Participant', 'Em', 'Pr', 'Emotion', 'Prediction'))%>%
+  subset(Emotion != "Neutral")%>%
+  mutate(pair = paste0(Emotion, Prediction))%>%
+  mutate(Emotion = as.factor(Emotion))%>%
+  mutate(Emotion = relevel(Emotion, ref = "Anger"))%>%
+  mutate(Prediction = as.factor(Prediction))%>%
+  mutate(Prediction = relevel(Prediction, ref = "Anger"))%>%
+  group_by(pair, Emotion,Prediction,Em,Pr)%>%
+  summarise_at(c( 'Prop.x', 'Prop.y'), mean, na.rm = TRUE)%>%
+  ggplot(aes(Em, Pr))+
+  geom_raster(aes(fill = Prop.x-Prop.y, stat = 'identity'))+
+  ggtitle("High prot. (original - morph)")
+  # # facet_grid(DATASET~VideoType,
+  #            # facet_grid(Dataset~morph,
+  #            labeller = labeller(morph = confusion_byds_vt_full$VideoType, 
+  #                                DATASET = dataset_labs))+
+  # xlab("Emotion")+
+  # ylab("Prediction")+
+  # theme_classic()+
+  # p$graphstyle1+
+  # scale_fill_viridis_c(option = "plasma")
+
+
+original_vs_morph_ADFES<- original_vs_morph_ADFES+
+  theme_classic()+
+  p$graphstyle1 +
+  scale_fill_viridis_c(option = "plasma", breaks = c(-.8, 0, .8), limits = c(-.8,.8))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        plot.title = element_text(size = 14),
+        legend.position = "None") +
+    guides(fill = guide_colourbar(ticks = FALSE, barwidth = 10, barheight = .5))
+
+
+
+
+original_vs_morph_ADFES
+
+
+```
+
+# low - original - morph
+```{r}
+original_vs_morph_JEFEE<-  left_join(
+subset(confusion_byds_vt_full, DATASET != "ADFES" & VideoType != "Morph"),
+subset(confusion_byds_vt_full, DATASET != "ADFES" & VideoType == "Morph"),
+by = c('Participant', 'Em', 'Pr', 'Emotion', 'Prediction'))%>%
+  subset(Emotion != "Neutral")%>%
+  mutate(pair = paste0(Emotion, Prediction))%>%
+  mutate(Emotion = as.factor(Emotion))%>%
+  mutate(Emotion = relevel(Emotion, ref = "Anger"))%>%
+  mutate(Prediction = as.factor(Prediction))%>%
+  mutate(Prediction = relevel(Prediction, ref = "Anger"))%>%
+  group_by(pair, Emotion,Prediction,Em,Pr)%>%
+  summarise_at(c( 'Prop.x', 'Prop.y'), mean, na.rm = TRUE)%>%
+  ggplot(aes(Em, Pr))+
+  geom_raster(aes(fill = Prop.x-Prop.y, stat = 'identity'))+
+  ggtitle("Low prot. (original - morph)")
+  # # facet_grid(DATASET~VideoType,
+  #            # facet_grid(Dataset~morph,
+  #            labeller = labeller(morph = confusion_byds_vt_full$VideoType, 
+  #                                DATASET = dataset_labs))+
+  # xlab("Emotion")+
+  # ylab("Prediction")+
+  # theme_classic()+
+  # p$graphstyle1+
+  # scale_fill_viridis_c(option = "plasma")
+
+
+
+original_vs_morph_JEFEE<- original_vs_morph_JEFEE+
+theme_classic()+
+  p$graphstyle1 +
+  scale_fill_viridis_c(option = "plasma", breaks = c(-.8, 0, .8), limits = c(-.8,.8))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.y = element_blank(),
+        plot.title = element_text(size = 14),
+        legend.position = "none") +
+    guides(fill = guide_colourbar(ticks = FALSE, barwidth = 10, barheight = .5))
+
+original_vs_morph_JEFEE
+high_vs_low_original
+high_vs_low_morph
+original_vs_morph_ADFES
+original_vs_morph_JEFEE
+  
+```
+
+
+```{r}
+paper_plots$Matrix_panel
+
+
+ Study1_Matrix<- (((paper_plots$CMatrix_byGroup +  
+  theme(legend.position = "none", axis.title.x = element_blank(),
+                                     axis.text.x = element_blank())+
+     guides(fill = guide_colourbar(ticks = FALSE, barwidth = 10, barheight = .5))
+     ) /
+    (paper_plots$CMatrix_byGroup_global +
+    theme(legend.position = "none",
+                                           # axis.title.y = element_blank(),
+          strip.text = element_blank())+
+  guides(fill = guide_colourbar(ticks = FALSE, barwidth = 10, barheight = .5))
+  ))+ plot_layout()+plot_annotation() & theme(legend.title =
+          element_text(size = 16), legend.position = 'top') |
+   (paper_plots$Representation+ 
+      theme(axis.title.x = element_blank())/
+      (paper_plots$Representation_nodiag+
+      theme(legend.position = "none")))) 
+  # plot_layout(nrow = 2, ncol = 2, heights = c(2, 1), widths = c(1,1))+
+   # +
+   plot_annotation(tag_levels = "A") & 
+  theme(plot.tag = element_text(size = 13)) 
+
+ Study1_Matrix
+ 
+
+
+paper_plots$CMatrix_byGrou <-  paper_plots$CMatrix_byGroup+guides(fill = guide_colourbar(ticks = FALSE, barwidth = 10, barheight = .5))
+
+
+leftt_low<- (
+high_vs_low_original+high_vs_low_morph)/(
+ original_vs_morph_ADFES+original_vs_morph_JEFEE)+
+  plot_layout(guides = 'keep')
+
+left<- paper_plots$CMatrix_byGrou/ leftt_low
+
+leftt_low
+```
+
+
+```{r}
+
+
+# left <- left
+   left
+
+right<- paper_plots$Representation/ 
+      paper_plots$Representation_nodiag
+  
+
+# left|right
+new_matrix_plot <- left|right
+
+
+# new_matrix_plot+ plot_layout(widths = c(2, 2), heights = unit(c(1, 1), c('cm', 'null')))
+
+new_matrix_plot<- new_matrix_plot+
+   plot_annotation(tag_levels = "A") & 
+  theme(plot.tag = element_text(size = 16)) 
+
+
+new_matrix_plot
+
+ ggsave("Matrix_panel_new.png",  new_matrix_plot,device = 'png', width = 14, 
+        height = 14, dpi = 800)  
+ggsave("Study1_matrixpanel_new.tiff",  new_matrix_plot,device = 'tiff', 
+       width = 14, height = 14, dpi = 800)
+
+new_matrix_plot
+```
+
+
+
+
+```{r}
+
+paper_plots$Representation <- 
+bind_rows(confusion_byds_vt_full_coragg_ttest, confusion_byds_vt_full_coragg)%>%
+  mutate(DATASET = as.factor(DATASET))%>%
+  mutate(DATASET = relevel(DATASET, ref = 'Global'))%>%
+  group_by(DATASET)%>%
+  mutate(mean_acc = mean(cor_morph_orig, na.rm = TRUE))%>%
+  group_by(Participant, DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subs
+  ggplot(aes(DATASET, cor_morph_orig, colour = DATASET, fill = DATASET))+
+  geom_half_violin(position = position_dodge(2), colour = FALSE, alpha = .3)+
+  geom_jitter( width = .1,pch = 1, size = 2, alpha = .5)+
+  geom_line(aes(group = Participant), colour = 'gray75', 
+             size = .5, alpha = .3)+
+    
+  stat_summary(geom = 'errorbar', width = 0, size = 1.5)+
+  stat_summary(geom = 'pointrange', width = 0, size = .5)+
+    geom_hline(yintercept = 0, linetype = "dotted", size = 2, alpha  = .5)+
+  theme_classic()+
+    ylab("Similarity: morph - original (r)") +
+  ggtitle("With diagonal")+
+
+
+
+  p$graphstyle1+
+  scale_y_continuous(breaks = c(.2, .6, 1), limits = c(.2,1))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")
+  
+paper_plots$Representation<- paper_plots$Representation +
+  theme(plot.title = element_text(size = 14), axis.title.x = element_blank())+
+  scale_x_discrete(breaks=c("Global","ADFES","JEFFE"),
+        labels=c("All", "High prot.", "Low prot."))+
+  theme(axis.text.x = element_blank())+
+  scale_x_discrete(breaks=c("All","ADFES","JEFFE"),
+        labels=c("All", "High prot.", "Low prot."))+
+  scale_color_discrete(name = "DATASET",
+        labels=c("All", "High prot.", "Low prot."))+
+  scale_fill_discrete(name = "DATASET",
+        labels=c("All", "High prot.", "Low prot."))
+
+paper_plots$Representation<- paper_plots$Representation+
+    scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")
+
+paper_plots$Representation
+```
+
+
+```{r}
+
+# off Diagonal()
+library(psych)
+
+ confusion_byds_vt_full_cor%>%
+  subset(Emotion!= Prediction)%>%
+  group_by(Participant, DATASET)%>%
+  mutate(cor_morph_orig = cor(Prop.x, Prop.y, use = 'complete.obs'))%>%
+  # mutate(cor_morph_orig_z = fisherz(cor_morph_orig))%>%
+  group_by(Participant)%>%
+  mutate(cor_morph_orig_subj = cor(Prop.x, Prop.y, use = 'complete.obs'))%>%
+  # mutate(cor_morph_orig_z_subj = fisherz(cor_morph_orig_subj))%>%
+  group_by(Participant, DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+ 
+
+ confusion_byds_vt_full_cor_nodiagnonal_agg 
+ 
+ confusion_byds_vt_full_cor_nodiagnonal_agg1$DATASET<- "Global"
+ 
+ 
+paper_plots$Representation_nodiag<-
+bind_rows(confusion_byds_vt_full_cor_nodiagnonal_agg, confusion_byds_vt_full_cor_nodiagnonal_agg1)%>%
+  # confusion_byds_vt_full_cor%>%
+  # subset(Emotion!= Prediction)%>%
+  mutate(DATASET = as.factor(DATASET))%>%
+  mutate(DATASET = relevel(DATASET, ref = 'Global'))%>%
+  # group_by(DATASET)%>%
+  # mutate(mean_acc = mean(cor_morph_orig, na.rm = TRUE))%>%
+  # group_by(Participant, DATASET)%>%
+  # summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # group_by(Participant, DATASET)%>%
+  # mutate(cor_morph_orig = cor(Prop.x, Prop.y, use = 'complete.obs'))%>%
+  # # mutate(cor_morph_orig_z = fisherz(cor_morph_orig))%>%
+  # group_by(Participant)%>%
+  # mutate(cor_morph_orig_subj = cor(Prop.x, Prop.y, use = 'complete.obs'))%>%
+  # # mutate(cor_morph_orig_z_subj = fisherz(cor_morph_orig_subj))%>%
+  group_by(Participant, DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # subs
+  ggplot(aes(DATASET, cor_morph_orig, colour = DATASET, fill = DATASET))+
+  geom_half_violin(position = position_dodge(2), colour = FALSE, alpha = .3)+
+  geom_jitter(width = .1,pch = 1, size = 2, alpha = .5)+
+  geom_line(aes(group = Participant), colour = 'gray75', 
+             size = .5, alpha = .3)+
+    
+  stat_summary(geom = 'errorbar', width = 0, size = 1.5)+
+  stat_summary(geom = 'pointrange', width = 0, size = .5)+
+    geom_hline(yintercept = 0, linetype = "dotted", size = 2, alpha  = .5)+
+  theme_classic()+
+    ylab("Similarity: morph - original (r)") +
+  ggtitle("Off diagonal")+
+
+
+
+  p$graphstyle1+
+  # scale_y_continuous(breaks = c(0,.5, 1), limits = c(-.3,1))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")
+
+paper_plots$Representation_nodiag <-
+  paper_plots$Representation_nodiag<- paper_plots$Representation_nodiag +
+  theme(plot.title = element_text(size = 14),
+        axis.title.x = element_blank())+
+  scale_x_discrete(breaks=c("Global","ADFES","JEFFE"),
+        labels=c("All", "High prot.", "Low prot."))+
+  theme(legend.position = "none")
+
+paper_plots$Representation_nodiag
+  
+```
+
+
+correlations between confusion matrices
+
+
+```{r}
+confusion_byds_vt_full_coragg_ttest
+
+confusion_byds_vt_full_ADFES_origi<- subset(confusion_byds_vt_full, 
+                                            DATASET == "ADFES" & VideoType == "Original")%>%
+  arrange(Participant, Emotion, Prediction)
+
+
+confusion_byds_vt_full_JEFFE_origi<- subset(confusion_byds_vt_full, 
+                                            DATASET != "ADFES" & VideoType == "Original")%>%
+  arrange(Participant, Emotion, Prediction)
+
+
+cor.test(confusion_byds_vt_full_ADFES_origi$Freq,confusion_byds_vt_full_ADFES_origi$Prop)$estimate
+left_join(confusion_byds_vt_full_ADFES_origi,confusion_byds_vt_full_JEFFE_origi,
+          by = c('Participant', 'Emotion', 'Prediction'))%>%
+  group_by(Emotion, Prediction)%>%
+  subset(Emotion != Prediction)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  
+  # mutate(cor_adfes_jeffe_orig = cor.test(Prop.x, Prop.y, use = "complete")$estimate)%>%
+  ggplot(aes(Prop.x, Prop.y))+
+  geom_point()+
+  geom_smooth(method = lm, se =F)+
+   ggpubr::stat_cor()
+
+# morph
+
+confusion_byds_vt_full_ADFES_Morph<- subset(confusion_byds_vt_full, 
+                                            DATASET == "ADFES" & VideoType == "Morph")%>%
+  arrange(Participant, Emotion, Prediction)
+
+
+confusion_byds_vt_full_JEFFE_Morph<- subset(confusion_byds_vt_full, 
+                                            DATASET != "ADFES" & VideoType == "Morph")%>%
+  arrange(Participant, Emotion, Prediction)
+
+
+cor.test(confusion_byds_vt_full_ADFES_Morph$Freq,confusion_byds_vt_full_ADFES_Morph$Prop)$estimate
+
+left_join(confusion_byds_vt_full_ADFES_origi,confusion_byds_vt_full_ADFES_Morph,
+          by = c('Participant', 'Emotion', 'Prediction'))%>%
+  group_by(Emotion, Prediction)%>%
+  subset(Emotion != Prediction)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  
+  # mutate(cor_adfes_jeffe_orig = cor.test(Prop.x, Prop.y, use = "complete")$estimate)%>%
+  ggplot(aes(Prop.x, Prop.y))+
+  geom_point()+
+  geom_smooth(method = lm, se =F)+
+   ggpubr::stat_cor()
+
+
+# jeffe morph vs original
+
+
+confusion_byds_vt_full_ADFES_Morph<- subset(confusion_byds_vt_full, 
+                                            DATASET == "ADFES" & VideoType == "Morph")%>%
+  arrange(Participant, Emotion, Prediction)
+
+
+confusion_byds_vt_full_JEFFE_Morph<- subset(confusion_byds_vt_full, 
+                                            DATASET != "ADFES" & VideoType == "Morph")%>%
+  arrange(Participant, Emotion, Prediction)
+
+
+cor.test(confusion_byds_vt_full_ADFES_Morph$Freq,confusion_byds_vt_full_ADFES_Morph$Prop)$estimate
+
+left_join(confusion_byds_vt_full_JEFFE_origi,confusion_byds_vt_full_JEFFE_Morph,
+          by = c('Participant', 'Emotion', 'Prediction'))%>%
+  group_by(Emotion, Prediction)%>%
+  subset(Emotion != Prediction)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  
+  # mutate(cor_adfes_jeffe_orig = cor.test(Prop.x, Prop.y, use = "complete")$estimate)%>%
+  ggplot(aes(Prop.x, Prop.y))+
+  geom_point()+
+  geom_smooth(method = lm, se =F)+
+  ggpubr::stat_cor()
+
+
+
+left_join(confusion_byds_vt_full_ADFES_Morph,confusion_byds_vt_full_JEFFE_Morph,
+          by = c('Participant', 'Emotion', 'Prediction'))%>%
+  group_by(Emotion, Prediction)%>%
+  # subset(Emotion != Prediction)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  
+  # mutate(cor_adfes_jeffe_orig = cor.test(Prop.x, Prop.y, use = "complete")$estimate)%>%
+  ggplot(aes(Prop.x, Prop.y))+
+  geom_point()+
+  geom_smooth(method = lm, se =F)+
+  ggpubr::stat_cor()
+
+
+
+```
+
+
+
+
+```{r}
+
+# valence
+paper_plots$cor_morph_orig_val<- bind_rows(db_NT_lmer_correlation_merged3_agg, db_NT_lmer_correlation_merged3_agg1)%>%
+    mutate(DATASET = as.factor(DATASET))%>%
+    mutate(DATASET = relevel(DATASET, ref = 'All'))%>%
+    group_by(DATASET)%>%
+    mutate(mean_val_cor = mean(valence_morph_orig_cor))%>%
+  ggplot(aes(DATASET,valence_morph_orig_cor, colour = DATASET, fill = DATASET))+
+  geom_half_violin(position = position_dodge(2), colour = FALSE, alpha = .3)+
+  geom_jitter( width = .1,pch = 1, size = 2, alpha = .5)+
+  geom_line(aes(group = ParticipantPrivateID), colour = 'gray75', 
+             size = .5, alpha = .3)+
+    
+  stat_summary(geom = 'errorbar', width = 0, size = 1.5)+
+  stat_summary(geom = 'pointrange', width = 0, size = .5)+
+    geom_hline(yintercept = 0, linetype = "dotted", size = 2, alpha  = .5)+
+  theme_classic()+
+    ylab("Valence similarity \n Morph and Original")
+
+paper_plots$cor_morph_orig_val<- paper_plots$cor_morph_orig_val+ 
+  p$graphstyle1+
+  scale_y_continuous(breaks = c(0, .5, 1), limits = c(-.3,1))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  scale_x_discrete(breaks=c("All","ADFES","JEFFE"),
+        labels=c("All", "High prot.", "Low prot."))+
+  scale_color_discrete(name = "DATASET",
+        labels=c("All", "High prot.", "Low prot."))+
+  scale_fill_discrete(name = "DATASET",
+        labels=c("All", "High prot.", "Low prot."))+
+  theme(axis.title.x = element_blank())
+
+paper_plots$cor_morph_orig_val<- paper_plots$cor_morph_orig_val+
+   scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")
+
+paper_plots$cor_morph_orig_val
+
+```
+intensity
+
+
+```{r}
+paper_plots$cor_morph_orig_int<- bind_rows(db_NT_lmer_correlation_merged3_agg, db_NT_lmer_correlation_merged3_agg1)%>%
+    mutate(DATASET = as.factor(DATASET))%>%
+    mutate(DATASET = relevel(DATASET, ref = 'All'))%>%
+    group_by(DATASET)%>%
+    mutate(mean_int_cor = mean(intensity_morph_orig_cor))%>%
+  
+  ggplot(aes(DATASET,intensity_morph_orig_cor, colour = DATASET, fill = DATASET))+
+ geom_half_violin(position = position_dodge(2), colour = FALSE, alpha = .3)+
+  geom_jitter( width = .1,pch = 1, size = 2, alpha = .5)+
+  geom_line(aes(group = ParticipantPrivateID), colour = 'gray75', 
+             size = .5, alpha = .3)+
+    
+  stat_summary(geom = 'errorbar', width = 0, size = 1.5)+
+  stat_summary(geom = 'pointrange', width = 0, size = .5)+
+    geom_hline(yintercept = 0, linetype = "dotted", size = 2, alpha  = .5)+
+  theme_classic()+
+    ylab("Intensity similarity \n Morph and Original")
+  
+paper_plots$cor_morph_orig_int
+
+  
+paper_plots$cor_morph_orig_int<- paper_plots$cor_morph_orig_int+ 
+  p$graphstyle1+
+  scale_y_continuous(breaks = c(-.5, 0, .5, 1), limits = c(-.6,1))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  scale_x_discrete(breaks=c("All","ADFES","JEFFE"),
+        labels=c("All", "High prot.", "Low prot."))+
+  theme(legend.position = "none", axis.title.x = element_blank())
+
+paper_plots$cor_morph_orig_int
+
+```
+
+
+
+```{r}
+
+paper_plots$cor_morph_orig_nat <- bind_rows(db_NT_lmer_correlation_merged3_agg, db_NT_lmer_correlation_merged3_agg1)%>%
+    mutate(DATASET = as.factor(DATASET))%>%
+    mutate(DATASET = relevel(DATASET, ref = 'All'))%>%
+    group_by(DATASET)%>%
+    mutate(mean_nat_cor = mean(naturality_morph_orig_cor))%>%
+  ggplot(aes(DATASET,naturality_morph_orig_cor, colour = DATASET, fill = DATASET))+
+  geom_half_violin(position = position_dodge(2), colour = FALSE, alpha = .3)+
+  geom_jitter( width = .1,pch = 1, size = 2, alpha = .5)+
+  geom_line(aes(group = ParticipantPrivateID), colour = 'gray75', 
+             size = .5, alpha = .3)+
+    
+  stat_summary(geom = 'errorbar', width = 0, size = 1.5)+
+  stat_summary(geom = 'pointrange', width = 0, size = .5)+
+    geom_hline(yintercept = 0, linetype = "dotted", size = 2, alpha  = .5)+
+  theme_classic()+
+      ylab("Naturality similarity \n Morph and Original")+
+  scale_x_discrete(breaks=c("All","ADFES","JEFFE"),
+        labels=c("All", "High prot.", "Low prot."))
+
+paper_plots$cor_morph_orig_nat
+
+```
+
+
+```{r}
+
+  # geom_line(aes(group = ParticipantPrivateID), colour = 'gray75', size = .1, alpha = .5)+
+  # geom_boxplot( width = .3, size = 1, alpha = .5)+
+  # geom_jitter(width = .1,pch = 21, size = 3, alpha = .7)+
+  #  
+  #   stat_summary(geom = 'point', size = 5)+
+  #   theme_classic()+
+  # 
+  # 
+  #   ylab("Naturality similarity \n Morph and Original")
+
+
+ 
+
+  
+  
+paper_plots$cor_morph_orig_nat<- paper_plots$cor_morph_orig_nat+ 
+  p$graphstyle1+
+  scale_y_continuous(breaks = c(-.5, 0, .5, 1), limits = c(-.7,1))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  # scale_x_discrete(breaks=c("All","ADFES","JEFFE"),
+  #       labels=c("All", "High prot.", "Low prot."))+
+  theme(legend.position = "none", axis.title.x = element_blank())
+paper_plots$cor_morph_orig_nat
+
+
+```
+
+
+
+solve the accuracy issue
+```{r}
+# acc
+paper_plots$cor_morph_orig_acc <- bind_rows(db_NT_lmer_correlation_merged3_agg, db_NT_lmer_correlation_merged3_agg1)%>%
+    mutate(DATASET = as.factor(DATASET))%>%
+    mutate(DATASET = relevel(DATASET, ref = 'All'))%>%
+    group_by(DATASET)%>%
+    mutate(mean_acc_cor = mean(acc_morph_orig_cor*(-1)))%>%
+  ggplot(aes(DATASET,acc_morph_orig_cor* (-1), colour = DATASET))+
+  # geom_violin(trim = FALSE, width = .5)+
+    # geom_point(pch = 21, size = 3, alpha = .7)+
+    # geom_boxplot(aes(y=mean_acc_cor), width = .3, size = 1, colour = 'darkred')+
+  geom_boxplot( width = .3, size = 1)+
+  geom_jitter(width = .1,pch = 21, size = 3, alpha = .7)+
+   geom_line(aes(group = ParticipantPrivateID), colour = 'gray75', 
+             size = .5, alpha = .3)+
+    stat_summary(geom = 'point', size = 5)+
+    theme_classic()+
+    ylab("Accuracy similarity \n Morph and Original")
+
+
+
+
+  
+  
+paper_plots$cor_morph_orig_acc<- paper_plots$cor_morph_orig_acc+ 
+  p$graphstyle1+
+  scale_y_continuous(breaks = c(-1, -.5, 0, .5, 1), limits = c(-1,1))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_x_discrete(breaks=c("All","ADFES","JEFFE"),
+        labels=c("All", "High prot.", "Low prot."))+
+  theme(legend.position = "none", axis.title.x = element_blank())
+paper_plots$cor_morph_orig_acc
+
+
+
+```
+
+
+
+
+
+```{r}
+
+
+paper_plots$correlations_morph_orig<-
+paper_plots$cor_morph_orig_val+  theme(legend.position = "none", axis.title.x = element_blank(),
+                                     axis.text.x = element_blank())+
+paper_plots$cor_morph_orig_int+  theme(legend.position = "none", axis.title.x = element_blank(),
+                                     axis.text.x = element_blank(), axis.text.y = element_blank())+
+paper_plots$cor_morph_orig_nat+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.y = element_blank())+
+paper_plots$cor_morph_orig_acc+  theme(legend.position = "none", axis.title.x = element_blank())+
+plot_layout(nrow = 2, ncol = 2)
+            
+paper_plots$correlations_morph_orig          
+            guides = 'collect')& theme(legend.position = 'top')
+  
+ggsave("correlations_morph_orig.png", paper_plots$correlations_morph_orig, device = 'png', width = 10, height =7 , dpi = 900) 
+
+
+
+```
+
+```{r}
+
+# db_NT_lmer_correlation <- dplyr::select(db_NT_lmer, c(ParticipantPrivateID, Video, VideoType, DATASET, Emotion,
+#                                               AnswerRating_Intensity, AnswerRating_Valence, 
+#                                               AnswerRating_Naturality, Recognacc,
+#                                               # Answe
+
+
+# compute the correlations
+View(db_NT_lmer_correlation_merged)
+
+
+table(is.na(db_NT_lmer_correlation_merged$matched))
+db_NT_lmer_correlation_merged3 %>%
+  # filter(matched == "YES")%>%
+  group_by(ParticipantPrivateID, DATASET)%>%
+  # mutate(intensity_morph_orig_cor = cor(AnswerRating_Intensity.x, AnswerRating_Intensity.y, "complete.obs"))%>%
+  # mutate(valence_morph_orig_cor = cor(AnswerRating_Valence.x, AnswerRating_Valence.y, use = "complete.obs"))%>%
+  # mutate(naturality_morph_orig_cor = cor(AnswerRating_Naturality.x, AnswerRating_Naturality.y,use= "complete.obs"))%>%
+  mutate(acc_morph_orig_cor = cor.test(Recognacc.x, Recognacc.y, use = "complete.obs")$estimate)%>%
+  group_by(ParticipantPrivateID, DATASET)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(x = DATASET, y = acc_morph_orig_cor, color = DATASET))+
+     # geom_point(pch = 21, size = 3, alpha = .7)+
+    # geom_boxplot(aes(y=mean_acc_cor), width = .3, size = 1, colour = 'darkred')+
+  geom_boxplot( width = .3, size = 1)+
+  geom_jitter(width = .1,pch = 21, size = 3, alpha = .7)+
+   geom_line(aes(group = ParticipantPrivateID), colour = 'gray75', size = .1, alpha = .5)+
+    stat_summary(geom = 'point', size = 5)+
+    geom_hline(yintercept = 0, linetype = "dotted", size = 2, alpha  = .5)+
+  theme_classic()
+
+library(gghalves)
+library(tidyverse)
+library(ggplot2)
+
+paper_plots$cor_morph_orig_acc<- bind_rows(db_NT_lmer_correlation_merged3_agg, db_NT_lmer_correlation_merged3_agg1)%>%
+# db_NT_lmer_correlation_merged3_agg%>%
+    mutate(DATASET = as.factor(DATASET))%>%
+    mutate(DATASET = relevel(DATASET, ref = 'All'))%>%
+    group_by(DATASET)%>%
+    mutate(mean_acc_cor = mean(acc_morph_orig_cor*(-1)))%>%
+  ggplot(aes(DATASET,acc_morph_orig_cor* (-1), color =DATASET, fill = DATASET))+
+  geom_half_violin(position = position_dodge(2), colour = FALSE, alpha = .3)+
+  
+  geom_jitter( width = .1,pch = 1, size = 2, alpha = .5)+
+  geom_line(aes(group = ParticipantPrivateID), colour = 'gray75', 
+             size = .5, alpha = .3)+
+    
+  stat_summary(geom = 'errorbar', width = 0, size = 1.5)+
+  stat_summary(geom = 'pointrange', width = 0, size = .5)+
+    geom_hline(yintercept = 0, linetype = "dotted", size = 2, alpha  = .5)+
+  theme_classic()+
+      ylab("Accuracy similarity \n Morph and Original")+
+  scale_x_discrete(breaks=c("All","ADFES","JEFFE"),
+        labels=c("All", "High prot.", "Low prot."))
+  
+  
+paper_plots$cor_morph_orig_acc <- paper_plots$cor_morph_orig_acc + 
+  p$graphstyle1+
+  scale_y_continuous(breaks = c(-.5, 0, .5, 1), limits = c(-.5,1))+
+  scale_color_brewer(palette = "Dark2")+
+  theme(legend.position = "none", axis.title.x = element_blank())+
+  scale_fill_brewer(palette = "Dark2")
+paper_plots$cor_morph_orig_acc
+
+
+
+
+```
+
+
+
+Panel
+
+
+```{r}
+library(patchwork)
+paper_plots$correlations_morph_orig<-
+paper_plots$cor_morph_orig_val+  
+  theme(
+        axis.title.x = element_blank(), 
+        legend.position = "top") +
+paper_plots$cor_morph_orig_int+  
+  theme(legend.position = "none", 
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank())+
+  paper_plots$cor_morph_orig_nat+  
+  theme(legend.position = "none")+
+paper_plots$cor_morph_orig_acc+  
+  theme(legend.position = "none", 
+        axis.title.x = element_blank(),
+         axis.text.x = element_blank())+
+plot_layout(nrow = 2, ncol = 2)
+            
+# paper_plots$correlations_morph_orig +          
+#             guides = 'colect') & theme(legend.position = 'top')
+
+paper_plots$correlations_morph_orig
+  
+
+
+ggsave("Study1_panel_Similarity_morph_orig.tiff", paper_plots$correlations_morph_orig, 
+       device = 'tiff', width = 10, height =7, dpi = 900) 
+
+ggsave("Study1_panel_Similarity_morph_orig.png", paper_plots$correlations_morph_orig, 
+       device = 'png', width = 10, height =7, dpi = 900) 
+```
+
+
+```
+
+
+```{r}
+GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, 
+                           draw_group = function(self, data, ..., draw_quantiles = NULL) {
+  data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+  grp <- data[1, "group"]
+  newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
+  newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+  newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
+
+  if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+    stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
+      1))
+    quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
+    aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+    aesthetics$alpha <- rep(1, nrow(quantiles))
+    both <- cbind(quantiles, aesthetics)
+    quantile_grob <- GeomPath$draw_panel(both, ...)
+    ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+  }
+  else {
+    ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+  }
+})
+
+geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
+                              draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
+                              show.legend = NA, inherit.aes = TRUE) {
+  layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, 
+        position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
+        params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
+}
+
+
+```
