@@ -2156,8 +2156,23 @@ boundaryplots$panel_posed2 <-
     patchwork::wrap_elements(boundaryplots$pc1_3_box)))+ 
    plot_layout(nrow = 2, heights = c(.1,2))
    
+boundaryplots$panel_posed2
+paper_plots$conf_mat_posed 
 
 
+
+  (patchwork::wrap_elements(getleg)/
+(patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+  patchwork::wrap_elements(boundaryplots$pc2_3_box)+
+    patchwork::wrap_elements(boundaryplots$pc1_3_box))/ 
+  (paper_plots$ROC_posed+paper_plots$acc_SE+paper_plots$conf_mat_posed))+
+  
+  
+   plot_layout(nrow = 3, heights = c(.1,2,1))
+
+(patchwork::wrap_plots(boundaryplots$panel_posed2)/
+  (paper_plots$ROC_posed|paper_plots$conf_mat_posed))+
+  plot_layout(nrow = 2)
 ```
 
 ROCs
@@ -2249,37 +2264,79 @@ roc.happy <- roc(ifelse(predictions$observed=="happy", "happy", "rest"), as.nume
 plot(roc.happy, col = "gray60")
 
 # others
-roc.sad <- roc(ifelse(predictions$observed=="sad", "sad", "rest"), as.numeric(predictions$sad))
-roc.angry <- roc(ifelse(predictions$observed=="angry", "angry", "rest"), as.numeric(predictions$angry))
+roc.sad_main <- roc(ifelse(predictions$observed=="sad", "sad", "rest"), as.numeric(predictions$sad))
 
+roc.sad_main$auc
+roc.angry <- roc(ifelse(predictions$observed=="angry", "angry", "rest"), as.numeric(predictions$angry))
+# roc.angry$auc
+
+roc.happy$auc
 roc_p<- plot(roc.happy, col = "gray60")
 lines(roc.sad, col = "blue")
 lines(roc.angry, col = "red")
 
-roc.sad$sensitivities
-roc.happy$sensitivities
-roc.angry$sensitivities
+as.data.frame(roc.sad$sensitivities)
+as.data.frame(roc.happy$sensitivities)
+as.data.frame(roc.angry$sensitivities)
 
+roc.sad<- cbind(as.data.frame(roc.sad$specificities), as.data.frame(roc.sad$sensitivities))
+roc.sad$expression = "sad"
+
+rochappydf<- cbind(as.data.frame(roc.happy$specificities), as.data.frame(roc.happy$sensitivities))
+rochappydf$expression<-"happy"
+
+rocangrydf<- cbind(as.data.frame(roc.angry$specificities), as.data.frame(roc.angry$sensitivities))
+rocangrydf$expressin <- "angry"
+
+names(roc.sad) <- c('specificities', 'sensitivities', 'expression')
+names(rochappydf) <- c('specificities', 'sensitivities', 'expression')
+names(rocangrydf) <- c('specificities', 'sensitivities', 'expression')
+
+roc_combined<- rbind(roc.sad,rochappydf,rocangrydf)
 roc.happy$sensitivities
+
+colnames(roc_combined)
 
 length(roc.happy$specificities)
+# 
 ggplot()+
   geom_line(aes(x = sort(1- roc.happy$specificities), y = sort(roc.happy$sensitivities)),colour = "red")+
   # geom_path()
   geom_line(aes(x = sort(1-roc.sad$specificities), y = sort(roc.sad$sensitivities)),colour = "blue")+
     geom_line(aes(x = sort(1-roc.angry$specificities), y = sort(roc.angry$sensitivities)),color = "green")+
-  geom_line(aes(x = seq(0,1,by = .1), y = seq(0,1,by = .1)),linetype = "dashed", size = 2)
+ 
+   geom_line(aes(x = seq(0,1,by = .1), y = seq(0,1,by = .1)),linetype = "dashed", size = 2)+
+  geom_line(aes(y = rep(1,each = 11), x = seq(0,1,by = .1)),linetype = "dashed", size = 2)+
+   geom_line(aes(x = rep(0,each = 11), y = seq(0,1,by = .1)),linetype = "dashed", size = 2)
 
-roc_p
 
-sqrt(45)
+# new roc
+paper_plots$ROC_posed<-
+roc_combined%>%
+  group_by(expression)%>%
+  mutate(specificities = sort(1- specificities),
+         sensitivities = sort(sensitivities))%>%
+ggplot(aes(x =  specificities, y = sensitivities, group = expression, colour = expression))+
+  geom_line(aes(y = rep(1,each = 44), x = seq(0,1,by = .023)), size = 1.5, colour = "black",
+            linetype = "dotted", alpha = .5)+
+   geom_line(aes(x = rep(0,each = 44), y = seq(0,1,by = .023)), size = 1.5, colour = "black",
+            linetype = "dotted", alpha = .5) +
+  geom_point(aes(x = 0, y = 1),colour = "black", size = 2)+
+  geom_line(size = 1.5)+
+   geom_line(aes(x = seq(0,1,by = .023), y = seq(0,1,by = .023)),linetype = "dashed", size = 2, color = "black")+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+    base_breaks_x(1-roc_combined$specificities) +
+  base_breaks_y(roc_combined$sensitivities)+
+  annotate( "text",x = 0.0999,y=1.05, label = "Perfect separation")+
+  theme_bw()+
+  plot_style+
+  theme(legend.position = c(.8,.4))
 
-45/6.708204
 
-6.708204/45
-
-breaks()
- length(seq(0,1,by = .1))
+(patchwork::wrap_plots(boundaryplots$panel_posed2)/
+  (paper_plots$ROC_posed|paper_plots$conf_mat_posed))+
+  plot_layout(nrow = 2)
 ```
 head(longtest)
  library(ROCR)
@@ -2623,8 +2680,8 @@ by_class_df_acc<- by_class_df%>%
 mutate(row_name = substr(rnames,1,19)) %>%
   filter(str_detect(row_name, "Balanced Accuracy"))
 
-bind_cols(acc_test_ci,
-by_class_df_acc)%>%
+paper_plots$acc_SE<-
+bind_cols(acc_test_ci,by_class_df_acc)%>%
 
   # filter(str_detect(row_name, "Balanced Accuracy"))%>%
 # mutate(test= contains(,row_name)) %>%
@@ -2643,9 +2700,10 @@ by_class_df_acc)%>%
   group_by(key)%>%
   summarise_if(is.numeric, mean, na.rm = T) %>%
   ggplot(aes(key, (value+.01), color = key)) +
-   geom_bar(stat="identity", width = .11)+
+   # geom_bar(stat="identity", width = .8)+
   geom_point(aes(x = key, y = (acc_test+.01)))+
-  geom_errorbar( aes(x=key, ymin=(perc_5+.01), ymax=(perc_95+.01)), width=0.4, colour="orange", alpha=0.9, size=1.3)
+  geom_errorbar( aes(x=key, ymin=(perc_5+.01), ymax=(perc_95+.01)), width=0.4, colour="orange", alpha=0.9, size=1.3)+
+  plot_style
   # coord_cartesian(ylim=c(.7,1))
   # ylim(.30,1)
   facet_grid(~key) +
@@ -2653,6 +2711,7 @@ by_class_df_acc)%>%
    geom_vline(aes(xintercept =(perc_95+.1))) +
     geom_vline(aes(xintercept = (acc_test+.1)), linetype ="dashed", color = "red")
 
+  paper_plots$acc_SE
 ```
 
 CHAT GPT bootsraped CIs for random forest
