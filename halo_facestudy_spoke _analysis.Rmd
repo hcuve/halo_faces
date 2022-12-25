@@ -1012,7 +1012,11 @@ r.forest_tr$finalModel
 confusionMatrix(pred, actual, mode = "everything", positive="1")
 
 library(caret)
-test<- confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "everything", positive="1")
+
+test_set_res<- confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "everything", positive="1")
+test_set_res$table
+test_set_res
+test
 
  test_set$prediction
   
@@ -1386,7 +1390,34 @@ message("Done Loop - ", i)
   r.forest_mts <- train(expression ~ PC1 + PC2 + PC3, 
                 data = train_set, 
                 method = "rf",
+                # trControl = trainControl(method = "oob")),
                 type = "raw",
+                ntree = 30)
+
+  r.forest_mts2 <- train(expression ~ PC1 + PC2 + PC3, 
+                data = train_set, 
+                method = "rf",
+                trControl = trainControl(method = "oob"),
+                type = "raw",
+                ntree = 30)
+  
+  
+  r.forest_mts2$finalModel$err.rate
+  
+  
+    r.forest_mts2 <- train(expression ~ PC1 + PC2 + PC3, 
+                data = train_set, 
+                method = "rf",
+                trControl = trainControl(method = "oob"),
+                type = "raw",
+                ntree = 30)
+  
+  
+    r.forest_mts_test <- train(expression ~ PC1 + PC2 + PC3, 
+                data = test_set, 
+                method = "rf",
+                type = "raw",
+                # mt
                 ntree = 30)
   
   r.forest_tr
@@ -1949,11 +1980,11 @@ boundaryplots$pc1_3
 
 library(ggExtra)
 
-boundaryplots$pc1_3_box <- ggMarginal(boundaryplots$pc1_3,groupFill = T,type = c("boxplot"),
+boundaryplots$pc1_3_box <- ggMarginal(boundaryplots$pc1_3,groupFill = T, groupColour = T, type = c("boxplot"),
                                        margins = 'both',
   size = 5)
  
-boundaryplots$pc1_3_den <- ggMarginal(boundaryplots$pc1_3,groupFill = T, type = "density")
+boundaryplots$pc1_3_den <- ggMarginal(boundaryplots$pc1_3,groupFill = T,groupColour = T, type = "density")
 
 
   
@@ -2154,7 +2185,7 @@ boundaryplots$panel_posed2 <-
 (patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
   patchwork::wrap_elements(boundaryplots$pc2_3_box)+
     patchwork::wrap_elements(boundaryplots$pc1_3_box)))+ 
-   plot_layout(nrow = 2, heights = c(.1,2))
+   plot_layout(nrow = 2, heights = c(2,1))
    
 boundaryplots$panel_posed2
 paper_plots$conf_mat_posed 
@@ -2165,7 +2196,7 @@ paper_plots$conf_mat_posed
 (patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
   patchwork::wrap_elements(boundaryplots$pc2_3_box)+
     patchwork::wrap_elements(boundaryplots$pc1_3_box))/ 
-  (paper_plots$ROC_posed+paper_plots$acc_SE+paper_plots$conf_mat_posed))+
+  (paper_plots$ROC_posed+paper_plots$conf_mat_posed))+
   
   
    plot_layout(nrow = 3, heights = c(.1,2,1))
@@ -2173,6 +2204,30 @@ paper_plots$conf_mat_posed
 (patchwork::wrap_plots(boundaryplots$panel_posed2)/
   (paper_plots$ROC_posed|paper_plots$conf_mat_posed))+
   plot_layout(nrow = 2)
+
+
+
+# new one
+
+library(cowplot)
+legend_side<- get_legend(legendtop+
+  theme(legend.position = "right"))
+
+
+(patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+ legend_side +
+  patchwork::wrap_elements(boundaryplots$pc1_3_box) +
+  patchwork::wrap_elements(boundaryplots$pc2_3_box)|(paper_plots$ROC_posed/paper_plots$conf_mat_posed))+
+  plot_layout(ncol = 2, widths = c(2,.8))
+  plot_layout(guides = "collect")
+
+boundaryplots$panel_posed2
+  
+  (patchwork::wrap_elements(getleg)/
+(patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+  patchwork::wrap_elements(boundaryplots$pc2_3_box)+
+    patchwork::wrap_elements(boundaryplots$pc1_3_box)))+ 
+   plot_layout(nrow = 2, heights = c(.1,2))
 ```
 
 ROCs
@@ -2225,9 +2280,15 @@ library(klaR)
                 type = "raw",
                 ntree = 30)
 
+   
+   rocmod
 test_set$type<- as.factor(test_set$expression == lvls[type.id])
   
   # test_set$expression
+
+
+
+
   
 nbprediction = predict(rocmod, test_set)
 # klaR::
@@ -2312,15 +2373,20 @@ ggplot()+
 
 # new roc
 paper_plots$ROC_posed<-
+
 roc_combined%>%
   group_by(expression)%>%
   mutate(specificities = sort(1- specificities),
          sensitivities = sort(sensitivities))%>%
+  ungroup()%>%
+  mutate(expression = if_else(expression == "angry", paste0("angry: AUC = ",substr(as.character(roc.angry$auc),1,4)),
+if_else(expression == "happy", paste0("happy: AUC = ",substr(as.character(roc.happy$auc),1,4)),
+        paste0("sad:    AUC = ",substr(as.character(roc.sad_main$auc),1,4)))))%>%
 ggplot(aes(x =  specificities, y = sensitivities, group = expression, colour = expression))+
-  geom_line(aes(y = rep(1,each = 44), x = seq(0,1,by = .023)), size = 1.5, colour = "black",
-            linetype = "dotted", alpha = .5)+
-   geom_line(aes(x = rep(0,each = 44), y = seq(0,1,by = .023)), size = 1.5, colour = "black",
-            linetype = "dotted", alpha = .5) +
+  # geom_line(aes(y = rep(1,each = 44), x = seq(0,1,by = .023)), size = 1.5, colour = "black",
+            # linetype = "dotted", alpha = .5)+
+   # geom_line(aes(x = rep(0,each = 44), y = seq(0,1,by = .023)), size = 1.5, colour = "black",
+            # linetype = "dotted", alpha = .5) +
   geom_point(aes(x = 0, y = 1),colour = "black", size = 2)+
   geom_line(size = 1.5)+
    geom_line(aes(x = seq(0,1,by = .023), y = seq(0,1,by = .023)),linetype = "dashed", size = 2, color = "black")+
@@ -2329,14 +2395,57 @@ ggplot(aes(x =  specificities, y = sensitivities, group = expression, colour = e
     base_breaks_x(1-roc_combined$specificities) +
   base_breaks_y(roc_combined$sensitivities)+
   annotate( "text",x = 0.0999,y=1.05, label = "Perfect separation")+
+  xlab("False Positive Rate")+
+  ylab("True Positive Rate")+
+  # annotate( "text",x = 0.0999,y=1.05, label = paste0("AUC=", roc.happy$auc)+
+  
   theme_bw()+
   plot_style+
-  theme(legend.position = c(.8,.4))
+  theme(legend.position = c(.8,.2))
 
 
+paper_plots$ROC_posed
+paper_plots$conf_mat_posed
 (patchwork::wrap_plots(boundaryplots$panel_posed2)/
   (paper_plots$ROC_posed|paper_plots$conf_mat_posed))+
   plot_layout(nrow = 2)
+
+
+
+r.forest_mts$finalModel$err.rate
+r.forest_mts$finalModel$forest
+
+r.forest_mts$finalModel
+treesMSE
+
+# 
+library(randomForest)
+randomForest
+r.forest_mts$finalModel$err.rate
+predict(r.forest_mts, newdata = train_set, type = "raw")
+
+
+as.data.frame(r.forest_mts$finalModel$err.rate)%>%
+  mutate(data = "train")%>%
+
+# r.forest_mts_test
+  mutate(trees = 1:30)%>%
+  gather(key, value,-trees,-data) %>%
+  ggplot(aes(trees, 1-value, group = key, colour = key))+
+    geom_line()
+
+
+as.data.frame(r.forest_mts_test$finalModel$err.rate)%>%
+    mutate(data = "test")%>%
+  mutate(trees = 1:30) %>%
+  gather(key, value,-trees,-data) %>%
+  ggplot(aes(trees, 1-value, group = key, colour = key))+
+    geom_line()
+
+
+
+
+
 ```
 head(longtest)
  library(ROCR)
@@ -2638,6 +2747,9 @@ jasp_boundarytest%>%
 ```{r}
 conf_mat_df
 
+nrow(train_set)/3
+# 61
+
 by_class_temp
 
 
@@ -2680,7 +2792,42 @@ by_class_df_acc<- by_class_df%>%
 mutate(row_name = substr(rnames,1,19)) %>%
   filter(str_detect(row_name, "Balanced Accuracy"))
 
-paper_plots$acc_SE<-
+
+by_class_df_acc
+# bias_correction <- (1 - (3 * boot_skewness^2) / (4 * (n - 1)))
+# boot_skewness
+# n = sqmpel size
+
+# skewness
+library(e1071)
+boot_skewness_ang<- skewness(by_class_df_acc$`Class: angry`)
+boot_skewness_hap<- skewness(by_class_df_acc$`Class: happy`)
+boot_skewness_sad<- skewness(by_class_df_acc$`Class: sad`)
+
+boot_skewness_ang
+boot_skewness_hap
+boot_skewness_sad
+
+# n = 61
+bias_correction_ang <- (1 - (3 * boot_skewness_ang^2) / (4 * (61 - 1)))
+bias_correction_sad <- (1 - (3 * boot_skewness_sad^2) / (4 * (61 - 1)))
+bias_correction_hap <- (1 - (3 * boot_skewness_hap^2) / (4 * (61 - 1)))
+
+
+# compute bca CIs
+# mean(boot_statistic) - (1.96 * bias_correction) * boot_se
+standard_error <- function(x) sd(x) / sqrt(length(x))
+
+
+ci_lower_ang <- mean(by_class_df_acc$`Class: angry`) - (1.96 * bias_correction_ang) * standard_error(by_class_df_acc$`Class: angry`)
+
+ci_upper_ang <- mean(by_class_df_acc$`Class: angry`) + (1.96 * bias_correction_ang) * standard_error(by_class_df_acc$`Class: angry`)
+
+test_set_res
+
+paper_plots$acc_SE 
+
+
 bind_cols(acc_test_ci,by_class_df_acc)%>%
 
   # filter(str_detect(row_name, "Balanced Accuracy"))%>%
@@ -2694,22 +2841,22 @@ bind_cols(acc_test_ci,by_class_df_acc)%>%
 
   # 0.8833       0.9500     0.9167
 
-  mutate(acc_test = if_else(key == "angry", .88,
-                  if_else(key == "happy", .95,
-                          if_else(key == "sad",.91, 0.8889)))) %>%
+  mutate(acc_test_n = if_else(key == "angry", .90,
+                  if_else(key == "happy", .98,
+                          if_else(key == "sad",.91, .91)))) %>%
   group_by(key)%>%
   summarise_if(is.numeric, mean, na.rm = T) %>%
-  ggplot(aes(key, (value+.01), color = key)) +
+  ggplot(aes(key, (value), color = key)) +
    # geom_bar(stat="identity", width = .8)+
-  geom_point(aes(x = key, y = (acc_test+.01)))+
-  geom_errorbar( aes(x=key, ymin=(perc_5+.01), ymax=(perc_95+.01)), width=0.4, colour="orange", alpha=0.9, size=1.3)+
+  geom_point(aes(x = key, y = (acc_test_n)))+
+  geom_errorbar( aes(x=key, ymin=(perc_5), ymax=(perc_95)), width=0.4, colour="orange", alpha=0.9, size=1.3)+
   plot_style
   # coord_cartesian(ylim=c(.7,1))
   # ylim(.30,1)
   facet_grid(~key) +
-    geom_vline(aes(xintercept = (perc_5+.01))) +
-   geom_vline(aes(xintercept =(perc_95+.1))) +
-    geom_vline(aes(xintercept = (acc_test+.1)), linetype ="dashed", color = "red")
+    geom_vline(aes(xintercept = (perc_5))) +
+   geom_vline(aes(xintercept =(perc_95))) +
+    geom_vline(aes(xintercept = (acc_test_n)), linetype ="dashed", color = "red")
 
   paper_plots$acc_SE
 ```
