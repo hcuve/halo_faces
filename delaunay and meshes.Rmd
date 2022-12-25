@@ -1,0 +1,328 @@
+---
+title: "delaunay faces and meshes"
+author: "Helio"
+date: "2022-12-25"
+output: html_document
+---
+
+
+
+
+
+
+
+# landmarks and normalisation
+
+```{r}
+require(data.table)
+
+View(df_OF_output_land)
+df_OF_output_land
+
+colnames(df_OF_output_land)
+unique(df_OF_output_land$filename)
+
+
+
+# lets start by taking one single subject and plotting the change
+
+# but to do that we fist need to normalise and alligh
+
+library(data.table)
+
+
+df_OF_output_land$filename
+# select one test sample
+test_happy <-df_OF_output_land%>%
+  subset(filename == "./cut_posed_happy_day2_p6.csv")
+  
+test_happy_dcast<- df_OF_output_land%>%
+group_by(filename)%>%
+  gather(key, value, -frame, -timestamp,-filename) %>%
+  mutate(coordinate = substr(key,1,1))%>%
+  mutate(lanmark_id = substr(key,3,4)) %>%
+  dcast(filename+lanmark_id+frame+timestamp~coordinate, value.var = "value",  mean)
+
+# now compute differences before doing any alligning, etc
+# but lets normalise to max
+
+maxnormalize <- function(x, ...) {
+    return((x - min(x,na.rm = T, ...)) /(max(x,na.rm = T, ...) - min(x,na.rm = T, ...))) }
+
+
+# norm and diff
+options(scipen = 999)
+
+unique(test_happy_dcast$filename)
+
+max(test_happy_dcast$frame)
+
+test_happy_dcast<- test_happy_dcast %>%
+      group_by(filename,frame)%>%
+  mutate(x_new_norm = maxnormalize(x),
+         y_new_norm = maxnormalize(y))%>%
+  group_by(lanmark_id)%>%
+  mutate(x_norm_diff= x_new_norm - lag(x_new_norm),
+         y_norm_diff= y_new_norm - lag(y_new_norm))%>%
+    mutate(x_norm_diff_abs= (x_norm_diff),
+         y_norm_diff_abs= (y_norm_diff))%>%
+  # compute a summ - also consider a roling sum
+   mutate(x_norm_diff_abs_sum= sum(x_norm_diff_abs, na.rm = TRUE),
+         y_norm_diff_abs_sum= sum(y_norm_diff_abs, na.rm = TRUE))%>%
+  
+
+  
+  # do a cummulative summ
+  # subset(frame == 100)%>%
+  mutate(fill_x_y = (x_norm_diff_abs_sum+y_norm_diff_abs_sum)/2)%>%
+  group_by(lanmark_id)%>%
+  #the line below just ignores NA (introduced in lag) which would throw error to cumsum otehrwise
+      mutate(cum_x_norm_abs_diff = cumsum(ifelse(is.na(x_norm_diff_abs), 0, x_norm_diff_abs)) + x_norm_diff_abs*0,
+             cum_y_norm_abs_diff = cumsum(ifelse(is.na(y_norm_diff_abs), 0, y_norm_diff_abs)) + y_norm_diff_abs*0)%>%
+  mutate(cum_x_y_norm_abs_diff_mean_fill = ((cum_x_norm_abs_diff+cum_y_norm_abs_diff)/2))%>%
+  # just y
+  mutate(cum_x_y_norm_abs_diff_mean_fill_norm = maxnormalize(cum_y_norm_abs_diff))
+  # summarise_if(is.numeric, max,na.rm = T)%>%
+  
+  # this plots the largest change
+  # ggplot(aes(x = x_new_norm, y = 1-y_new_norm, fill = fill_x_y, colour = fill_x_y))+
+  # geom_point()
+# this plots the degree ochangedFiles( # this plots the largest change
+test_happy_dcast%>%
+  ggplot(aes(x = x_new_norm, y = 1-y_new_norm, colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+  geom_point(alpha = .8)+
+     scale_color_viridis_c(option = "magma")
+  
+  # ggforce::geom_delaunay_segment(data = test_happy_dcast_min, aes(x = x_new_norm, y = 1-y_new_norm, colour =1-cum_x_y_norm_abs_diff_mean_fill))
+  
+  # ggplot(aes(as.numeric(frame), x_norm_diff_abs))+
+  # geom_line()
+  # geom_line(aes(y = x_norm_diff_abs), linetype = "dotted")
+  # 
+
+test_happy_dcast
+  
+
+test_happy_dcast%>%
+  subset(frame == 120)%>%
+
+         summarise_if(is.numeric, mean,na.rm = T)%>%
+    ggplot(aes(x = x_new_norm, y = 1-y_new_norm, colour = cum_x_y_norm_abs_diff_mean_fill_norm, fill = cum_x_y_norm_abs_diff_mean_fill_norm))+
+
+     geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm),alpha = .8)+
+  # ggforce::stat_delvor_summary()
+  geom_delaunay_segment2()+
+     scale_color_viridis_c(option = "magma")
+    
+  
+  
+# 
+# library(deldir)
+#   frame_1<- subset(test_happy_dcast, test_happy_dcast$frame == 1)
+# dxy <- deldir(frame_1$x_new_norm, frame_1$y_new_norm)
+
+maxnormalize <- function(x, ...) {
+    return((x - min(x, ...)) /(max(x, ...) - min(x, ...))) }
+
+df_OF_output_land_f10_dcast_norm<- df_OF_output_land_f10_dcast%>%
+    group_by(filename,frame)%>%
+  mutate(x_new_norm = maxnormalize(x),
+         y_new_norm = maxnormalize(y))
+```
+
+
+
+<!-- proper alligments etc -->
+maxnormalize <- function(x, ...) {
+    return((x - min(x, ...)) /(max(x, ...) - min(x, ...))) }
+
+df_OF_output_land_f10_dcast_norm<- df_OF_output_land_f10_dcast%>%
+    group_by(filename,frame)%>%
+  mutate(x_new_norm = maxnormalize(x),
+         y_new_norm = maxnormalize(y))
+
+df_OF_output_land_f10_dcast_norm%>%
+  group_by(lanmark_id)%>%
+summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(x_new_norm, y_new_norm))+
+  geom_point()+
+  ylim(1,0)
+
+df_OF_output_land_f10_dcast_normagg<-df_OF_output_land_f10_dcast_norm%>%
+  group_by(lanmark_id)%>%
+summarise_if(is.numeric, mean, na.rm = T)
+
+# First, isolate the points of interest (the subject's left and right eyes)
+
+left_eye  <- df_OF_output_land_f10_dcast_normagg[df_OF_output_land_f10_dcast_normagg$lanmark_id == 42,]
+right_eye <- df_OF_output_land_f10_dcast_normagg[df_OF_output_land_f10_dcast_normagg$lanmark_id == 39,] 
+
+# Now find the difference in the y co-ordinates and x co-ordinates between these two points:
+
+diff_x <- left_eye$x_new_norm - right_eye$x_new_norm
+diff_y <- left_eye$y_new_norm - right_eye$y_new_norm
+
+
+# The arctangent of the ratio will be the angle you need to rotate all the points by:
+
+theta  <- atan2(-diff_y, diff_x)
+
+mat <- matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), 2)
+
+df_OF_output_land_f10_dcast_normagg[,8:9] <- t(apply(df_OF_output_land_f10_dcast_normagg[,6:7], 1, function(x) mat %*% x))
+
+
+df_OF_output_land_f10_dcast_normagg %>%
+  ggplot(aes(V1, V2, label = lanmark_id)) + 
+  geom_point(color = 'gray') +
+  geom_text() +
+  scale_y_reverse() +
+  theme_bw()
+
+
+df_OF_output_land_f10_dcast_normagg
+
+
+install.packages("ggvoronoi")
+
+?ggvoronoi::stat_voronoi
+write_csv(df_OF_output_land_f10_dcast_normagg, "df_OF_output_land_f10_dcast_normagg.csv")
+df_OF_output_land_f10_dcast_normagg %>%
+  arrange(lanmark_id)%>%
+  ggplot(aes(V1, V2, label = lanmark_id)) + 
+  ggvoronoi::stat_voronoi(geom="path", outline = c(df_OF_output_land_f10_dcast_normagg$V1, df_OF_output_land_f10_dcast_normagg$V2)) +
+  geom_point()+
+  ylim(1,0)
+
+
+write_csv(pca_AUs, "pca_AUs.csv")
+
+
+# coded landmarks
+library(readxl)
+codeLandmarksAUs <- read_excel("codeLandmarksAUs.xlsx")
+View(codeLandmarksAUs)
+codeLandmarksAUs%>%
+  arrange(lanmark_id)%>%
+  ggplot(aes(V1, V2, label = lanmark_id)) + 
+  # geom_path()+
+  # ggvoronoi::stat_voronoi(geom="path", outline = c(df_OF_output_land_f10_dcast_normagg$V1, df_OF_output_land_f10_dcast_normagg$V2)) +
+  geom_point()+
+  ylim(1,0)+
+  theme_bw()
+
+codeLandmarksAUs
+
+
+df_OF_output_AUsW_unblind_posed_binned1
+
+library(readxl)
+LANDMARKNMF <- read_excel("LANDMARKNMF.xlsx")
+View(LANDMARKNMF)
+
+LANDMARKNMF[is.na(LANDMARKNMF)] <- 0
+
+pairing AOIs to landmarks
+
+Lanmarking
+```{r}
+library(readxl)
+LANDMARKNMF <- read_excel("Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/LANDMARKNMF.xlsx")
+View(LANDMARKNMF)
+LANDMARKNMF
+
+
+NMFresk3test<- as.data.frame(res_k3@fit@H)%>%
+  mutate(component = 1:n())%>%
+  gather(AU, coef, -component)%>%
+  group_by(component)%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )%>%
+  arrange(AU_code)
+
+
+
+LANDMARKNMF
+
+
+NMFresk3test
+
+LANDMARKNMF<- LANDMARKNMF1
+colnames(LANDMARKNMF)
+colnames(LANDMARKNMF[,c(1,8:9,12:31)])
+
+LANDMARKNMF_dcast<- LANDMARKNMF[,c(1,8:9,12:31)]%>%
+gather(AU, land1_0,-c(1:3,21:23))%>%
+gather(comp, land1_0_nmf, -c(1:3,7:8))
+
+library(ggvoronoi)
+
+left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
+         V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
+  group_by(lanmark_id, component, AU)%>%
+  summarise_if(is.numeric, mean, na.rm = T) %>%
+  mutate(coef2 = if_else(land1_0_nmf == 1, coef,0))%>%
+  ggplot(aes(V1_1, V2_2, color = coef2))+
+  geom_point(aes(size = coef2), alpha = .5)+
+  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
+  ggvoronoi::stat_voronoi(geom="path")+
+  geom_point(aes(x = V1, y = V2))+
+  # geom_point(aes(size = coef), alpha = .1)+
+  ylim(1,0)+
+  facet_grid(~component)+
+  scale_color_viridis_c(option = "magma")
+
+  
+LANDMARKNMF_dcast
+
+# 
+
+install.packages("ggforce")
+library(ggforce)
+left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
+         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
+  # group_by(lanmark_id)%>%
+  # summarise_if(is.numeric, mean, na.rm = T) %>%
+  mutate(coef2 = if_else(land1_0 == 1, coef,0))%>%
+  ggplot(aes(V1_1, V2_2, color = coef2, fill=coef2 ))+
+  geom_point(aes(size = coef2), alpha = .5)+
+    # ggvoronoi::stat_voronoi(geom="path" )
+  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
+
+  geom_point(aes(x = V1, y = V2))+
+  # geom_point(aes(size = coef), alpha = .1)+
+  ylim(1,0)+
+  facet_grid(~component)+
+    geom_delaunay_tile(aes(x =V1, V2, fill = lanmark_id), alpha = 0.3, colour = 'black')+
+  # geom_delaunay_segment2()+
+  scale_color_viridis_c(option = "magma")
+
+NMFresk3test$component
+LANDMARKNMF_dcast$component<- as.numeric(substr(LANDMARKNMF_dcast$comp,4,4))
+
+left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+  mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
+         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
+  # group_by(lanmark_id)%>%
+  # summarise_if(is.numeric, mean, na.rm = T) %>%
+  mutate(coef2 = if_else(land1_0 == 1, coef,0))%>%
+  ggplot(aes(V1_1, V2_2, color = coef2, fill=coef2 ))+
+  geom_point(aes(size = coef2), alpha = .5)+
+    # ggvoronoi::stat_voronoi(geom="path" )
+  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
+
+  geom_point(aes(x = V1, y = V2))+
+  # geom_point(aes(size = coef), alpha = .1)+
+  ylim(1,0)+
+  facet_grid(~component)+
+    geom_delaunay_tile(aes(x =V1, V2), alpha = 0.1, colour = 'black')+
+      geom_delaunay_segment2(aes(x =V1, V2, colour = coef2))+
+  # geom_delaunay_segment2()+
+  scale_color_viridis_c(option = "magma")
+
+```
