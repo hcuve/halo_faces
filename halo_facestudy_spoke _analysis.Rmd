@@ -1198,25 +1198,34 @@ acc_test <- acc_test%>%
     geom_tile()+
        # scale_fill_viridis_c(option = "magma")
     scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
-                       limits =c(0,1))
+                       limits =c(0,1))+
+    
   
 require(caret)
   
 paper_plots$conf_mat_posed <-
 as.data.frame(confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "everything", positive="1")[["table"]])%>%
   mutate(prop = Freq/15)%>%
-      ggplot(aes(Prediction, Reference, fill = prop))+
+      ggplot(aes(Reference,Prediction, fill = prop))+
     geom_tile()+
        # scale_fill_viridis_c(option = "magma")
     scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
                        limits =c(0,1))+
+  xlab("Expression")+
+  ylab("Prediction")+
+  
   theme_bw()+
   plot_style+
   guides(fill=guide_colorbar(ticks.colour = NA))+
-  theme(panel.spacing = unit(1, "cm"))
+  theme(panel.spacing = unit(1, "cm"),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_text(angle = 45, hjust = 1), 
+        legend.position = "top"
+        )
   
   
   
+
 paper_plots$conf_mat_posed
 ```
   
@@ -1818,6 +1827,7 @@ boundaryplots$pc1_2
 
 
 boundaryplots$pc1_2 <- 
+  
 ggplot(df, aes(PC1, PC2, fill = expression)) +
     # geom_raster(alpha = 0.5, interpolate=FALSE) +
   # geom_density_2d_filled(show.legend = FALSE,alpha = .1) 
@@ -1842,7 +1852,16 @@ ggplot(df, aes(PC1, PC2, fill = expression)) +
   ylab("comp2")
 
 # fprside toside
+
+
+
+```
+
+
+Investigate the order issue and ggside - SOLUTION
+```{r}
 boundaryplots$pc1_2 <- 
+  
 ggplot(df, aes(PC1, PC2,fill = expression)) +
     # geom_raster(alpha = 0.5, interpolate=FALSE) +
   # geom_density_2d_filled(show.legend = FALSE,alpha = .1) 
@@ -1872,16 +1891,152 @@ ggplot(df, aes(PC1, PC2,fill = expression)) +
 
 # ggside
 
-# ggplot(df, aes(PC1, PC2,fill = expression)) +
-# 
-#   geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
-# 
-#    geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
-#   geom_point(data = bind_train_test, shape = 21, size = 3) +
-# 
-#   geom_xsidedensity(data = bind_train_test,aes(x =PC1, fill = expression), alpha = 0.5)+
-#   geom_ysideboxplot(data = bind_train_test,aes(x =PC2, fill = expression), alpha = 0.5, orientation = "x")
-#   
+df$expression<- as.factor(as.character(df$expression, levels = c("angry", "happy", "sad")))
+
+bind_train_test$expression<- as.factor(as.character(bind_train_test$expression, levels = c("angry", "happy", "sad")))
+
+
+left_join(bind_train_test,df)
+
+# pc1,2
+
+ggplot(df, aes(PC1, PC2,fill = expression)) +
+
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+
+   geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
+  
+  geom_point(data = bind_train_test, shape = 21, size = 3) +
+
+  geom_ysideboxplot(data = bind_train_test,aes(x = expression), orientation = "x",alpha = .5)+
+   scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+  geom_xsidedensity(data = bind_train_test,aes(fill = expression), alpha = .5)
+
+ggplot(df, aes(PC2, PC3,fill = expression)) +
+
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+
+   geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
+  
+  geom_point(data = bind_train_test, shape = 21, size = 3) +
+
+  geom_ysideboxplot(data = bind_train_test,aes(x = expression), orientation = "x",alpha = .5)+
+   scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+  geom_xsidedensity(data = bind_train_test,aes(fill = expression), alpha = .5)
+
+
+
+ggplot(df, aes(PC3, PC1,fill = expression)) +
+
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+
+   geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
+  
+  geom_point(data = bind_train_test, shape = 21, size = 3) +
+
+  geom_ysideboxplot(data = bind_train_test,aes(x = expression), orientation = "x",alpha = .5)+
+   scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+  geom_xsidedensity(data = bind_train_test,aes(fill = expression), alpha = .5)
+
+                        
+  geom_ysideboxplot( alpha = 0.5, orientation = "x")+
+
+  # geom_ysideboxplot(data = bind_train_test,aes(x =PC2, fill = expression, colour = expression), alpha = 0.5, orientation = "x")+
+
+
+  # scale_x_discrete()+
+  # scale_x_discrete()+
+  # theme(ggside.panel.scale = .3)+
+  # scale_ysidex_discrete(guide = guide_axis(angle = 45),breaks = c("angry", "happy", "sad"), labels = c("angry", "happy", "sad")) #affects side bioxplot
+  # scale_ysidey_discrete()
+
+    theme_bw() +
+      plot_style+
+    scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+  base_breaks_x(df$PC1) +
+  base_breaks_y(df$PC2)+
+  ylab("comp2")+
+  xlab("comp1")
+    
+
+
+
+ptest<- bind_train_test%>%
+  ggplot(aes(PC1, PC2))+
+  geom_point()
+
+
+
+bind_train_test%>%
+  ggplot(aes(PC1, PC2))+
+  geom_point()+
+  geom_ysideboxplot(aes(x = expression), orientation = "x") +
+  scale_ysidex_discrete(guide = guide_axis(angle = 90)) 
+
+
+geom_ysideboxplot(aes(x = expression), orientation = "x")
+```
+
+ggplot(df, aes(PC3,PC1 ,fill = expression)) +
+
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+
+   geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
+  geom_point(data = bind_train_test, shape = 21, size = 3) +
+
+  geom_xsidedensity(data = bind_train_test,aes(x =PC3, fill = expression), alpha = 0.5)+
+  geom_ysideboxplot(data = bind_train_test,aes(x =PC1, fill = expression), alpha = 0.5, orientation = "x")+
+    theme_bw() +
+      plot_style+
+    scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+  base_breaks_x(df$PC3) +
+  base_breaks_y(df$PC1)+
+  ylab("comp3")+
+  xlab("comp1")+
+  scale_ysidex_discrete(guide = guide_axis(angle = 90))
+
+
+testplot
+
+ggplot(df, aes(PC2, PC3,fill = expression)) +
+
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+
+   geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
+  geom_point(data = bind_train_test, shape = 21, size = 3)+
+
+  # df$expression
+# testplot+
+geom_xsidedensity(data =bind_train_test,aes(x =PC2, fill = expression), alpha = 0.5)+
+
+  geom_ysideboxplot(data = bind_train_test,aes(x =PC3, fill = expression), alpha = 0.5, orientation = "x")+
+  scale_ysidex_continuous()+
+  
+    scale_ysidex_discrete(guide = guide_axis(angle = 90)) +
+      plot_style
+    scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+  base_breaks_x(df$PC2) +
+  base_breaks_y(df$PC3)+
+  ylab("comp2")+
+  xlab("comp1")+
+  scale_ysidex_discrete(guide = guide_axis(angle = 90))
+
+    
+    iris$Species
+irisp <- ggplot(iris, aes(Sepal.Width, Sepal.Length, colour = Species)) +
+  geom_point() 
+
+
+irisp + geom_ysideboxplot(aes(x = Species), orientation = "x") +
+  scale_ysidex_discrete(guide = guide_axis(angle = 90))
+
+ggplot(iris, aes(Sepal.Width, Petal.Length, colour = Species)) +
+  geom_point() +
+  geom_ysideboxplot(aes(x = Species), orientation = "x") +
+  scale_ysidex_discrete(guide = guide_axis(angle = 90))
+
+```
+
 
 
 boundaryplots$pc1_2
@@ -2123,7 +2278,7 @@ boundaryplots$pc2_3_box
  
 panel
 
-
+```
 ```{r}
  # axis.title.x = element_text(margin = margin(t = 15, b = 5)))
  # 
@@ -2140,6 +2295,8 @@ legendtop<- boundaryplots$pc1_3+plot_style+theme(legend.position = "top",
   guides(color = guide_legend(override.aes = list(size = sf*5)))
 
 legendtop
+
+```
 
 ```
 ```{r}
@@ -2214,20 +2371,74 @@ legend_side<- get_legend(legendtop+
   theme(legend.position = "right"))
 
 
-(patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
- legend_side +
-  patchwork::wrap_elements(boundaryplots$pc1_3_box) +
-  patchwork::wrap_elements(boundaryplots$pc2_3_box)|(paper_plots$ROC_posed/paper_plots$conf_mat_posed))+
-  plot_layout(ncol = 2, widths = c(2,.8))
-  plot_layout(guides = "collect")
+# (patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+#  legend_side +
+#   patchwork::wrap_elements(boundaryplots$pc1_3_box) +
+#   patchwork::wrap_elements(boundaryplots$pc2_3_box)|(paper_plots$ROC_posed/paper_plots$conf_mat_posed))+
+#   plot_layout(ncol = 2, widths = c(2,.8))
+#   plot_layout(guides = "collect")
+
+  
+  
+# (patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+#  legend_side +
+#           paper_plots$ROC_posed+
+#        patchwork::wrap_elements(boundaryplots$pc2_3_box)+
+#     patchwork::wrap_elements(boundaryplots$pc1_3_box) +
+# 
+#   paper_plots$conf_mat_posed)+
+#   plot_layout(ncol = 3)
+#   plot_layout(guides = "collect")
+  
+  
+
+
+
 
 boundaryplots$panel_posed2
   
-  (patchwork::wrap_elements(getleg)/
-(patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+ 
+patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+                            patchwork::wrap_elements(legend_side)+
   patchwork::wrap_elements(boundaryplots$pc2_3_box)+
-    patchwork::wrap_elements(boundaryplots$pc1_3_box)))+ 
-   plot_layout(nrow = 2, heights = c(.1,2))
+    patchwork::wrap_elements(boundaryplots$pc1_3_box)+ 
+   plot_layout(nrow = 2)
+
+
+# yry this
+# hwork::wrap_elements(boundaryplots$pc1_3_box)))
+
+
+# <!-- ((patchwork::wrap_elements(boundaryplots$pc1_2_box) +  -->
+# <!--                             patchwork::wrap_elements(legend_side)+ -->
+# <!--   patchwork::wrap_elements(boundaryplots$pc2_3_box)+ -->
+# <!--     patchwork::wrap_elements(boundaryplots$pc1_3_box))+  -->
+# <!-- plot_layout(nrow = 2, heights = c(1,1))| (paper_plots$ROC_posed/ -->
+# <!--   paper_plots$conf_mat_posed)+plot_layout(nrow = 2, heights = c(.5,.5)))+ -->
+# <!--   plot_layout(nrow = 2, heights = c(.5,.5), -->
+# <!--                                           widths =c(2,1)) -->
+# 
+
+# 1500 buy 900 seems to work - save this
+
+paper_plots$panel_posed_fig3<-
+(patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+                            patchwork::wrap_elements(legend_side)+
+
+  patchwork::wrap_elements(paper_plots$ROC_posed) +
+    patchwork::wrap_elements(boundaryplots$pc2_3_box)+
+    patchwork::wrap_elements(boundaryplots$pc1_3_box)+ 
+  patchwork::wrap_elements(paper_plots$conf_mat_posed))+
+  plot_layout(nrow = 2, ncol = 3, widths = c(1,1,.9),
+              heights = c(1,1))
+  # plot_layout(nro, heights = c(.5,.5),
+  #                                         widths =c(2,1))
+ggsave("panel_posed_fig3.tiff",  paper_plots$panel_posed_fig3,
+       device = "tiff",
+       width = 15,
+       height = 9)
+
+ggsave
 ```
 
 ROCs
@@ -2371,7 +2582,14 @@ ggplot()+
    geom_line(aes(x = rep(0,each = 11), y = seq(0,1,by = .1)),linetype = "dashed", size = 2)
 
 
+```
+
 # new roc
+
+
+
+```{r}
+
 paper_plots$ROC_posed<-
 
 roc_combined%>%
@@ -2394,14 +2612,14 @@ ggplot(aes(x =  specificities, y = sensitivities, group = expression, colour = e
   scale_fill_brewer(palette = "Dark2")+
     base_breaks_x(1-roc_combined$specificities) +
   base_breaks_y(roc_combined$sensitivities)+
-  annotate( "text",x = 0.0999,y=1.05, label = "Perfect separation")+
-  xlab("False Positive Rate")+
-  ylab("True Positive Rate")+
+  annotate( "text",x = 0.15,y=1.05, label = "Perfect separation")+
+  xlab("FPR")+
+  ylab("TPR")+
   # annotate( "text",x = 0.0999,y=1.05, label = paste0("AUC=", roc.happy$auc)+
   
   theme_bw()+
   plot_style+
-  theme(legend.position = c(.8,.2))
+  theme(legend.position = c(.75,.2))
 
 
 paper_plots$ROC_posed
