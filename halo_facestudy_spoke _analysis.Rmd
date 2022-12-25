@@ -1885,12 +1885,14 @@ ggplot(df, aes(PC1, PC2,fill = expression)) +
   geom_point(data = bind_train_test, shape = 21, size = 3) +
   
   geom_ysideboxplot(data = bind_train_test,aes(x = expression,colour =expression), orientation = "x",alpha = .5)+
-   scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+  scale_ysidex_discrete(guide = guide_axis(angle = 90))+
   geom_xsidedensity(data = bind_train_test,aes(fill = expression,colour =expression), alpha = .5,show.legend =FALSE)+
    scale_xsidey_continuous(breaks = NULL)+
   # theme(axis.text.x = element_text(size = 10))+
   theme_bw() +
       plot_style+
+     # scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+     theme(ggside.panel.scale = .2)+
   scale_color_brewer(palette = "Dark2")+
     scale_fill_brewer(palette = "Dark2")+
 
@@ -1910,6 +1912,8 @@ boundaryplots$pc1_2_ggside<- boundaryplots$pc1_2_ggside+
        )
 
 boundaryplots$pc1_2_ggside
+boundaryplots$pc1_2_ggside+
+  boundaryplots$pc1_2_ggside
 
 ```
   ggMarginal(piris, groupColour = TRUE, groupFill = TRUE)
@@ -2178,12 +2182,14 @@ boundaryplots$pc1_3_box$grobs[ boundaryplots$pc1_3_box$layout$name == "topMargPl
     
     # side plots
     geom_ysideboxplot(data = bind_train_test,aes(x = expression,colour =expression), orientation = "x",alpha = .5)+
-   scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+     scale_ysidex_discrete(guide = guide_axis(angle = 90))+
   geom_xsidedensity(data = bind_train_test,aes(fill = expression,colour =expression), alpha = .5,show.legend =FALSE)+
    scale_xsidey_continuous(breaks = NULL)+
   
   theme_bw() +
       plot_style+
+       scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+     theme(ggside.panel.scale = .2)+
   base_breaks_x(df$PC1) +
   base_breaks_y(df$PC3)+
     ylab("comp1")+
@@ -2319,7 +2325,10 @@ boundaryplots$pc2_3_box
 
 # ggside
 
-boundaryplots$pc2_3_ggside<- ggplot(df, aes(PC2, PC3, fill = expression)) +
+boundaryplots$pc2_3_ggside<-
+
+
+  ggplot(df, aes(PC2, PC3, fill = expression)) +
    geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
 
    geom_point(data =bind_train_test,aes( colour =expression,fill = expression),size = 3) +
@@ -2328,11 +2337,13 @@ boundaryplots$pc2_3_ggside<- ggplot(df, aes(PC2, PC3, fill = expression)) +
    # side plots
     geom_ysideboxplot(data = bind_train_test,aes(x = expression,colour =expression), orientation = "x",alpha = .5)+
    scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+     # theme(ggside.panel.scale = .2)+
   geom_xsidedensity(data = bind_train_test,aes(fill = expression,colour =expression), alpha = .5,show.legend =FALSE)+
    scale_xsidey_continuous(breaks = NULL)+
 
   theme_bw() +
       plot_style+
+     theme(ggside.panel.scale = .2)+
 
   base_breaks_x(df$PC2) +
   base_breaks_y(df$PC3)+
@@ -2512,12 +2523,68 @@ paper_plots$panel_posed_fig3<-
               heights = c(1,1))
   # plot_layout(nro, heights = c(.5,.5),
   #                                         widths =c(2,1))
+
+
+
+# ggside panel
+
+
+paper_plots$panel_posed_fig3_ggside<-
+(boundaryplots$pc1_2_ggside + 
+  patchwork::wrap_elements(legend_side)+
+
+  paper_plots$ROC_posed +
+  boundaryplots$pc2_3_ggside+
+    boundaryplots$pc1_3_ggside+ 
+  paper_plots$conf_mat_posed)
+  # plot_layout(nrow = 2, ncol = 3, widths = c(1,1,.9),
+  #             heights = c(1,1))
+
+
+paper_plots$panel_posed_fig3_ggside_noxlab<-
+(boundaryplots$pc1_2_ggside + 
+  patchwork::wrap_elements(legend_side)+
+
+  paper_plots$ROC_posed +
+  boundaryplots$pc2_3_ggside+
+    boundaryplots$pc1_3_ggside+ 
+  paper_plots$conf_mat_posed)
 ggsave("panel_posed_fig3.tiff",  paper_plots$panel_posed_fig3,
        device = "tiff",
        width = 15,
        height = 9)
 
-ggsave
+ggsave("panel_posed_fig3_ggside.tiff",  paper_plots$panel_posed_fig3_ggside,
+       device = "tiff",
+       width = 1800,
+    
+       height = 1100, 
+          units="px",
+       dpi = 300)
+
+
+ggsave("panel_posed_fig3_ggside.tiff",  paper_plots$panel_posed_fig3_ggside,
+       device = "tiff",
+       width = 17,
+       # 
+       height = 10,
+       dpi = 800
+       )
+
+
+ggsave("panel_posed_fig3_ggside_noxlab.tiff",  paper_plots$panel_posed_fig3_ggside_noxlab,
+       device = "tiff",
+       width = 15,
+       height = 10)
+
+# install.packages("Cairo")
+library("Cairo")
+# paper_plots$panel_posed_fig3_ggside
+# Cairo::CairoTIFF("panel_posed_fig3_ggside.tiff")
+# paper_plots$panel_posed_fig3_ggside
+# dev.off()
+
+fig3_test<- paper_plots$panel_posed_fig3_ggside_noxlab/paper_plots$panel_posed_fig3_ggside_noxlab
 ```
 
 ROCs
