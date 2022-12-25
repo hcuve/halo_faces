@@ -588,8 +588,7 @@ left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
 
 
 ```{r}
-
-test_del<-left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
+test_del<- left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
   mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
          V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
     mutate(coloring = if_else(V1_1 == 1, 1,0)) %>%
@@ -2440,7 +2439,7 @@ df_OF_output_land_f10_dcast<-df_OF_output_land_f10%>%
 
 
 maxnormalize <- function(x, ...) {
-    return((x - min(x, ...)) /(max(x, ...) - min(x, ...))) }
+    return((x - min(x, na ...)) /(max(x, ...) - min(x, ...))) }
 
 df_OF_output_land_f10_dcast_norm<- df_OF_output_land_f10_dcast%>%
     group_by(filename,frame)%>%

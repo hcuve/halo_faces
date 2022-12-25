@@ -15,7 +15,9 @@ output: html_document
 
 ```{r}
 require(data.table)
+require(ggforce)
 
+library(tidyverse)
 View(df_OF_output_land)
 df_OF_output_land
 
@@ -61,7 +63,7 @@ test_happy_dcast<- test_happy_dcast %>%
       group_by(filename,frame)%>%
   mutate(x_new_norm = maxnormalize(x),
          y_new_norm = maxnormalize(y))%>%
-  group_by(lanmark_id)%>%
+  group_by(filename,lanmark_id)%>%
   mutate(x_norm_diff= x_new_norm - lag(x_new_norm),
          y_norm_diff= y_new_norm - lag(y_new_norm))%>%
     mutate(x_norm_diff_abs= (x_norm_diff),
@@ -75,7 +77,7 @@ test_happy_dcast<- test_happy_dcast %>%
   # do a cummulative summ
   # subset(frame == 100)%>%
   mutate(fill_x_y = (x_norm_diff_abs_sum+y_norm_diff_abs_sum)/2)%>%
-  group_by(lanmark_id)%>%
+  group_by(filename,lanmark_id)%>%
   #the line below just ignores NA (introduced in lag) which would throw error to cumsum otehrwise
       mutate(cum_x_norm_abs_diff = cumsum(ifelse(is.na(x_norm_diff_abs), 0, x_norm_diff_abs)) + x_norm_diff_abs*0,
              cum_y_norm_abs_diff = cumsum(ifelse(is.na(y_norm_diff_abs), 0, y_norm_diff_abs)) + y_norm_diff_abs*0)%>%
@@ -87,32 +89,79 @@ test_happy_dcast<- test_happy_dcast %>%
   # this plots the largest change
   # ggplot(aes(x = x_new_norm, y = 1-y_new_norm, fill = fill_x_y, colour = fill_x_y))+
   # geom_point()
+
+
 # this plots the degree ochangedFiles( # this plots the largest change
+unique(test_happy_dcast$filename)
+
+test_happy_dcast$posed.spoken<- sapply(strsplit(test_happy_dcast$filename, "_"), function(x) x[2])
+
+test_happy_dcast$expression <-sapply(strsplit(test_happy_dcast$filename, "_"), function(x) x[3])
+
+
 test_happy_dcast%>%
+  subset(posed.spoken == "posed")%>%
+    group_by(lanmark_id,frame,expression)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
   ggplot(aes(x = x_new_norm, y = 1-y_new_norm, colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
   geom_point(alpha = .8)+
-     scale_color_viridis_c(option = "magma")
-  
-  # ggforce::geom_delaunay_segment(data = test_happy_dcast_min, aes(x = x_new_norm, y = 1-y_new_norm, colour =1-cum_x_y_norm_abs_diff_mean_fill))
-  
-  # ggplot(aes(as.numeric(frame), x_norm_diff_abs))+
-  # geom_line()
-  # geom_line(aes(y = x_norm_diff_abs), linetype = "dotted")
-  # 
-
-test_happy_dcast
+     scale_color_viridis_c(option = "magma")+
+  facet_grid(~expression)
   
 
 test_happy_dcast%>%
+    subset(posed.spoken == "posed")%>%
   subset(frame == 120)%>%
+      group_by(lanmark_id,frame,expression)%>%
 
          summarise_if(is.numeric, mean,na.rm = T)%>%
-    ggplot(aes(x = x_new_norm, y = 1-y_new_norm, colour = cum_x_y_norm_abs_diff_mean_fill_norm, fill = cum_x_y_norm_abs_diff_mean_fill_norm))+
+  ungroup()%>%
+    ggplot(aes(x = x_new_norm, y = 1-y_new_norm, fill = cum_x_y_norm_abs_diff_mean_fill_norm,
+               colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
 
-     geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm),alpha = .8)+
+     # geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm),alpha = .8)+
+  geom_delaunay_tile(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
   # ggforce::stat_delvor_summary()
   geom_delaunay_segment2()+
-     scale_color_viridis_c(option = "magma")
+     scale_color_viridis_c(option = "magma")+
+  scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+  
+
+test_happy_dcast_summ<- test_happy_dcast%>%
+    subset(posed.spoken == "posed")%>%
+  subset(frame > 100 & frame <200)%>%
+      group_by(lanmark_id,expression)%>%
+
+         summarise_if(is.numeric, mean,na.rm = T)
+
+
+bound_plot<- cbind(test_happy_dcast_summ$x_new_norm,test_happy_dcast_summ$y_new_norm)
+bound_plot
+
+
+test_happy_dcast%>%
+    subset(posed.spoken == "posed")%>%
+  subset(frame > 100 & frame <200)%>%
+      group_by(lanmark_id,expression)%>%
+
+         summarise_if(is.numeric, mean,na.rm = T)%>%
+  ungroup()%>%
+    ggplot(aes(x = x_new_norm, y = 1-y_new_norm, fill = cum_x_y_norm_abs_diff_mean_fill_norm,
+               colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+
+     geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm), colour = "white")+
+    
+   geom_voronoi_tile(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm), colour =NA)+
+  geom_delaunay_segment2( colour = "white",alpha = .2)+
+   geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm), colour = "white",size = .5,alpha = .5)+
+  # geom_delaunay_tile(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+  # ggforce::stat_delvor_summary()
+
+     scale_color_viridis_c(option = "magma")+
+  scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+  
     
   
   
@@ -129,6 +178,60 @@ df_OF_output_land_f10_dcast_norm<- df_OF_output_land_f10_dcast%>%
   mutate(x_new_norm = maxnormalize(x),
          y_new_norm = maxnormalize(y))
 ```
+
+
+
+NMF of landmarks?
+
+```{r}
+
+test_happy_dcast
+# bin
+unique(test_happy_dcast$posed.spoken)
+
+df_OF_output_land_posed_binned <-test_happy_dcast%>%
+    subset(posed.spoken == "posed")%>%
+  group_by(filename, expression,lanmark_id)%>%
+  mutate(bin_frame = cut(frame, 50, labels = FALSE))%>%
+  group_by(filename,bin_frame,expression,lanmark_id)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+
+colnames(df_OF_output_land_posed_binned)
+ df_OF_output_land_posed_binned_select<- df_OF_output_land_posed_binned[,c(1:6,9:10)]
+
+ colnames(df_OF_output_land_posed_binned_select)
+ # df_OF_output_AUsW_unblind_posed_binned
+ 
+ unique(df_OF_output_land_posed_binned_select$lanmark_id)
+ 
+ df_OF_output_land_posed_binned_select$lanmark_id<- as.numeric(df_OF_output_land_posed_binned_select$lanmark_id)
+ df_OF_output_land_posed_binned_select%>%
+  group_by(filename,bin_frame)%>%
+  arrange(as.numeric(lanmark_id),bin_frame)
+df_OF_output_land_posed_binned_select_dcast <- setDT(df_OF_output_land_posed_binned_select)%>%
+  # group_by(filename)%>%
+  # arrange(bin_frame,as.numeric(as.factor(lanmark_id)) ) %>%
+  # setDT()%>%
+  dcast(filename+bin_frame+expression+frame~lanmark_id, value.var = c("x_new_norm","y_new_norm"))
+
+df_OF_output_land_posed_binned_select_dcast
+
+```
+
+NMF on landmarks
+
+```{r}
+df_OF_output_land_posed_binned_select_dcast
+library(NMF)
+
+colnames(df_OF_output_land_posed_binned_select_dcast)
+res_k3_land <- NMF::nmf(df_OF_output_land_posed_binned_select_dcast[,5:140], r = 3, 
+                  nrun = 200, 
+                  seed=123456,
+                 .options = list( 'v')) #
+
+```
+
 
 
 
