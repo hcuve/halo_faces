@@ -177,6 +177,8 @@ df_OF_output_land_f10_dcast_norm<- df_OF_output_land_f10_dcast%>%
     group_by(filename,frame)%>%
   mutate(x_new_norm = maxnormalize(x),
          y_new_norm = maxnormalize(y))
+
+# try and estimate y and x separately
 ```
 
 
@@ -225,14 +227,162 @@ df_OF_output_land_posed_binned_select_dcast
 library(NMF)
 
 colnames(df_OF_output_land_posed_binned_select_dcast)
+colnames(df_OF_output_land_posed_binned_select_dcast)
 res_k3_land <- NMF::nmf(df_OF_output_land_posed_binned_select_dcast[,5:140], r = 3, 
-                  nrun = 200, 
+                  nrun = 30, #
                   seed=123456,
                  .options = list( 'v')) #
 
+
+NMF::plot(res_k3_land)
+NMF::basis(res_k3_land)
+NMF::aheatmap(res_k3_land)
+
+NMF::basis(res_k3_land)
+coefmap(res_k3_land)
+basismap(res_k3_land)
+
+plot(res_k3_land)
+
+res_k3_land@fit@W
+res_k3_land_H<- as.data.frame(res_k3_land@fit@H)%>%
+  gather(key, value)%>%
+  mutate(comp = rep(seq(1:3), times = 136))%>%
+  mutate(lanmark_id = substr(key,12,13))%>%
+  mutate(coord = substr(key,1,1))
+options(scipen = 999)
+
+res_k3_land_H_dcast<-res_k3_land_H%>%
+   group_by(comp)%>%
+  mutate(value = maxnormalize(value))%>%
+  setDT()%>%
+  dcast(comp+ lanmark_id ~coord, value.var = "value")
+ 
+  ggplot(aes(x,1-y, colour = (x+(1-y))/2))+
+  geom_point()+
+  scale_color_viridis_c(option = "magma")+
+  facet_grid(~comp)
+  
+  res_k3_land_H_dcast
+  
+res_k3_land_W<-  as.data.frame(res_k3_land@fit@W)%>%
+    mutate(bin_frame = df_OF_output_land_posed_binned_select_dcast$bin_frame)%>%
+    mutate(filename = df_OF_output_land_posed_binned_select_dcast$filename)%>%
+       mutate(expression = df_OF_output_land_posed_binned_select_dcast$expression)
+
+colnames(res_k3_land_W)
+res_k3_land_W_gath<- res_k3_land_W%>%
+   gather(comp, value,-bin_frame,  -filename,-expression)%>%
+  mutate(comp = substr(comp,2,2))
+
+res_k3_land_H_dcast$comp<- as.character(res_k3_land_H_dcast$comp)
+
+# plot new
+left_join(res_k3_land_W_gath, res_k3_land_H_dcast)%>%
+  group_by(comp)%>%
+  mutate(value = maxnormalize(value))%>%
+  mutate(x_new = value * x,
+         y_new = value * y)%>%
+  
+  group_by(expression,lanmark_id,comp)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+    ggplot(aes(x_new,1-y_new, colour = y))+
+  geom_point(alpha = .1)+
+  scale_color_viridis_c(option = "magma")+
+  facet_grid(~comp)
+  
+
+
+   group_by(comp)%>%
+  mutate(value = maxnormalize(value))%>%
+  setDT()%>%
+  dcast(comp+ lanmark_id ~coord, value.var = "value")
 ```
 
 
+above not quite there yet
+
+let's see correlations
+
+```{r}
+# correlation between land mark and AUS
+df_OF_output_AUsW_unblind_posed_binned1
+df_OF_output_land_posed_binned_select_dcast
+colnames(df_OF_output_land_posed_binned_select_dcast)
+df_AU_land_bin<- left_join(df_OF_output_AUsW_unblind_posed_binned1,df_OF_output_land_posed_binned_select_dcast,
+          by = c("filename", "expression", "bin_frame"))
+
+df_AU_land_bin
+
+# Select the two groups of variables
+colnames(df_AU_land_bin)
+vars_x <- select(df_AU_land_bin, 16:32)
+
+# we can just take y to start
+vars_y <- select(df_AU_land_bin, 119:186)
+
+# Compute the correl
+cor(vars_x, vars_y, use="pairwise.complete.obs")
+
+# Compute the correlations as before
+cor_matrix <- cor(vars_x, vars_y, use="pairwise.complete.obs")
+
+# Visualize the correlations
+library(corrplot)
+corrplot(cor_matrix)
+
+# selected_vars <- vars_y[which(abs(cor_matrix[,1]) > .3),]
+# 
+# vars_y[,which(abs(cor_matrix[1,]) > .3)]
+# 
+# selected_vars
+
+above_thresh<- as.data.frame(abs(cor_matrix))%>%
+  summarise_if(is.numeric, max, na.rm = T)%>%
+  gather(key, values)
+  subset(values>.3)
+
+View(above_thresh)
+
+
+cor_matrix
+
+cor_matrix_tresh<- as.data.frame(abs(cor_matrix))
+  select(c(above_thresh$key))
+  
+cor_matrix_tresh_repl<- replace(cor_matrix_tresh, cor_matrix_tresh < .3, 0)
+
+
+cor_matrix_tresh_repl_gath<- cor_matrix_tresh_repl%>%
+  mutate(AU = rownames(cor_matrix_tresh_repl))%>%
+  gather(land_y, value,-AU)
+  
+colnames(cor_matrix_tresh_repl_gath)
+
+unique(cor_matrix_tresh_repl_gath$land_y)
+
+# combine with the plots
+NMF3_k3_res<- as.data.frame(res_k3@fit@H)%>%
+  mutate(component = 1:n())%>%
+  gather(AU, coef, -component)%>%
+  group_by(component)%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )
+
+NMF3_k3_res$comp<- NMF3_k3_res$component
+lan_AU_comp_paired<- left_join(NMF3_k3_res,cor_matrix_tresh_repl_gath)
+# avoid multiplication y zero
+
+lan_AU_comp_paired$value<- lan_AU_comp_paired$value+0.0001
+
+# 
+# group_by(as.factor(AU))%>%
+#     arrange(desc(value))
+  
+```
 
 
 <!-- proper alligments etc -->
