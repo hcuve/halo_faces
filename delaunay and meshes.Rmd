@@ -24,153 +24,270 @@ df_OF_output_land
 colnames(df_OF_output_land)
 unique(df_OF_output_land$filename)
 
-
-
 # lets start by taking one single subject and plotting the change
-
 # but to do that we fist need to normalise and alligh
 
 library(data.table)
-
 
 df_OF_output_land$filename
 # select one test sample
 test_happy <-df_OF_output_land%>%
   subset(filename == "./cut_posed_happy_day2_p6.csv")
   
-test_happy_dcast<- df_OF_output_land%>%
+colnames(df_OF_output_land)
+df_OF_output_land
+# first binify it
+colnames(df_OF_output_land_posed_binned)
+
+unique(df_OF_output_land_posed_binned$bin_frame)
+
+# dcasted
+df_OF_output_land_posed_binned
+df_OF_output_land_posed_binned_select
+# group_by(filename)%>%
+#   gather(key, value, -frame, -timestamp,-filename) %>%
+#   mutate(coordinate = substr(key,1,1))%>%
+#   mutate(lanmark_id = substr(key,3,4)) %>%
+#   dcast(filename+lanmark_id+frame+timestamp~coordinate, value.var = "value",  mean)
+
+
+
+```
+
+rotate
+
+```{r}
+
+df_OF_output_land_posed_binned_select$Stimuli_frame <- paste0(df_OF_output_land_posed_binned_select$filename,df_OF_output_land_posed_binned_select$bin_frame)
+
+filename_unique<-unique(df_OF_output_land_posed_binned_select$Stimuli_frame)
+
+f = 1
+temp_df_bind<- data.frame() # e empty dataframe to store results
+
+for (f in 1:length(filename_unique)) {
+  # f = 2
+  # video = filename_video[f]
+  temp_df <- df_OF_output_land_posed_binned_select%>%
+    subset(Stimuli_frame == filename_unique[f])
   
-
-group_by(filename)%>%
-  gather(key, value, -frame, -timestamp,-filename) %>%
-  mutate(coordinate = substr(key,1,1))%>%
-  mutate(lanmark_id = substr(key,3,4)) %>%
-  dcast(filename+lanmark_id+frame+timestamp~coordinate, value.var = "value",  mean)
-
-# now compute differences before doing any alligning, etc
-# but lets normalise to max
-
-maxnormalize <- function(x, ...) {
-    return((x - min(x,na.rm = T, ...)) /(max(x,na.rm = T, ...) - min(x,na.rm = T, ...))) }
+    # start
+  message(paste0("running video no_: ", f), paste0("_",filename_unique[f]))
 
 
-# norm and diff
+  
+  # First, isolate the points of interest (the subject's left and right eyes)
+  left_eye  <- temp_df[temp_df$lanmark_id == 42,]
+  right_eye <- temp_df[temp_df$lanmark_id == 39,] 
+  
+  # now find the difference in the y co-ordinates and x co-ordinates between these two points:
+  diff_x <- left_eye$x - right_eye$x
+  diff_y <- left_eye$y - right_eye$y
+  
+   message(paste0("angle - ratio - transform"))
+  # The arctangent of the ratio will be the angle you need to rotate all the points by:
+  theta  <- atan2(-diff_y, diff_x)
+  
+# print("matrix") 
+# To transform the points, you need to create a rotation matrix, which is a specific two-by-two matrix which you can use to rotate the original points:
+# 
+# enter image description here - https://stackoverflow.com/questions/74493141/align-x-and-y-coordinates-of-face-landmarks-in-r/74493424?noredirect=1#comment131500839_74493424
+  
+  mat <- matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), 2)
+
+# Now we multiply each x, y point by this matrix to get our rotated points, and write it back into our original data frame:
+  temp_df$x_new_norm_rot <- t(apply(temp_df[,7:8], 1, function(x) mat %*% x))[,1]
+  temp_df$y_new_norm_rot <- t(apply(temp_df[,7:8], 1, function(x) mat %*% x))[,2] 
+   
+  message(paste0("bind datasets"))
+  
+    temp_df_bind<- bind_rows(temp_df_bind,temp_df)
+}
+
+
+```
+
+after this we want to plot again the average landmark position for each expression
+
+```{r}
 options(scipen = 999)
+# 
+# df_OF_output_land_posed_binned_select$subject<- sub(".*_p", "", str_match(df_OF_output_land_posed_binned_select$filename, "p\\s*(.*?)\\s*.csv")[,2])
+# df_OF_output_land_posed_binned_select
+df_OF_output_land_posed_binned_select_alligned_eyes<- temp_df_bind
 
-unique(test_happy_dcast$filename)
+# plot alligned landmarks to check
+df_OF_output_land_posed_binned_select_alligned_eyes%>%
+    filter(bin_frame>40 & bin_frame<75)%>%
+  subset(subject == 20)%>% # explore specific subjects
+ group_by(lanmark_id,expression)%>%
+         summarise_if(is.numeric, mean,na.rm = T)%>%
+  ggplot(aes(x = x_new_norm, y = 1-y_new_norm))+
+  geom_point()+
+    facet_grid(~expression)
 
-max(test_happy_dcast$frame)
+# of the above looks right, store average position of ndmarls for plotting
+# norm and diff
 
-test_happy_dcast_binned<- test_happy_dcast %>%
-  
+# now compute difference maps - i.e compute commutative differences for each landmark
+
+
+
+# taking too long??
+# test_happy_dcast_binned<- 
+  # test_happy_dcast %>%
+df_OF_output_land_posed_binned_select_alligned_eyes%>%
   group_by(filename, expression,lanmark_id)%>%
-  mutate(bin_frame = cut(frame, 50, labels = FALSE))%>%
-  group_by(filename,bin_frame)%>%
-      # group_by(filename,frame)%>%
-  mutate(x_new_norm = maxnormalize(x),
-         y_new_norm = maxnormalize(y))%>%
+
+  # mutate(x_new_norm = maxnormalize(x),
+  #        y_new_norm = maxnormalize(y))%>%
+  # compute landmark differences
   group_by(filename,lanmark_id)%>%
   mutate(x_norm_diff= x_new_norm - lag(x_new_norm),
          y_norm_diff= y_new_norm - lag(y_new_norm))%>%
-    mutate(x_norm_diff_abs= (x_norm_diff),
+    mutate(x_norm_diff_abs= (x_norm_diff),#decide wherher to absolute or not, i cut the abs for now
          y_norm_diff_abs= (y_norm_diff))%>%
-  # compute a summ - also consider a roling sum
+  
+  # compute a sum - also consider a rolling sum
    mutate(x_norm_diff_abs_sum= sum(x_norm_diff_abs, na.rm = TRUE),
          y_norm_diff_abs_sum= sum(y_norm_diff_abs, na.rm = TRUE))%>%
-  
-
-  
   # do a cummulative summ
   # subset(frame == 100)%>%
-  mutate(fill_x_y = (x_norm_diff_abs_sum+y_norm_diff_abs_sum)/2)%>%
+  mutate(fill_x_y_sum = (x_norm_diff_abs_sum+y_norm_diff_abs_sum)/2)%>% # this is what we are goint to use to colour pints
+  
   group_by(filename,lanmark_id)%>%
   #the line below just ignores NA (introduced in lag) which would throw error to cumsum otehrwise
       mutate(cum_x_norm_abs_diff = cumsum(ifelse(is.na(x_norm_diff_abs), 0, x_norm_diff_abs)) + x_norm_diff_abs*0,
              cum_y_norm_abs_diff = cumsum(ifelse(is.na(y_norm_diff_abs), 0, y_norm_diff_abs)) + y_norm_diff_abs*0)%>%
   mutate(cum_x_y_norm_abs_diff_mean_fill = ((cum_x_norm_abs_diff+cum_y_norm_abs_diff)/2))%>%
-  # just y
-  mutate(cum_x_y_norm_abs_diff_mean_fill_norm = maxnormalize(cum_y_norm_abs_diff))
-  # summarise_if(is.numeric, max,na.rm = T)%>%
   
-  # this plots the largest change
-  # ggplot(aes(x = x_new_norm, y = 1-y_new_norm, fill = fill_x_y, colour = fill_x_y))+
-  # geom_point()
+  # normalise the fills
+  group_by(subject)%>%
+  mutate(cum_x_y_norm_abs_diff_mean_fill_norm = maxnorm(cum_y_norm_abs_diff),
+         
+         fill_x_y_sum_norm = maxnorm(fill_x_y_sum))%>%
+  group_by(filename)%>%
+  # this just ensures we have means which we can sumamrise later
+  mutate(cum_x_y_norm_abs_diff_mean_fill_norm_mean = mean(cum_x_y_norm_abs_diff_mean_fill_norm, na.rm = T),
+         fill_x_y_sum_norm_mean - mean(fill_x_y_sum_norm, na.rm = T))
+
+# might not need to summarise below
+  #   group_by(filename, expression, bin_frame, lanmark_id)%>% #posed.spoken
+  # summarise_if(is.numeric, mean, na.rm = T)
+  
 
 
-# this plots the degree ochangedFiles( # this plots the largest change
-unique(test_happy_dcast$filename)
-nrow(test_happy_dcast_binned)
-
-nrow(test_happy_dcast)
-
-test_happy_dcast_binned$expression
-test_happy_dcast$posed.spoken<- sapply(strsplit(test_happy_dcast$filename, "_"), function(x) x[2])
-
-test_happy_dcast$expression <-sapply(strsplit(test_happy_dcast$filename, "_"), function(x) x[3])
-
-
-# sumamrise_bin
-test_happy_dcast_binned1<- test_happy_dcast_binned%>%
-  group_by(filename, expression, bin_frame, posed.spoken, lanmark_id)%>%
+# summarise for del and vor
+df_OF_output_land_posed_binned_select_alligned_eyes
+ filter(bin_frame>40 & bin_frame<75)%>%
+  # subset(subject == 20)%>% # explore specific subj
+  group_by(filename, expression, lanmark_id)%>% #posed.spoken
   summarise_if(is.numeric, mean, na.rm = T)
-  ggplot(aes(x = x_new_norm, y = 1-y_new_norm, colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
-  geom_point(alpha = .8)+
-     scale_color_viridis_c(option = "magma")+
+ 
+ # 
+ 
+```
+
+try del amnd vor plots
+
+```{r}
+
+# one colour per triangle
+tri <- triang.list(deldir(iris$Sepal.Length, iris$Sepal.Width))
+do.call(rbind, lapply(seq_along(tri), 
+                      function(x) {
+  data.frame(Sepal.Length = tri[[x]]$x, Sepal.Width = tri[[x]]$y, 
+             Petal.Length = mean(iris$Petal.Length[tri[[x]]$ptNum]),
+             tri = x)
+  })) |>
+  ggplot(aes(Sepal.Length, Sepal.Width)) +
+  geom_polygon(aes(fill = Petal.Length, group = tri)) 
+
+# fil gradients
+Additional
+
+To gradient fill your triangles, probably best to draw blank triangles over a 2D interpolation:
+
+library(interp)
+library(ggforce)
+
+interp(iris$Sepal.Length, iris$Sepal.Width, iris$Petal.Length, 
+              duplicate = "mean", nx = 1000, ny = 1000) |>
+  interp2xyz() |>
+  as.data.frame() |>
+  setNames(names(iris)[1:3]) |>
+  ggplot(aes(Sepal.Length, Sepal.Width)) +
+  geom_raster(aes(fill = Petal.Length)) +
+  scale_fill_continuous(na.value = NA) +
+  geom_delaunay_tile(data = iris, fill = NA, color = "#00000050")
+
+# traidional vorplot
+
+test_happy_dcast_summ%>%
+  group_by(expression, lanmark_id)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  
+  ggplot(aes(x = x_new_norm, y = 1-y_new_norm))+
+  geom_point()+
   facet_grid(~expression)
   
-
-test_happy_dcast%>%
-    subset(posed.spoken == "posed")%>%
-  subset(frame == 120)%>%
-      group_by(lanmark_id,frame,expression)%>%
-
-         summarise_if(is.numeric, mean,na.rm = T)%>%
-  ungroup()%>%
     ggplot(aes(x = x_new_norm, y = 1-y_new_norm, fill = cum_x_y_norm_abs_diff_mean_fill_norm,
                colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
 
-     # geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm),alpha = .8)+
-  geom_delaunay_tile(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
-  # ggforce::stat_delvor_summary()
-  geom_delaunay_segment2()+
-     scale_color_viridis_c(option = "magma")+
-  scale_fill_viridis_c(option = "magma")+
-    facet_grid(~expression)
-  
-
-test_happy_dcast_summ<- test_happy_dcast%>%
-    subset(posed.spoken == "posed")%>%
-  subset(frame > 100 & frame <200)%>%
-      group_by(lanmark_id,expression)%>%
-
-         summarise_if(is.numeric, mean,na.rm = T)
-
-
-bound_plot<- cbind(test_happy_dcast_summ$x_new_norm,test_happy_dcast_summ$y_new_norm)
-bound_plot
-
-
-paneled<- test_happy_dcast%>%
-    subset(posed.spoken == "posed")%>%
-  subset(frame > 100 & frame <200)%>%
-      group_by(lanmark_id,expression)%>%
-
-         summarise_if(is.numeric, mean,na.rm = T)%>%
-  ungroup()%>%
-    ggplot(aes(x = x_new_norm, y = 1-y_new_norm, fill = cum_x_y_norm_abs_diff_mean_fill_norm,
-               colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
-
-     geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm), colour = "white")+
+     # geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm), colour = "white")+
     
    geom_voronoi_tile(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm), colour =NA)+
-  geom_delaunay_segment2( colour = "white",alpha = .2)+
-   geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm), colour = "white",size = .5,alpha = .5)+
+  # geom_delaunay_segment2( colour = "white",alpha = .2)+
+   geom_point(aes(y = mean(1-y_new_norm)), colour = "white",size = .5,alpha = .5)+
   # geom_delaunay_tile(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
   # ggforce::stat_delvor_summary()
 
      scale_color_viridis_c(option = "magma")+
   scale_fill_viridis_c(option = "magma")+
     facet_grid(~expression)
+```
+
+
+```{r}
+
+unique(test_happy_dcast$filename)
+nrow(test_happy_dcast_binned)
+
+nrow(test_happy_dcast)
+
+# redo NMF with
+df_OF_output_land_posed_binned_select_alligned_eyes
+```
+
+
+# 
+test_happy_dcast_binned$expression
+test_happy_dcast$posed.spoken<- sapply(strsplit(test_happy_dcast$filename, "_"), function(x) x[2])
+test_happy_dcast$expression <-sapply(strsplit(test_happy_dcast$filename, "_"), function(x) x[3])
+
+# sumamrise_bin
+colnames(test_happy_dcast_binned)
+test_happy_dcast_binned1<- test_happy_dcast_binned%>%
+  group_by(filename, expression, bin_frame, posed.spoken, lanmark_id)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
+  
+
+test_happy_dcast_summ<- test_happy_dcast%>%
+    subset(posed.spoken == "posed")%>%
+  subset(frame > 100 & frame <200)%>%
+      group_by(filename,lanmark_id,expression)%>%
+
+         summarise_if(is.numeric, mean,na.rm = T)
+
+bound_plot<- cbind(test_happy_dcast_summ$x_new_norm,test_happy_dcast_summ$y_new_norm)
+bound_plot
+
+
+paneled
+unique(test_happy_dcast$frame)
+
+
+
   
     test_happy_dcast
   
@@ -193,10 +310,54 @@ get_panel1<-cowplot::get_panel(paneled)
 
 # try and estimate y and x separately
 
-paneled
+library(data.table)
+colnames(lan_AU_comp_paired)
+
+lan_AU_comp_paired_dcast<-setDT(lan_AU_comp_paired)%>%
+dcast(lanmark_id~comp, value.var = c('value', 'coef'), mean)
+
+
+test_happy_dcast_summ_paired_test<-left_join(
+test_happy_dcast_summ,lan_AU_comp_paired_dcast)
+unique(df_OF_output_land_posed_binned_select$filename)
+
+df_OF_output_land_posed_binned_select$subject<- sub(".*_p", "", str_match(df_OF_output_land_posed_binned_select$filename, "p\\s*(.*?)\\s*.csv")[,2])
+
+df_OF_output_land_posed_binned_select$subject
+
+df_OF_output_land_posed_binned_select%>%
+    filter(bin_frame>40 & bin_frame<75)%>%
+  subset(subject == 20)%>%
+ group_by(lanmark_id,expression)%>%
+         summarise_if(is.numeric, mean,na.rm = T)%>%
+  ggplot(aes(x = x_new_norm, y = 1-y_new_norm))+
+  geom_point()+
+    facet_grid(~expression)
+
+unique(df_OF_output_land_posed_binned)
+
+test_happy_dcast_summ_paired_test%>%
+   group_by(lanmark_id,expression)%>%
+         summarise_if(is.numeric, mean,na.rm = T)%>%
+  # subset()
+    ggplot(aes(x = x_new_norm, y = 1-y_new_norm, fill = cum_x_y_norm_abs_diff_mean_fill_norm*coef_3*value_3,
+               colour = cum_x_y_norm_abs_diff_mean_fill_norm*coef_3*value_3))+
+
+     geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm), colour = "white")+
+    
+   geom_voronoi_tile(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm*coef_3*value_3), colour =NA)+
+  # geom_delaunay_segment2( colour = "white",alpha = .2)+
+   geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm), colour = "white",size = .5,alpha = .5)+
+
+     scale_color_viridis_c(option = "magma")+
+  scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+  
+    test_happy_dcast
+  
 ```
 
-stacl
+stack question
 ```{r}
 iris
 
@@ -212,6 +373,11 @@ ggplot(iris, aes(Sepal.Length, Sepal.Width,colour = Petal.Length)) +
   geom_delaunay_segment2()
 
 
+# deldir - let's examine the ouput of a delaunay trianglation
+library(deldir)
+?deldir
+deldir_output<-deldir(iris$Sepal.Length, iris$Sepal.Width, plot=TRUE)
+deldir_output
 ```
 
 
@@ -229,6 +395,8 @@ unique(lan_AU_comp_paired_W2$bin_frame)
 # 79,070,400 
 # test_happy_dcast$frame
 colnames(lan_AU_comp_paired_W)
+
+
 lan_AU_comp_paired_W %>%
       group_by(filename,bin_frame)%>%
   mutate(x_new_norm = maxnormalize(x),
@@ -417,7 +585,7 @@ View(above_thresh)
 
 
 cor_matrix
-
+df_OF_output_land_posed_binned
 cor_matrix_tresh<- as.data.frame(abs(cor_matrix))
   select(c(above_thresh$key))
   
@@ -459,6 +627,11 @@ lan_AU_comp_paired$lanmark_id<- substr(lan_AU_comp_paired$land_y, 12,13)
 
 go back tothebig dataset at the start
 ```{r}
+
+save(lan_AU_comp_paired,lan_AU_comp_paired_W,
+     df_OF_output_land_posed_binned_select,
+     
+     file = "part_land_AU_testdata.Rdata")
 lan_AU_comp_paired
 
 
@@ -482,10 +655,20 @@ unique(lan_AU_comp_paired_W$bin_frame)
 
 df_OF_output_land_posed_binned_select$lanmark_id<- as.character(df_OF_output_land_posed_binned_select$lanmark_id)
 
-lan_AU_comp_paired_W2<- left_join(lan_AU_comp_paired_W%>%
-                                    group_by(filename,expression,comp, lanmark_id)%>%
+df_OF_output_land_posed_binned
+
+colnames(df_OF_output_land_posed_binned_select)
+
+colnames(lan_AU_comp_paired_W2)
+unique(lan_AU_comp_paired_W$bin_frame)
+unique(df_OF_output_land_posed_binned_select$bin_frame)
+
+lan_AU_comp_paired_W2<- left_join( lan_AU_comp_paired_W%>%
+                                    subset(bin_frame>40 & bin_frame<80) %>%
+                                    group_by(filename,expression,comp, lanmark_id, bin_frame)%>%
                                     summarise_if(is.numeric, mean, na.rm =T), df_OF_output_land_posed_binned_select%>%
-                                    group_by(filename,expression,lanmark_id)%>%
+                                      subset(bin_frame>40 & bin_frame<80)%>%
+                                    group_by(filename,expression,lanmark_id,bin_frame)%>%
                                     summarise_if(is.numeric, mean, na.rm =T))
 
 lan_AU_comp_paired_W2
@@ -506,11 +689,7 @@ table(is.na(lan_AU_comp_paired_W2$value.x))
 
 lan_AU_comp_paired_W2%>%
       ungroup()%>%
-  # mutate(
-  #   # coef = maxnormalize(coef),
-  #        value.x = maxnormalize(value.x)
-  #        ) %>%
-  # ungroup()%>%
+
   mutate(fill_coef = (coef*value.y)*correlation) %>%
    # group_by(expression,comp)%>%
   # mutate(fill_coef = fill_coef/max(fill_coef, na.rm =T)) %>%
@@ -533,9 +712,35 @@ group_by(filename,lanmark_id,expression,comp)%>%
    geom_point(aes(colour = fill_coef), colour = "white",size = .5,alpha = .5)
 
 
+unique(lan_AU_comp_paired_W2)
+unique(lan_AU_comp_paired_W2$bin_frame)
+lan_AU_comp_paired_W2%>%
+# test_happy_dcast%>%
+    # subset(posed.spoken == "posed")%>%
+  subset(frame > 100 & frame <200)%>%
+      group_by(lanmark_id,expression)%>%
 
+         summarise_if(is.numeric, mean,na.rm = T)%>%
+  ungroup()%>%
+    ggplot(aes(x = x_new_norm, y = 1-y_new_norm, fill = cum_x_y_norm_abs_diff_mean_fill_norm,
+               colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
 
-rm(test_dtw,rnames, pd,pd1, ph,ph1)
+     geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm), colour = "white")+
+    
+   geom_voronoi_tile(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm), colour =NA)+
+  geom_delaunay_segment2( colour = "white",alpha = .2)+
+   geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm), colour = "white",size = .5,alpha = .5)+
+  # geom_delaunay_tile(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+  # ggforce::stat_delvor_summary()
+
+     scale_color_viridis_c(option = "magma")+
+  scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+
+# 
+# rm(test_dtw,rnames, pd,pd1, ph,ph1)
+
+install.paclages("interp")
 ```
 
 
