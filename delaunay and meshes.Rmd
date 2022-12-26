@@ -39,6 +39,8 @@ test_happy <-df_OF_output_land%>%
   subset(filename == "./cut_posed_happy_day2_p6.csv")
   
 test_happy_dcast<- df_OF_output_land%>%
+  
+
 group_by(filename)%>%
   gather(key, value, -frame, -timestamp,-filename) %>%
   mutate(coordinate = substr(key,1,1))%>%
@@ -59,8 +61,12 @@ unique(test_happy_dcast$filename)
 
 max(test_happy_dcast$frame)
 
-test_happy_dcast<- test_happy_dcast %>%
-      group_by(filename,frame)%>%
+test_happy_dcast_binned<- test_happy_dcast %>%
+  
+  group_by(filename, expression,lanmark_id)%>%
+  mutate(bin_frame = cut(frame, 50, labels = FALSE))%>%
+  group_by(filename,bin_frame)%>%
+      # group_by(filename,frame)%>%
   mutate(x_new_norm = maxnormalize(x),
          y_new_norm = maxnormalize(y))%>%
   group_by(filename,lanmark_id)%>%
@@ -93,16 +99,20 @@ test_happy_dcast<- test_happy_dcast %>%
 
 # this plots the degree ochangedFiles( # this plots the largest change
 unique(test_happy_dcast$filename)
+nrow(test_happy_dcast_binned)
 
+nrow(test_happy_dcast)
+
+test_happy_dcast_binned$expression
 test_happy_dcast$posed.spoken<- sapply(strsplit(test_happy_dcast$filename, "_"), function(x) x[2])
 
 test_happy_dcast$expression <-sapply(strsplit(test_happy_dcast$filename, "_"), function(x) x[3])
 
 
-test_happy_dcast%>%
-  subset(posed.spoken == "posed")%>%
-    group_by(lanmark_id,frame,expression)%>%
-  summarise_if(is.numeric, mean, na.rm = T)%>%
+# sumamrise_bin
+test_happy_dcast_binned1<- test_happy_dcast_binned%>%
+  group_by(filename, expression, bin_frame, posed.spoken, lanmark_id)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
   ggplot(aes(x = x_new_norm, y = 1-y_new_norm, colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
   geom_point(alpha = .8)+
      scale_color_viridis_c(option = "magma")+
@@ -140,7 +150,7 @@ bound_plot<- cbind(test_happy_dcast_summ$x_new_norm,test_happy_dcast_summ$y_new_
 bound_plot
 
 
-test_happy_dcast%>%
+paneled<- test_happy_dcast%>%
     subset(posed.spoken == "posed")%>%
   subset(frame > 100 & frame <200)%>%
       group_by(lanmark_id,expression)%>%
@@ -162,7 +172,7 @@ test_happy_dcast%>%
   scale_fill_viridis_c(option = "magma")+
     facet_grid(~expression)
   
-    
+    test_happy_dcast
   
   
 # 
@@ -178,10 +188,69 @@ df_OF_output_land_f10_dcast_norm<- df_OF_output_land_f10_dcast%>%
   mutate(x_new_norm = maxnormalize(x),
          y_new_norm = maxnormalize(y))
 
+?cowplot::get_panel
+get_panel1<-cowplot::get_panel(paneled)
+
 # try and estimate y and x separately
+
+paneled
+```
+
+stacl
+```{r}
+iris
+
+
+ggplot(iris, aes(Sepal.Length, Sepal.Width)) +
+  geom_voronoi_tile(aes(fill = Petal.Length))
+# Delaunay triangles
+ggplot(iris, aes(Sepal.Length, Sepal.Width,fill = Petal.Length)) +
+  geom_delaunay_tile()
+
+# colouring lines
+ggplot(iris, aes(Sepal.Length, Sepal.Width,colour = Petal.Length)) +
+  geom_delaunay_segment2()
+
+
 ```
 
 
+
+```{r}
+
+test_happy_dcast
+df_OF_output_land_posed_binned_select
+lan_AU_comp_paired_W
+
+
+colnames(lan_AU_comp_paired_W)
+colnames(test_happy_dcast)
+unique(lan_AU_comp_paired_W2$bin_frame)
+# 79,070,400 
+# test_happy_dcast$frame
+colnames(lan_AU_comp_paired_W)
+lan_AU_comp_paired_W %>%
+      group_by(filename,bin_frame)%>%
+  mutate(x_new_norm = maxnormalize(x),
+         y_new_norm = maxnormalize(y))%>%
+  group_by(filename,lanmark_id)%>%
+  mutate(x_norm_diff= x_new_norm - lag(x_new_norm),
+         y_norm_diff= y_new_norm - lag(y_new_norm))%>%
+    mutate(x_norm_diff_abs= (x_norm_diff),
+         y_norm_diff_abs= (y_norm_diff))%>%
+  # compute a summ - also consider a roling sum
+   mutate(x_norm_diff_abs_sum= sum(x_norm_diff_abs, na.rm = TRUE),
+         y_norm_diff_abs_sum= sum(y_norm_diff_abs, na.rm = TRUE))%>%
+  
+  mutate(fill_x_y = (x_norm_diff_abs_sum+y_norm_diff_abs_sum)/2)%>%
+  group_by(filename,lanmark_id)%>%
+  #the line below just ignores NA (introduced in lag) which would throw error to cumsum otehrwise
+      mutate(cum_x_norm_abs_diff = cumsum(ifelse(is.na(x_norm_diff_abs), 0, x_norm_diff_abs)) + x_norm_diff_abs*0,
+             cum_y_norm_abs_diff = cumsum(ifelse(is.na(y_norm_diff_abs), 0, y_norm_diff_abs)) + y_norm_diff_abs*0)%>%
+  mutate(cum_x_y_norm_abs_diff_mean_fill = ((cum_x_norm_abs_diff+cum_y_norm_abs_diff)/2))%>%
+  # just y
+  mutate(cum_x_y_norm_abs_diff_mean_fill_norm = maxnormalize(cum_y_norm_abs_diff))
+```
 
 NMF of landmarks?
 
@@ -242,6 +311,8 @@ NMF::basis(res_k3_land)
 coefmap(res_k3_land)
 basismap(res_k3_land)
 
+
+NMF::coefmap(res_k3, scale = "none")
 plot(res_k3_land)
 
 res_k3_land@fit@W
@@ -286,9 +357,9 @@ left_join(res_k3_land_W_gath, res_k3_land_H_dcast)%>%
   
   group_by(expression,lanmark_id,comp)%>%
   summarise_if(is.numeric, mean, na.rm = T)%>%
-    ggplot(aes(x_new,1-y_new, colour = y))+
-  geom_point(alpha = .1)+
-  scale_color_viridis_c(option = "magma")+
+    ggplot(aes(x_new,1-y_new, colour = comp))+
+  geom_point(alpha = .5)+
+  # scale_color_viridis_c(option = "magma")+
   facet_grid(~comp)
   
 
@@ -398,6 +469,8 @@ lan_AU_comp_paired$comp<- as.character(lan_AU_comp_paired$comp)
 
 lan_AU_comp_paired$coef
 lan_AU_comp_paired_W<- left_join(res_k3_land_W_gath,lan_AU_comp_paired, by = "comp")
+
+
 colnames(lan_AU_comp_paired_W)
 lan_AU_comp_paired_W$correlation<- lan_AU_comp_paired_W$value.y
 
@@ -409,13 +482,58 @@ unique(lan_AU_comp_paired_W$bin_frame)
 
 df_OF_output_land_posed_binned_select$lanmark_id<- as.character(df_OF_output_land_posed_binned_select$lanmark_id)
 
-lan_AU_comp_paired_W2<- left_join(lan_AU_comp_paired_W, df_OF_output_land_posed_binned_select)
+lan_AU_comp_paired_W2<- left_join(lan_AU_comp_paired_W%>%
+                                    group_by(filename,expression,comp, lanmark_id)%>%
+                                    summarise_if(is.numeric, mean, na.rm =T), df_OF_output_land_posed_binned_select%>%
+                                    group_by(filename,expression,lanmark_id)%>%
+                                    summarise_if(is.numeric, mean, na.rm =T))
 
-lan_AU_comp_paired_W%>%
-  group_by(filename)
-
+lan_AU_comp_paired_W2
 # 79,070,400 
 # 1,550,400
+
+
+unique(lan_AU_comp_paired_W2$filename)
+
+max(lan_AU_comp_paired_W2$coef)
+max(lan_AU_comp_paired_W2$value.x)
+
+lan_AU_comp_paired_W2
+# res_k3
+table(is.na(lan_AU_comp_paired_W2$coef))
+table(is.na(lan_AU_comp_paired_W2$value.x))
+
+
+lan_AU_comp_paired_W2%>%
+      ungroup()%>%
+  # mutate(
+  #   # coef = maxnormalize(coef),
+  #        value.x = maxnormalize(value.x)
+  #        ) %>%
+  # ungroup()%>%
+  mutate(fill_coef = (coef*value.y)*correlation) %>%
+   # group_by(expression,comp)%>%
+  # mutate(fill_coef = fill_coef/max(fill_coef, na.rm =T)) %>%
+  
+group_by(filename,lanmark_id,expression,comp)%>%
+         summarise_if(is.numeric, mean,na.rm = T)%>%
+  ungroup()%>%
+    ggplot(aes(x = x_new_norm, y = 1-y_new_norm,
+             # value.x - time
+             # $coef * basis
+               colour = fill_coef))+
+
+     geom_point(alpha = .1)+
+       scale_color_viridis_c(option = "magma")+
+  # scale_fill_viridis_c(option = "magma")+
+      facet_grid(~comp)+
+    
+   geom_voronoi_tile(aes(fill = fill_coef), colour =NA)+
+  geom_delaunay_segment2( colour = "white",alpha = .2)+
+   geom_point(aes(colour = fill_coef), colour = "white",size = .5,alpha = .5)
+
+
+
 
 rm(test_dtw,rnames, pd,pd1, ph,ph1)
 ```
