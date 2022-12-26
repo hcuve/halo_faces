@@ -292,7 +292,7 @@ df_OF_output_AUsW_unblind_posed_binned <-df_OF_output_AUsW_unblind_posed%>%
   mutate(bin_frame = cut(frame, 100, labels = FALSE))%>%
   group_by(filename,bin_frame,subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE)
- 
+colnames(df_OF_output_AUsW_unblind_posed_binned) 
  
 df_OF_output_AUsW_unblind_posed_binned$filename
 # "./cut_posed_angry_day1_p1.csv"
@@ -552,6 +552,6 @@ df_OF_output_AUsW_unblind_spoken1_2%>%
   scale_fill_viridis_c(option = "magma")
 
 
-table(df_OF_output_AUsW_unblind_posed_binned$bin_frame)
+table(ç$bin_frame)
 
 ```

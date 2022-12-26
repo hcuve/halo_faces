@@ -373,15 +373,51 @@ NMF3_k3_res<- as.data.frame(res_k3@fit@H)%>%
          )
 
 NMF3_k3_res$comp<- NMF3_k3_res$component
-lan_AU_comp_paired<- left_join(NMF3_k3_res,cor_matrix_tresh_repl_gath)
+lan_AU_comp_paired<- left_join(NMF3_k3_res$,cor_matrix_tresh_repl_gath)
 # avoid multiplication y zero
 
 lan_AU_comp_paired$value<- lan_AU_comp_paired$value+0.0001
 
+lan_AU_comp_paired$lanmark_id<- substr(lan_AU_comp_paired$land_y, 12,13)
 # 
 # group_by(as.factor(AU))%>%
 #     arrange(desc(value))
   
+```
+
+
+go back tothebig dataset at the start
+```{r}
+lan_AU_comp_paired
+
+
+
+lan_AU_comp_paired
+
+lan_AU_comp_paired$comp<- as.character(lan_AU_comp_paired$comp)
+
+lan_AU_comp_paired$coef
+lan_AU_comp_paired_W<- left_join(res_k3_land_W_gath,lan_AU_comp_paired, by = "comp")
+colnames(lan_AU_comp_paired_W)
+lan_AU_comp_paired_W$correlation<- lan_AU_comp_paired_W$value.y
+
+colnames(lan_AU_comp_paired_W)
+
+lan_AU_comp_paired_W
+
+unique(lan_AU_comp_paired_W$bin_frame)
+
+df_OF_output_land_posed_binned_select$lanmark_id<- as.character(df_OF_output_land_posed_binned_select$lanmark_id)
+
+lan_AU_comp_paired_W2<- left_join(lan_AU_comp_paired_W, df_OF_output_land_posed_binned_select)
+
+lan_AU_comp_paired_W%>%
+  group_by(filename)
+
+# 79,070,400 
+# 1,550,400
+
+rm(test_dtw,rnames, pd,pd1, ph,ph1)
 ```
 
 
