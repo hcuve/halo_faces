@@ -453,7 +453,7 @@ chool_talk<-list()
 
 chool_talk$AU_NM <-
 as.data.frame(res_k3@fit@H)%>%
-  mutate(component = 1:n())%>%
+  mutate(component = as.factor(1:n()))%>%
   gather(AU, coef, -component)%>%
   group_by(component)%>%
   mutate(max_comp = max(coef),
@@ -509,12 +509,12 @@ comp1.im= image_read("comp1.png",strip = TRUE)
 comp2.im = image_read("comp2.png",strip = TRUE)
 comp3.im = image_read("comp3.png",strip = TRUE)  
 
-comp1.im<- image_convert(comp1.im, format = "png", depth = NULL)
-comp2.im<- image_convert(comp2.im, format = "png", depth = NULL)
+# comp1.im<- image_convert(comp1.im, format = "png", depth = NULL)
+# comp2.im<- image_convert(comp2.im, format = "png", depth = NULL)
+# 
+# comp3.im<- image_convert(comp3.im, format = "png", depth = NULL)
 
-comp3.im<- image_convert(comp3.im, format = "png", depth = NULL)
-
-
+library(magick)
 # labels
 labels <- c(
   comp1= comp1.im,
@@ -526,13 +526,50 @@ iris
 
 
   iris%>%
-   mutate(label_n = link_to_img(labels))%>%
-    ggplot(aes(label_n, Sepal.Width)) +
+   # mutate(label_n = link_to_img(labels))%>%
+    ggplot(aes(Species, Sepal.Width)) +
   geom_boxplot()+
+        scale_x_discrete(
+    name = NULL,
+    labels = labels) +
+  theme( axis.text.x = element_markdown(color = "black", size = 20))
+  
+  
+  # https://drive.google.com/file/d/1Py4QGB7r4EdIS7YNxyWGBBEKEaqLakwx/view?usp=share_link
+  # https://drive.google.com/file/d/1Q0o3bgXZlQafzefXznh3uA27axEBOud5/view?usp=share_link
+  # https://drive.google.com/file/d/1Pz34Q0jpK8NL7TXuPQ0d_q-fJYFXietT/view?usp=share_link
+  # 
+  labels <- c(
+  setosa = "<img src='  https://drive.google.com/file/d/1Py4QGB7r4EdIS7YNxyWGBBEKEaqLakwx/view?usp=share_link'
+    width='100' /><br>*I. setosa*",
+  virginica = "<img src=' https://drive.google.com/file/d/1Q0o3bgXZlQafzefXznh3uA27axEBOud5/view?usp=share_link'
+    width='100' /><br>*I. virginica*",
+  versicolor = "<img src='  https://drive.google.com/file/d/1Pz34Q0jpK8NL7TXuPQ0d_q-fJYFXietT/view?usp=share_link'
+    width='100' /><br>*I. versicolor*"
+)
+  
+  
+  
+   labels <- c(
+  setosa = "<img src='https://github.com/hcuve/halo_faces/blob/main/ggtextimgs/comp1.JPG'
+    width='100' /><br>*I. *",
+  virginica = "<img src='https://github.com/hcuve/halo_faces/blob/main/ggtextimgs/comp2.JPG'
+    width='100' /><br>*I. *",
+  versicolor = "<img src='https://github.com/hcuve/halo_faces/blob/main/ggtextimgs/comp3.JPG'
+    width='100' /><br>*I. *"
+)
+
+
+
+ggplot(iris, aes(Species, Sepal.Width)) +
+  geom_boxplot() +
+  scale_x_discrete(
+    name = NULL,
+    labels = labels
+  ) +
   theme(
     axis.text.x = element_markdown(color = "black", size = 11)
   )
-
 
 as.data.frame(res_k3@fit@H)%>%
   mutate(component = 1:n())%>%
@@ -558,9 +595,117 @@ as.data.frame(res_k3@fit@H)%>%
   )
 
 # ggimage
+install.packages("ggimage")
+
+ptest<-  res_k3_fit_H%>%
+      mutate(component = factor(component))%>%
+  ggplot(aes(component,AU, fill = coef))+
+  
+  geom_tile()
+require(ggtext)
+
+ptest+
+    scale_x_discrete(
+    name = NULL,
+    labels = labels
+  ) +
+  theme(
+    axis.text.x = element_markdown(color = "black", size = 20)
+  )
+
+
+
+  
+directname<- "Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Github/halo_faces/ggtextimgs"
+
+
+
+labels <- c(
+  setosa = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1.png'
+    width='100' /><br>*. *",
+  virginica = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2.png'
+    width='100' /><br>*I. *",
+  versicolor = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3.png'
+    width='100' /><br>*I. *"
+)
+# I is for italic
+labels <- c(
+  `1` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1.png'
+    width='100' /><br>1 ",
+  `2` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2.png'
+    width='100' /><br> 2",
+  `3` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3.png'
+    width='100' /><br> 3"
+)
+
+  chool_talk$AU_NM +
+    scale_x_discrete(
+    name = NULL,
+    labels = labels
+  ) +
+  theme(
+    axis.text.x = element_markdown(color = "black", size = 20)
+  )
+
+  
+  
+  library(ggplot2)
+
+# First, create a data frame with some sample data
+library(ggplot2)
+library(png)
+
+# Read in the image file
+my_image <- readPNG("comp1.png")
+library(ggplot2)
+library(grid)
+
+# Load the image and convert it to a grob (graphics object)
+img <- png::readPNG("comp1.png")
+grob_image <- rasterGrob(img, interpolate=TRUE)
+
+# Create a plot with a blank axis label
+p <- ggplot(data, aes(x=x, y=y)) +
+  geom_point() +
+  theme(axis.text.x=element_blank())
+
+# Add the image as the x-axis label using the `label` argument in the `axis.text.x` element
+p + theme(axis.text.x=element_text(label=grob_image))
+
+
+library(ggplot2)
+library(grid)
+qplot(speed, dist, data = cars, geom = c("point", "smooth"))+ylim(-10,120)
+## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+# ?grid.raster
+grid.raster(img, x = -0,y = -10)
+```
+
+# plot just timeseries for components
+
+
+```{r}
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(component,subject)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by( component, bin_frame)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")+
+  geom_vline(xintercept = 55)+
+    geom_vline(xintercept = 25)
 
 ```
-  
 
 
   theme_classic()+

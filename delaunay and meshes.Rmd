@@ -236,7 +236,6 @@ df_OF_output_land_posed_binned_select_alligned_eyes%>%
   
 
 
-
 # might not need to summarise below
   #   group_by(filename, expression, bin_frame, lanmark_id)%>% #posed.spoken
   # summarise_if(is.numeric, mean, na.rm = T)
@@ -246,7 +245,8 @@ df_OF_output_land_posed_binned_select_alligned_eyes%>%
 # summarise for del and vor
 ```{r}
 df_OF_output_land_posed_binned_select_alligned_eyes%>%
- filter(bin_frame>40 & bin_frame<75)%>%
+ # filter(bin_frame>40 & bin_frame<75)%>%
+ filter(bin_frame>10 & bin_frame<60)%>%
   subset(subject == 1)%>% # explore specific subj
   group_by(expression, lanmark_id)%>% #posed.spoken
   summarise_if(is.numeric, mean, na.rm = T)%>%
@@ -267,12 +267,13 @@ df_OF_output_land_posed_binned_select_alligned_eyes%>%
 try del amnd vor plots
 
 ```{r}
-
+require(ggforce)
 # one colour per triangle
 
 df_OF_output_land_posed_binned_select_alligned_eyes_agg<- df_OF_output_land_posed_binned_select_alligned_eyes%>%
- filter(bin_frame>40 & bin_frame<75)%>%
-  # subset(subject == 10)%>% # explore specific subj
+   filter(bin_frame>10 & bin_frame<60)%>%
+ # filter(bin_frame>40 & bin_frame<75)%>%
+
   group_by(expression, lanmark_id)%>% #posed.spoken
   summarise_if(is.numeric, mean, na.rm = T)
   # ggplot(aes(x = x_new_norm_rot2, y = 1-y_new_norm_rot2, fill = cum_x_y_norm_abs_diff_mean_fill_norm,
@@ -320,18 +321,8 @@ View(delaunay_tri_all)
 library(interp)
 library(ggforce)
 
-# tri <- triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg$x_new_norm_rot2, 
-#                           df_OF_output_land_posed_binned_select_alligned_eyes_agg$y_new_norm_rot2))
-# 
-# delaunay_tri_all<- do.call(rbind, lapply(seq_along(tri), 
-#                       function(x) {
-#   data.frame(x_new_norm_rot2 = tri[[x]]$x, y_new_norm_rot2 = tri[[x]]$y, 
-#              coef_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg$cum_x_y_norm_abs_diff_mean_fill_norm[tri[[x]]$ptNum]),
-#              tri = x)
-
-table(is.na(df_OF_output_land_posed_binned_select_alligned_eyes_agg$cum_x_y_norm_abs_diff_mean_fill_norm))
-
 ?interp
+
 nms<-c('x_new_norm_rot2', 'y_new_norm_rot2', 'coef_fill')
 colnames(df_OF_output_land_posed_binned_select_alligned_eyes_agg)
 test_gradient<-df_OF_output_land_posed_binned_select_alligned_eyes_agg[,c(22,23,18)]
@@ -363,9 +354,7 @@ interp(test_gradient$x_new_norm_rot2,
 
 ```
 
-
-
-sepaarte emmotions
+separate emmotions
 
 ```{r}
 
@@ -397,16 +386,15 @@ triangle_plots$delaunay_tri_ang<- do.call(rbind, lapply(seq_along(tri_ang),
   # tri
   geom_polygon(aes(fill = coef_fill, group = tri_ang)) +
 
-  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+  geom_point(colour = "white", alpha = .5)+
     scale_fill_viridis_c(option = "magma")+
     scale_colour_viridis_c(option = "magma")+
-  theme_dark()+
   theme_void()+
   theme(plot.background = element_rect(fill = "black"))
 
-delaunay_tri_ang
+triangle_plots$delaunay_tri_ang
 
-
+```
 # fillgradiuent
 colnames(anger_del)
 
@@ -437,12 +425,11 @@ theme(
 triangle_plots$delaunay_tri_ang
 
 triangle_plots$delaunay_tri_ang_grad
-```
+
 
 
 happy sad
 ```{r}
-anger_del
 tri_happy <- triang.list(deldir(happy_del$x_new_norm_rot2, 
                           happy_del$y_new_norm_rot2))
 
@@ -466,7 +453,7 @@ triangle_plots$delaunay_tri_happy<- do.call(rbind, lapply(seq_along(tri_happy),
 
 triangle_plots$delaunay_tri_happy
 
-
+```
 # fillgradiuent
 colnames(anger_del)
 
@@ -498,8 +485,6 @@ triangle_plots$delaunay_tri_happy
 triangle_plots$delaunay_tri_happy_grad
 
 
-
-```
 sad
 
 ```{r}
@@ -525,10 +510,8 @@ triangle_plots$delaunay_tri_sad<- do.call(rbind, lapply(seq_along(tri_sad),
   theme(plot.background = element_rect(fill = "black"))
 triangle_plots$delaunay_tri_sad
 
-
+```
 # fillgradiuent
-
-
 
 triangle_plots$delaunay_tri_sad_grad<-
 interp(sad_del$x_new_norm_rot2,
@@ -557,10 +540,8 @@ interp(sad_del$x_new_norm_rot2,
 triangle_plots$delaunay_tri_sad
 triangle_plots$delaunay_tri_sad_grad
 
-```
 
 correlate landmarks with NMF components?
-
 
 above not quite there yet
 
@@ -777,7 +758,8 @@ delaunay with the new data
 # one colour per triangle
 
 df_OF_output_land_posed_binned_select_alligned_eyes_agg2<- df_OF_output_land_posed_binned_select_alligned_eyes%>%
- filter(bin_frame>40 & bin_frame<75)%>%
+   filter(bin_frame>10 & bin_frame<60)%>%
+ # filter(bin_frame>40 & bin_frame<75)%>%
   # subset(subject == 10)%>% # explore specific subj
   group_by(lanmark_id)%>% #posed.spoken
   summarise_if(is.numeric, mean, na.rm = T)%>%
@@ -795,9 +777,6 @@ df_OF_output_land_posed_binned_select_alligned_eyes_agg2$comp1_fill
 library(deldir)
 
 # comp 1
-data.frame(x_new_norm_rot2 = tri_happy[[x]]$x, y_new_norm_rot2 = tri_happy[[x]]$y, 
-             coef_fill = mean(happy_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_happy[[x]]$ptNum]),
-             tri_happy = x)
 
 
 
@@ -875,6 +854,7 @@ triangle_plots$delaunay_tri_comp1_grad<- interp(gradient_df$comp1$x_new_norm_rot
 
 triangle_plots$delaunay_tri_comp1_grad
 ```
+
 comp2
 ```{r}
 # one colour per triangle
