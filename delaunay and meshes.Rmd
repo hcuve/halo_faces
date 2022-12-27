@@ -1314,19 +1314,19 @@ triangle_plots$delaunay_tri_comp1
 triangle_plots$delaunay_tri_comp2
 triangle_plots$delaunay_tri_comp3
 ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1,
-       width = 100,
-       height = 100,
+       width = 300,
+       height = 300,
               units = 'px',
        dpi = 300)
 
 ggsave("comp2n.png", device = "png", triangle_plots$delaunay_tri_comp2,
-       width = 100,
-       height = 100,
+       width = 300,
+       height = 300,
                      units = 'px',
        dpi = 300)
 ggsave("comp3n.png", device = "png", triangle_plots$delaunay_tri_comp3,
-       width = 100,
-       height = 100,
+       width = 300,
+       height = 300,
                      units = 'px',
        dpi = 300)
 
