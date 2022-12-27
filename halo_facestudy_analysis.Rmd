@@ -468,27 +468,15 @@ as.data.frame(res_k3@fit@H)%>%
   # scale_fill_viridis_()
     scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
                        limits =c(0,1))+#)+
-  xlab("K")+
+  xlab("Component")+
   p$graphstyle_int+
 guides(fill=guide_colorbar(ticks.colour = NA))
+chool_talk$AU_NM 
 
 ```
 
 anotate with components
 ```{r}
-res_k3_fit_H<-as.data.frame(res_k3@fit@H)%>%
-  mutate(component = 1:n())%>%
-  gather(AU, coef, -component)%>%
-  group_by(component)%>%
-  mutate(max_comp = max(coef),
-         coef = coef/max_comp,
-         # AU = substring(AU,8,40),
-         AU_code = substring(AU,4,5)
-         )%>%
-  arrange(AU_code)
-
-res_k3_fit_H$component
-chool_talk$AU_NM
 
 triangle_plots$delaunay_tri_comp3
 # load images
@@ -501,67 +489,17 @@ library(magick)
 # library(grid)
 
 
-# ggplot(iris, aes(Species, Sepal.Width)) +
-#   geom_boxplot() +
-#   scale_x_discrete(
-#     name = NULL,
-#     labels = labels
-#   ) +
-#   theme(
-#     axis.text.x = element_markdown(color = "black", size = 11)
-#   )
 
-as.data.frame(res_k3@fit@H)%>%
-  mutate(component = 1:n())%>%
-  gather(AU, coef, -component)%>%
-  group_by(component)%>%
-  mutate(max_comp = max(coef),
-         coef = coef/max_comp,
-         # AU = substring(AU,8,40),
-         AU_code = substring(AU,4,5)
-         )%>%
-  arrange(AU_code)
-  
-  res_k3_fit_H%>%
-    mutate(component = factor(component))%>%
-  ggplot(aes(component,AU, fill = coef))+
-  geom_tile()+
-    scale_x_discrete(
-    # name = NULL,
-    labels = labels
-  ) +
-  theme(
-    axis.text.x = element_markdown(color = "black", size = 20)
-  )
-
-# ggimage
-install.packages("ggimage")
-
-ptest<-  res_k3_fit_H%>%
-      mutate(component = factor(component))%>%
-  ggplot(aes(component,AU, fill = coef))+
-  
-  geom_tile()
-require(ggtext)
-
-ptest+
-    scale_x_discrete(
-    name = NULL,
-    labels = labels
-  ) +
-  theme(
-    axis.text.x = element_markdown(color = "black", size = 20)
-  )
 
 
 # I is for italic
 labels <- c(
   `1` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1n.png'
-    width='100' /><br>*I. *",
+    width='100' /><br> 1",
   `2` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2n.png'
-    width='100' /><br>*I. *",
+    width='100' /><br> 2",
   `3` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3n.png'
-    width='100' /><br>*I. *"
+    width='100' /><br> 3"
 )
 
   chool_talk$AU_NM +
