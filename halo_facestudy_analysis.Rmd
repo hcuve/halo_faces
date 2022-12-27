@@ -505,10 +505,14 @@ image_read("comp1.tiff")
 tiger <- image_read_svg('http://jeroen.github.io/images/tiger.svg', width = 350)
 
 
-comp1.im= image_read("comp1.tiff")
-comp2.im = image_read("comp2.tiff")
-comp3.im = image_read("comp3.tiff")  
+comp1.im= image_read("comp1.png",strip = TRUE)
+comp2.im = image_read("comp2.png",strip = TRUE)
+comp3.im = image_read("comp3.png",strip = TRUE)  
 
+comp1.im<- image_convert(comp1.im, format = "png", depth = NULL)
+comp2.im<- image_convert(comp2.im, format = "png", depth = NULL)
+
+comp3.im<- image_convert(comp3.im, format = "png", depth = NULL)
 
 
 # labels
@@ -519,12 +523,12 @@ comp3 = comp3.im
 )
 
 iris
-ggplot(iris, aes(Species, Sepal.Width)) +
-  geom_boxplot() +
-  scale_x_discrete(
-    name = NULL,
-    labels = labels
-  ) +
+
+
+  iris%>%
+   mutate(label_n = link_to_img(labels))%>%
+    ggplot(aes(label_n, Sepal.Width)) +
+  geom_boxplot()+
   theme(
     axis.text.x = element_markdown(color = "black", size = 11)
   )
@@ -539,16 +543,22 @@ as.data.frame(res_k3@fit@H)%>%
          # AU = substring(AU,8,40),
          AU_code = substring(AU,4,5)
          )%>%
-  arrange(AU_code)%>%
+  arrange(AU_code)
+  
+  res_k3_fit_H%>%
+    mutate(component = factor(component))%>%
   ggplot(aes(component,AU, fill = coef))+
   geom_tile()+
     scale_x_discrete(
-    name = NULL,
+    # name = NULL,
     labels = labels
   ) +
   theme(
-    axis.text.x = element_markdown(color = "black", size = 11)
+    axis.text.x = element_markdown(color = "black", size = 20)
   )
+
+# ggimage
+
 ```
   
 
