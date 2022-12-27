@@ -472,8 +472,10 @@ as.data.frame(res_k3@fit@H)%>%
   p$graphstyle_int+
 guides(fill=guide_colorbar(ticks.colour = NA))
 
+```
 
-
+anotate with components
+```{r}
 res_k3_fit_H<-as.data.frame(res_k3@fit@H)%>%
   mutate(component = 1:n())%>%
   gather(AU, coef, -component)%>%
@@ -490,86 +492,24 @@ chool_talk$AU_NM
 
 triangle_plots$delaunay_tri_comp3
 # load images
-install.packages('magick')
+# install.packages('magick')
 library(magick)
+# install.packages('imager')
+# library(imager)
 
-install.packages('imager')
-
-library(imager)
-pathname<-"~/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/"
-
-file_path <- system.file('/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/comp1.tiff',package='imager') 
-im <- load.image(file_path)
-plot(im)
-image_read("comp1.tiff")
-tiger <- image_read_svg('http://jeroen.github.io/images/tiger.svg', width = 350)
+# library(png)
+# library(grid)
 
 
-comp1.im= image_read("comp1.png",strip = TRUE)
-comp2.im = image_read("comp2.png",strip = TRUE)
-comp3.im = image_read("comp3.png",strip = TRUE)  
-
-# comp1.im<- image_convert(comp1.im, format = "png", depth = NULL)
-# comp2.im<- image_convert(comp2.im, format = "png", depth = NULL)
-# 
-# comp3.im<- image_convert(comp3.im, format = "png", depth = NULL)
-
-library(magick)
-# labels
-labels <- c(
-  comp1= comp1.im,
-comp2 = comp2.im,
-comp3 = comp3.im
-)
-
-iris
-
-
-  iris%>%
-   # mutate(label_n = link_to_img(labels))%>%
-    ggplot(aes(Species, Sepal.Width)) +
-  geom_boxplot()+
-        scale_x_discrete(
-    name = NULL,
-    labels = labels) +
-  theme( axis.text.x = element_markdown(color = "black", size = 20))
-  
-  
-  # https://drive.google.com/file/d/1Py4QGB7r4EdIS7YNxyWGBBEKEaqLakwx/view?usp=share_link
-  # https://drive.google.com/file/d/1Q0o3bgXZlQafzefXznh3uA27axEBOud5/view?usp=share_link
-  # https://drive.google.com/file/d/1Pz34Q0jpK8NL7TXuPQ0d_q-fJYFXietT/view?usp=share_link
-  # 
-  labels <- c(
-  setosa = "<img src='  https://drive.google.com/file/d/1Py4QGB7r4EdIS7YNxyWGBBEKEaqLakwx/view?usp=share_link'
-    width='100' /><br>*I. setosa*",
-  virginica = "<img src=' https://drive.google.com/file/d/1Q0o3bgXZlQafzefXznh3uA27axEBOud5/view?usp=share_link'
-    width='100' /><br>*I. virginica*",
-  versicolor = "<img src='  https://drive.google.com/file/d/1Pz34Q0jpK8NL7TXuPQ0d_q-fJYFXietT/view?usp=share_link'
-    width='100' /><br>*I. versicolor*"
-)
-  
-  
-  
-   labels <- c(
-  setosa = "<img src='https://github.com/hcuve/halo_faces/blob/main/ggtextimgs/comp1.JPG'
-    width='100' /><br>*I. *",
-  virginica = "<img src='https://github.com/hcuve/halo_faces/blob/main/ggtextimgs/comp2.JPG'
-    width='100' /><br>*I. *",
-  versicolor = "<img src='https://github.com/hcuve/halo_faces/blob/main/ggtextimgs/comp3.JPG'
-    width='100' /><br>*I. *"
-)
-
-
-
-ggplot(iris, aes(Species, Sepal.Width)) +
-  geom_boxplot() +
-  scale_x_discrete(
-    name = NULL,
-    labels = labels
-  ) +
-  theme(
-    axis.text.x = element_markdown(color = "black", size = 11)
-  )
+# ggplot(iris, aes(Species, Sepal.Width)) +
+#   geom_boxplot() +
+#   scale_x_discrete(
+#     name = NULL,
+#     labels = labels
+#   ) +
+#   theme(
+#     axis.text.x = element_markdown(color = "black", size = 11)
+#   )
 
 as.data.frame(res_k3@fit@H)%>%
   mutate(component = 1:n())%>%
@@ -614,28 +554,14 @@ ptest+
   )
 
 
-
-  
-directname<- "Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Github/halo_faces/ggtextimgs"
-
-
-
-labels <- c(
-  setosa = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1.png'
-    width='100' /><br>*. *",
-  virginica = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2.png'
-    width='100' /><br>*I. *",
-  versicolor = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3.png'
-    width='100' /><br>*I. *"
-)
 # I is for italic
 labels <- c(
-  `1` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1.png'
-    width='100' /><br>1 ",
-  `2` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2.png'
-    width='100' /><br> 2",
-  `3` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3.png'
-    width='100' /><br> 3"
+  `1` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1n.png'
+    width='100' /><br>*I. *",
+  `2` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2n.png'
+    width='100' /><br>*I. *",
+  `3` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3n.png'
+    width='100' /><br>*I. *"
 )
 
   chool_talk$AU_NM +
@@ -649,40 +575,10 @@ labels <- c(
 
   
   
-  library(ggplot2)
 
-# First, create a data frame with some sample data
-library(ggplot2)
-library(png)
-
-# Read in the image file
-my_image <- readPNG("comp1.png")
-library(ggplot2)
-library(grid)
-
-# Load the image and convert it to a grob (graphics object)
-img <- png::readPNG("comp1.png")
-grob_image <- rasterGrob(img, interpolate=TRUE)
-
-# Create a plot with a blank axis label
-p <- ggplot(data, aes(x=x, y=y)) +
-  geom_point() +
-  theme(axis.text.x=element_blank())
-
-# Add the image as the x-axis label using the `label` argument in the `axis.text.x` element
-p + theme(axis.text.x=element_text(label=grob_image))
-
-
-library(ggplot2)
-library(grid)
-qplot(speed, dist, data = cars, geom = c("point", "smooth"))+ylim(-10,120)
-## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
-# ?grid.raster
-grid.raster(img, x = -0,y = -10)
 ```
 
 # plot just timeseries for components
-
 
 ```{r}
 df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
@@ -707,29 +603,6 @@ df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
 
 ```
 
-
-  theme_classic()+
-  # scale_fill_viridis_()
-    scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
-                       limits =c(0,1))+#)+
-  xlab("K")+
-  p$graphstyle_int+
-guides(fill=guide_colorbar(ticks.colour = NA))
-
-library(ggtext)
-chool_talk$AU_NM+
-    scale_x_discrete(
-    name = NULL,
-    labels = labels
-  ) +
-  theme(
-    axis.text.x = element_markdown(color = "black", size = 11)
-  )
-
-
-
-
-```
 
 
 Lanmarking
@@ -1282,7 +1155,7 @@ ggsave("fig2_NMF_panel_posed.tiff", paper_plots$NMF_panel_posed, device = "tiff"
 
 
 
-# plot compoent classification of emotion
+# plot component classification of emotion
 
 ```{r}
 df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
@@ -1480,7 +1353,6 @@ dcast_time_ha$comp3 = dcast_time_ha$table_time_NMF_k3$V3
 # angry
   
 
-
 same as above for  k 4
 
 ```{r}
@@ -1540,7 +1412,7 @@ plot(tsnresul, col = "black", bg =as.numeric(tsnetest$expression))
 
 ```
 
-tsnresul
+tsnresult
 
 ```{r}
 tsne(df_OF_output_AUsW_unblind_posed_binned[,c(10, 34:36)],
@@ -1751,9 +1623,9 @@ df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,38:41)]%>%
   scale_fill_brewer(palette = "Dark2")
 
 
+  
+  df_OF_output_AUsW_unblind_posed_binned
 ```
-
-
 
 
 do we get different patterns if we fit placebo and drug separately
@@ -2013,6 +1885,7 @@ write_csv(nmfk4_agg_no_ts, "nmfk4_agg_no_ts.csv")
 
 
 ```
+
 before we do for classification and clustering
 let's do BADIA
 
@@ -2143,7 +2016,7 @@ df_OF_output_AUsW_unblind_posed_binned%>%
 ```
 
 
-movement subspaces
+movement substates
 ```{r}
 colnames(df_OF_output_AUsW_unblind_posed_binned)
 unique(df_OF_output_AUsW_unblind_posed_binned$filename)
@@ -2691,8 +2564,8 @@ df_OF_output_land_f10_dcast<-df_OF_output_land_f10%>%
 
 
 
-maxnormalize <- function(x, ...) {
-    return((x - min(x, na ...)) /(max(x, ...) - min(x, ...))) }
+# maxnormalize <- function(x, ...) {
+#     return((x - min(x, na ...)) /(max(x, ...) - min(x, ...))) }
 
 df_OF_output_land_f10_dcast_norm<- df_OF_output_land_f10_dcast%>%
     group_by(filename,frame)%>%
@@ -2786,7 +2659,7 @@ LANDMARKNMF[is.na(LANDMARKNMF)] <- 0
 
 ```
 
-```
+
 ```{r}
 
 #Replace NA avalues with 0
@@ -2814,11 +2687,8 @@ LANDMARKNMF
 
 
 all for loop
-```
+
 ```{r}
-
-
-
 
 temp_df_bind<- data.frame() # e empty dataframe to store results
 
@@ -2861,6 +2731,8 @@ for (f in 1:length(filename_unique)) {
 
 
 ```
+
+spatiotemporal clustering
 
 ```{r}
 colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
@@ -2914,7 +2786,6 @@ colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
 
 ```{r}
 
-
 df_OF_output_AUsW_unblind_posed_binned3_nona %>%
   
   # compare kmean and manual clustering
@@ -2962,7 +2833,6 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
 # if speed is abobe the threshold and diff = negative
 # anything else stable state
 
-```
 
 ```{r}
 colnames(df_OF_output_AUsW_unblind_posed_binned3_nona)
@@ -3208,6 +3078,7 @@ ungroup()%>%
   
 ```
 
+
 ```{r}
   
   df_OF_output_AUsW_unblind_posed_binned3_nona %>%
@@ -3361,8 +3232,6 @@ ungroup()%>%
 
 
 ```{r}
-    
-    
     
 # expresion
     
@@ -3683,7 +3552,7 @@ df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
 ```
 
 
-try and model mixed models on the variabes above
+ model mixed models on the variables above
 
 ```{r}
 df_OF_output_AUsW_unblind_posed_binned3_nona_clust<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%

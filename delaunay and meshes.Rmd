@@ -498,7 +498,7 @@ triangle_plots$delaunay_tri_ang
 do.call(rbind, lapply(seq_along(tri_ang), 
                       function(x) {
   data.frame(x_new_norm_rot2 = tri_ang[[x]]$x, y_new_norm_rot2 = tri_ang[[x]]$y, 
-             coef_fill = mean(anger_del$coef_fill_land_comp_nmf_max_norm[tri_ang[[x]]$ptNum]),
+             coef_fill = mean(anger_del$coef_fill_AUcomp_nmf_max_norm[tri_ang[[x]]$ptNum]),
              tri_ang = x)
   })) |>
   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
@@ -510,6 +510,8 @@ do.call(rbind, lapply(seq_along(tri_ang),
     scale_colour_viridis_c(option = "magma")+
   theme_void()+
   theme(plot.background = element_rect(fill = "black"))
+
+# the AU seems more accurate
 
 ```
 # fillgradiuent
@@ -570,6 +572,29 @@ triangle_plots$delaunay_tri_happy<- do.call(rbind, lapply(seq_along(tri_happy),
 
 triangle_plots$delaunay_tri_happy
 
+# AU NMF
+# triang.list(deldir(happy_del$x_new_norm_rot2, 
+#                           happy_del$y_new_norm_rot2))
+
+
+do.call(rbind, lapply(seq_along(tri_happy), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_happy[[x]]$x, y_new_norm_rot2 = tri_happy[[x]]$y, 
+             coef_fill = mean(happy_del$coef_fill_AUcomp_nmf_max_norm[tri_happy[[x]]$ptNum]),
+             tri_happy = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill =coef_fill, group = tri_happy)) +
+
+  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
+# happy not accurate
+
 
 
 
@@ -628,7 +653,26 @@ triangle_plots$delaunay_tri_sad<- do.call(rbind, lapply(seq_along(tri_sad),
   theme_dark()+
   theme_void()+
   theme(plot.background = element_rect(fill = "black"))
+
 triangle_plots$delaunay_tri_sad
+
+# AU NMF
+ do.call(rbind, lapply(seq_along(tri_sad), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_sad[[x]]$x, y_new_norm_rot2 = tri_sad[[x]]$y, 
+             coef_fill = mean(sad_del$coef_fill_AUcomp_nmf_max_norm[tri_sad[[x]]$ptNum]),
+             tri_sad = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_sad)) +
+
+  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
 
 ```
 # fillgradiuent
@@ -1221,7 +1265,7 @@ data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$
   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
   geom_polygon(aes(fill = comp3_fill, group = tri_comp1)) +
 
- geom_point(colour = "white", alpha = .1, size = .4)+
+ geom_point(colour = "white", alpha = .1, size = .5)+
     scale_fill_viridis_c(option = "magma")+
     scale_colour_viridis_c(option = "magma")+
   theme_dark()+
@@ -1267,6 +1311,19 @@ triangle_plots$delaunay_tri_comp1+theme(legend.position = "none")
 triangle_plots$delaunay_tri_comp1
 triangle_plots$delaunay_tri_comp2
 triangle_plots$delaunay_tri_comp3
+ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1,
+       width = 10,
+       height = 10,
+       dpi = 300)
+
+ggsave("comp2n.png", device = "png", triangle_plots$delaunay_tri_comp2,
+       width = 10,
+       height = 10,
+       dpi = 300)
+ggsave("comp3n.png", device = "png", triangle_plots$delaunay_tri_comp3,
+       width = 10,
+       height = 10,
+       dpi = 300)
 
 ```
 conclusion = use raw displacement? or au
