@@ -473,7 +473,104 @@ as.data.frame(res_k3@fit@H)%>%
 guides(fill=guide_colorbar(ticks.colour = NA))
 
 
+
+res_k3_fit_H<-as.data.frame(res_k3@fit@H)%>%
+  mutate(component = 1:n())%>%
+  gather(AU, coef, -component)%>%
+  group_by(component)%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )%>%
+  arrange(AU_code)
+
+res_k3_fit_H$component
 chool_talk$AU_NM
+
+triangle_plots$delaunay_tri_comp3
+# load images
+install.packages('magick')
+library(magick)
+
+install.packages('imager')
+
+library(imager)
+pathname<-"~/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/"
+
+file_path <- system.file('/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/comp1.tiff',package='imager') 
+im <- load.image(file_path)
+plot(im)
+image_read("comp1.tiff")
+tiger <- image_read_svg('http://jeroen.github.io/images/tiger.svg', width = 350)
+
+
+comp1.im= image_read("comp1.tiff")
+comp2.im = image_read("comp2.tiff")
+comp3.im = image_read("comp3.tiff")  
+
+
+
+# labels
+labels <- c(
+  comp1= comp1.im,
+comp2 = comp2.im,
+comp3 = comp3.im
+)
+
+iris
+ggplot(iris, aes(Species, Sepal.Width)) +
+  geom_boxplot() +
+  scale_x_discrete(
+    name = NULL,
+    labels = labels
+  ) +
+  theme(
+    axis.text.x = element_markdown(color = "black", size = 11)
+  )
+
+
+as.data.frame(res_k3@fit@H)%>%
+  mutate(component = 1:n())%>%
+  gather(AU, coef, -component)%>%
+  group_by(component)%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )%>%
+  arrange(AU_code)%>%
+  ggplot(aes(component,AU, fill = coef))+
+  geom_tile()+
+    scale_x_discrete(
+    name = NULL,
+    labels = labels
+  ) +
+  theme(
+    axis.text.x = element_markdown(color = "black", size = 11)
+  )
+```
+  
+
+
+  theme_classic()+
+  # scale_fill_viridis_()
+    scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  xlab("K")+
+  p$graphstyle_int+
+guides(fill=guide_colorbar(ticks.colour = NA))
+
+library(ggtext)
+chool_talk$AU_NM+
+    scale_x_discrete(
+    name = NULL,
+    labels = labels
+  ) +
+  theme(
+    axis.text.x = element_markdown(color = "black", size = 11)
+  )
+
 
 
 
@@ -488,7 +585,8 @@ LANDMARKNMF <- read_excel("Library/CloudStorage/GoogleDrive-helioclemente.c@gmai
 View(LANDMARKNMF)
 LANDMARKNMF
 
-
+library(ggtext)
+install.packages("ggtext")
 NMFresk3test<- as.data.frame(res_k3@fit@H)%>%
   mutate(component = 1:n())%>%
   gather(AU, coef, -component)%>%
@@ -890,7 +988,7 @@ df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
 #   # facet_grid(~component)+
 #   theme_classic()
 
-
+nrow(df_OF_output_AUsW_unblind_posed_binned)
 chool_talk$ts_smooth <- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
   

@@ -114,6 +114,9 @@ options(scipen = 999)
 # 
 # df_OF_output_land_posed_binned_select$subject<- sub(".*_p", "", str_match(df_OF_output_land_posed_binned_select$filename, "p\\s*(.*?)\\s*.csv")[,2])
 # df_OF_output_land_posed_binned_select
+nrow(df_OF_output_land_posed_binned_select)
+nrow(df_OF_output_land_posed_binned_select_alligned_eyes)
+
 df_OF_output_land_posed_binned_select_alligned_eyes<- temp_df_bind
 
 # plot alligned landmarks to check
@@ -122,7 +125,7 @@ df_OF_output_land_posed_binned_select_alligned_eyes%>%
   subset(subject == 20)%>% # explore specific subjects
  group_by(lanmark_id,expression)%>%
          summarise_if(is.numeric, mean,na.rm = T)%>%
-  ggplot(aes(x = x_new_norm, y = 1-y_new_norm))+
+  ggplot(aes(x = x_new_norm_rot, y = 1-y_new_norm_rot))+
   geom_point()+
     facet_grid(~expression)
 
@@ -136,40 +139,103 @@ df_OF_output_land_posed_binned_select_alligned_eyes%>%
 # taking too long??
 # test_happy_dcast_binned<- 
   # test_happy_dcast %>%
-df_OF_output_land_posed_binned_select_alligned_eyes%>%
-  group_by(filename, expression,lanmark_id)%>%
+df_OF_output_land_posed_binned_select_alligned_eyes$bin_frame
+df_OF_output_land_posed_binned_select_alligned_eyes<-
 
-  # mutate(x_new_norm = maxnormalize(x),
-  #        y_new_norm = maxnormalize(y))%>%
+df_OF_output_land_posed_binned_select_alligned_eyes%>%
+  mutate(lanmark_id = as.numeric(lanmark_id))%>%
+  group_by(filename)%>%
+  arrange(lanmark_id)%>%
+  # group_by(filename, expression,lanmark_id)%>%
+ group_by(filename, bin_frame)%>%
+  mutate(x_new_norm_rot2 = maxnormalize(x_new_norm_rot),
+         y_new_norm_rot2 = maxnormalize(y_new_norm_rot))%>%
   # compute landmark differences
   group_by(filename,lanmark_id)%>%
-  mutate(x_norm_diff= x_new_norm - lag(x_new_norm),
-         y_norm_diff= y_new_norm - lag(y_new_norm))%>%
+  mutate(x_norm_diff= x_new_norm_rot2 - lag(x_new_norm_rot2),
+         y_norm_diff= y_new_norm_rot2 - lag(y_new_norm_rot2))%>%
+# %>%
     mutate(x_norm_diff_abs= (x_norm_diff),#decide wherher to absolute or not, i cut the abs for now
          y_norm_diff_abs= (y_norm_diff))%>%
-  
+
   # compute a sum - also consider a rolling sum
-   mutate(x_norm_diff_abs_sum= sum(x_norm_diff_abs, na.rm = TRUE),
-         y_norm_diff_abs_sum= sum(y_norm_diff_abs, na.rm = TRUE))%>%
+   # mutate(x_norm_diff_abs_sum= sum(x_norm_diff_abs, na.rm = TRUE),
+   #       y_norm_diff_abs_sum= sum(y_norm_diff_abs, na.rm = TRUE))%>%
   # do a cummulative summ
   # subset(frame == 100)%>%
-  mutate(fill_x_y_sum = (x_norm_diff_abs_sum+y_norm_diff_abs_sum)/2)%>% # this is what we are goint to use to colour pints
+  # ungroup()%>%
+  mutate(fill_x_y_sum = (x_norm_diff_abs+y_norm_diff_abs)/2) %>%
+  # this is what we are goint to use to colour pints
   
   group_by(filename,lanmark_id)%>%
   #the line below just ignores NA (introduced in lag) which would throw error to cumsum otehrwise
       mutate(cum_x_norm_abs_diff = cumsum(ifelse(is.na(x_norm_diff_abs), 0, x_norm_diff_abs)) + x_norm_diff_abs*0,
              cum_y_norm_abs_diff = cumsum(ifelse(is.na(y_norm_diff_abs), 0, y_norm_diff_abs)) + y_norm_diff_abs*0)%>%
   mutate(cum_x_y_norm_abs_diff_mean_fill = ((cum_x_norm_abs_diff+cum_y_norm_abs_diff)/2))%>%
-  
+  mutate(fill_x_y_sum2 = sum(fill_x_y_sum))%>%
+  # cum_x_y_norm_abs_diff_mean_fill
   # normalise the fills
-  group_by(subject)%>%
-  mutate(cum_x_y_norm_abs_diff_mean_fill_norm = maxnorm(cum_y_norm_abs_diff),
+  group_by(subject, lanmark_id)%>%
+  mutate(cum_x_y_norm_abs_diff_mean_fill_norm = maxnormalize(cum_y_norm_abs_diff))%>%
+          # ungroup()%>% 
          
-         fill_x_y_sum_norm = maxnorm(fill_x_y_sum))%>%
-  group_by(filename)%>%
+        mutate(fill_x_y_sum_norm = maxnormalize(fill_x_y_sum),
+               # fill_x_y_sum_norm2 = maxnormalize(fill_x_y_sum2)
+               )
+
+
+
+# df_OF_output_land_posed_binned_select_alligned_eyes2<-
+# 
+# df_OF_output_land_posed_binned_select_alligned_eyes%>%
+#   mutate(lanmark_id = as.numeric(lanmark_id))%>%
+#   group_by(filename)%>%
+#   arrange(lanmark_id)%>%
+# 
+#  # group_by(filename, bin_frame)%>%
+#  #  mutate(x_new_norm_rot2 = maxnormalize(x_new_norm_rot),
+#  #         y_new_norm_rot2 = maxnormalize(y_new_norm_rot))%>%
+#   # compute landmark differences
+#   group_by(filename,lanmark_id)%>%
+#   mutate(x_norm_diff= x_new_norm_rot - lag(x_new_norm_rot),
+#          y_norm_diff= x_new_norm_rot2 - lag(y_new_norm_rot2))%>%
+# # %>%
+#     mutate(x_norm_diff_abs= (x_norm_diff),#decide wherher to absolute or not, i cut the abs for now
+#          y_norm_diff_abs= (y_norm_diff))%>%
+# 
+#   # compute a sum - also consider a rolling sum
+#    # mutate(x_norm_diff_abs_sum= sum(x_norm_diff_abs, na.rm = TRUE),
+#    #       y_norm_diff_abs_sum= sum(y_norm_diff_abs, na.rm = TRUE))%>%
+#   # do a cummulative summ
+#   # subset(frame == 100)%>%
+#   # ungroup()%>%
+#   mutate(fill_x_y_sum = (x_norm_diff_abs+y_norm_diff_abs)/2) %>%
+#   # this is what we are goint to use to colour pints
+#   
+#   group_by(filename,lanmark_id)%>%
+#   #the line below just ignores NA (introduced in lag) which would throw error to cumsum otehrwise
+#       mutate(cum_x_norm_abs_diff = cumsum(ifelse(is.na(x_norm_diff_abs), 0, x_norm_diff_abs)) + x_norm_diff_abs*0,
+#              cum_y_norm_abs_diff = cumsum(ifelse(is.na(y_norm_diff_abs), 0, y_norm_diff_abs)) + y_norm_diff_abs*0)%>%
+#   mutate(cum_x_y_norm_abs_diff_mean_fill = ((cum_x_norm_abs_diff+cum_y_norm_abs_diff)/2))%>%
+#   mutate(fill_x_y_sum2 = sum(fill_x_y_sum))%>%
+#   # cum_x_y_norm_abs_diff_mean_fill
+#   # normalise the fills
+#   group_by(subject, lanmark_id)%>%
+#   mutate(cum_x_y_norm_abs_diff_mean_fill_norm = maxnormalize(cum_y_norm_abs_diff))%>%
+#           # ungroup()%>% 
+#          
+#         mutate(fill_x_y_sum_norm = maxnormalize(fill_x_y_sum),
+#                # fill_x_y_sum_norm2 = maxnormalize(fill_x_y_sum2)
+#                )
+
+```
+  group_by(filename,lanmark_id,)%>%
   # this just ensures we have means which we can sumamrise later
   mutate(cum_x_y_norm_abs_diff_mean_fill_norm_mean = mean(cum_x_y_norm_abs_diff_mean_fill_norm, na.rm = T),
-         fill_x_y_sum_norm_mean - mean(fill_x_y_sum_norm, na.rm = T))
+         fill_x_y_sum_norm_mean = mean(fill_x_y_sum_norm, na.rm = T))
+  
+
+
 
 # might not need to summarise below
   #   group_by(filename, expression, bin_frame, lanmark_id)%>% #posed.spoken
@@ -178,11 +244,21 @@ df_OF_output_land_posed_binned_select_alligned_eyes%>%
 
 
 # summarise for del and vor
-df_OF_output_land_posed_binned_select_alligned_eyes
+```{r}
+df_OF_output_land_posed_binned_select_alligned_eyes%>%
  filter(bin_frame>40 & bin_frame<75)%>%
-  # subset(subject == 20)%>% # explore specific subj
-  group_by(filename, expression, lanmark_id)%>% #posed.spoken
-  summarise_if(is.numeric, mean, na.rm = T)
+  subset(subject == 1)%>% # explore specific subj
+  group_by(expression, lanmark_id)%>% #posed.spoken
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(x = x_new_norm_rot2, y = 1-y_new_norm_rot2, fill = cum_x_y_norm_abs_diff_mean_fill_norm,
+               colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+   geom_voronoi_tile(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm), colour =NA)+
+   geom_point(aes(y = 1-y_new_norm_rot2), colour = "white",size = .5,alpha = .5)+
+     scale_color_viridis_c(option = "magma")+
+  scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)+
+  geom_hline(yintercept = 1)
+
  
  # 
  
@@ -193,6 +269,766 @@ try del amnd vor plots
 ```{r}
 
 # one colour per triangle
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg<- df_OF_output_land_posed_binned_select_alligned_eyes%>%
+ filter(bin_frame>40 & bin_frame<75)%>%
+  # subset(subject == 10)%>% # explore specific subj
+  group_by(expression, lanmark_id)%>% #posed.spoken
+  summarise_if(is.numeric, mean, na.rm = T)
+  # ggplot(aes(x = x_new_norm_rot2, y = 1-y_new_norm_rot2, fill = cum_x_y_norm_abs_diff_mean_fill_norm,
+  #              colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+  #  geom_voronoi_tile(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm), colour =NA)+
+  #  geom_point(aes(y = 1-y_new_norm_rot2), colour = "white",size = .5,alpha = .5)+
+  #    scale_color_viridis_c(option = "magma")+
+  # scale_fill_viridis_c(option = "magma")+
+  #   facet_grid(~expression)+
+  # geom_hline(yintercept = 1)
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg
+
+library(deldir)
+tri <- triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg$y_new_norm_rot2))
+
+delaunay_tri_all<- do.call(rbind, lapply(seq_along(tri), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri[[x]]$x, y_new_norm_rot2 = tri[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg$cum_x_y_norm_abs_diff_mean_fill_norm[tri[[x]]$ptNum]),
+             tri = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_polygon(aes(fill = coef_fill, group = tri)) +
+
+  geom_point(aes(colour = coef_fill))+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")
+
+delaunay_tri_all
+
+View(delaunay_tri_all)
+
+```
+
+# do the fill gradient
+
+```{r}
+# fill gradients
+# Additional
+
+# To gradient fill your triangles, probably best to draw blank triangles over a 2D interpolation:
+# install.packages("interp")
+library(interp)
+library(ggforce)
+
+# tri <- triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg$x_new_norm_rot2, 
+#                           df_OF_output_land_posed_binned_select_alligned_eyes_agg$y_new_norm_rot2))
+# 
+# delaunay_tri_all<- do.call(rbind, lapply(seq_along(tri), 
+#                       function(x) {
+#   data.frame(x_new_norm_rot2 = tri[[x]]$x, y_new_norm_rot2 = tri[[x]]$y, 
+#              coef_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg$cum_x_y_norm_abs_diff_mean_fill_norm[tri[[x]]$ptNum]),
+#              tri = x)
+
+table(is.na(df_OF_output_land_posed_binned_select_alligned_eyes_agg$cum_x_y_norm_abs_diff_mean_fill_norm))
+
+?interp
+nms<-c('x_new_norm_rot2', 'y_new_norm_rot2', 'coef_fill')
+colnames(df_OF_output_land_posed_binned_select_alligned_eyes_agg)
+test_gradient<-df_OF_output_land_posed_binned_select_alligned_eyes_agg[,c(22,23,18)]
+
+colnames(test_gradient)
+
+test_gradient$coef_fill<- test_gradient$cum_x_y_norm_abs_diff_mean_fill_norm
+test_gradient$cum_x_y_norm_abs_diff_mean_fill_norm<-NULL
+
+interp(test_gradient$x_new_norm_rot2,
+       test_gradient$y_new_norm_rot2, 
+       test_gradient$coef_fill, 
+              duplicate = "mean", nx = 1000, ny = 1000) |>
+  interp2xyz() |>
+  as.data.frame() |>
+  setNames(names(test_gradient)[1:3]) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_raster(aes(fill = coef_fill)) +
+  scale_fill_continuous(na.value = NA) +
+  # geom_delaunay_tile(data = test_gradient, fill = NA, color = "#00000050")+
+    # geom_delaunay_segment2(aes(colour = coef_fill), size = 2)+
+   geom_delaunay_segment2(data = test_gradient, aes(colour = coef_fill))+
+    # geom_point(aes(colour = coef_fill))+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")
+
+
+
+
+```
+
+
+
+sepaarte emmotions
+
+```{r}
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg$expression
+
+anger_del<-subset(df_OF_output_land_posed_binned_select_alligned_eyes_agg,
+                expression == "angry")
+
+happy_del<-subset(df_OF_output_land_posed_binned_select_alligned_eyes_agg,
+                expression == "happy")
+
+
+sad_del<-subset(df_OF_output_land_posed_binned_select_alligned_eyes_agg,
+                expression == "sad")
+
+
+anger_del
+tri_ang <- triang.list(deldir(anger_del$x_new_norm_rot2, 
+                          anger_del$y_new_norm_rot2))
+
+
+triangle_plots$delaunay_tri_ang<- do.call(rbind, lapply(seq_along(tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_ang[[x]]$x, y_new_norm_rot2 = tri_ang[[x]]$y, 
+             coef_fill = mean(anger_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_ang[[x]]$ptNum]),
+             tri_ang = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_ang)) +
+
+  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
+
+delaunay_tri_ang
+
+
+# fillgradiuent
+colnames(anger_del)
+
+triangle_plots<-list()
+
+triangle_plots$delaunay_tri_ang_grad<-
+interp(anger_del$x_new_norm_rot2,
+       anger_del$y_new_norm_rot2, 
+       anger_del$cum_x_y_norm_abs_diff_mean_fill_norm, 
+              duplicate = "mean", nx = 1000, ny = 1000) |>
+  interp2xyz() |>
+  as.data.frame() |>
+  setNames(names(anger_del[,c(22,23,18)])) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_raster(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm)) +
+  # scale_fill_continuous(na.value = NA) +
+  geom_delaunay_tile(data = anger_del[,c(22,23,18)], fill = NA, color = "#00000050")+
+    # geom_delaunay_segment2(aes(colour = coef_fill), size = 2)+
+   # geom_delaunay_segment2(data = anger_del, aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+    # geom_delaunay_segment2()+
+    geom_point(aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+theme(
+  # legend.position = "top",
+      legend.title = element_blank())
+
+triangle_plots$delaunay_tri_ang
+
+triangle_plots$delaunay_tri_ang_grad
+```
+
+
+happy sad
+```{r}
+anger_del
+tri_happy <- triang.list(deldir(happy_del$x_new_norm_rot2, 
+                          happy_del$y_new_norm_rot2))
+
+
+triangle_plots$delaunay_tri_happy<- do.call(rbind, lapply(seq_along(tri_happy), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_happy[[x]]$x, y_new_norm_rot2 = tri_happy[[x]]$y, 
+             coef_fill = mean(happy_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_happy[[x]]$ptNum]),
+             tri_happy = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill =coef_fill, group = tri_happy)) +
+
+  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
+
+triangle_plots$delaunay_tri_happy
+
+
+# fillgradiuent
+colnames(anger_del)
+
+triangle_plots<-list()
+
+triangle_plots$delaunay_tri_happy_grad<-
+interp(happy_del$x_new_norm_rot2,
+       happy_del$y_new_norm_rot2, 
+       happy_del$cum_x_y_norm_abs_diff_mean_fill_norm, 
+              duplicate = "mean", nx = 1000, ny = 1000) |>
+  interp2xyz() |>
+  as.data.frame() |>
+  setNames(names(happy_del[,c(22,23,18)])) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_raster(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm)) +
+  # scale_fill_continuous(na.value = NA) +
+  geom_delaunay_tile(data = happy_del, fill = NA, color = "#00000050")+
+    # geom_delaunay_segment2(aes(colour = coef_fill), size = 2)+
+   # geom_delaunay_segment2(data = happy_del, aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+    # geom_delaunay_segment2()+
+    # geom_point(aes(colour = coef_fill))+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+theme(legend.position = "top")
+
+
+
+triangle_plots$delaunay_tri_happy
+triangle_plots$delaunay_tri_happy_grad
+
+
+
+```
+sad
+
+```{r}
+tri_sad <- triang.list(deldir(sad_del$x_new_norm_rot2, 
+                          sad_del$y_new_norm_rot2))
+
+
+triangle_plots$delaunay_tri_sad<- do.call(rbind, lapply(seq_along(tri_sad), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_sad[[x]]$x, y_new_norm_rot2 = tri_sad[[x]]$y, 
+             coef_fill = mean(sad_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_sad[[x]]$ptNum]),
+             tri_sad = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_sad)) +
+
+  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
+triangle_plots$delaunay_tri_sad
+
+
+# fillgradiuent
+
+
+
+triangle_plots$delaunay_tri_sad_grad<-
+interp(sad_del$x_new_norm_rot2,
+       sad_del$y_new_norm_rot2, 
+       sad_del$cum_x_y_norm_abs_diff_mean_fill_norm, 
+              duplicate = "mean", nx = 1000, ny = 1000) |>
+  interp2xyz() |>
+  as.data.frame() |>
+  setNames(names(sad_del[,c(22,23,18)])) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_raster(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm)) +
+  # scale_fill_continuous(na.value = NA) +
+  geom_delaunay_tile(data = sad_del[,c(22,23,18)], fill = NA, color = "#00000050")+
+    # geom_delaunay_segment2(aes(colour = coef_fill), size = 2)+
+   # geom_delaunay_segment2(data = sad_del, aes(colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
+    # geom_delaunay_segment2()+
+    # geom_point(aes(colour = coef_fill))+
+  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
+
+
+triangle_plots$delaunay_tri_sad
+triangle_plots$delaunay_tri_sad_grad
+
+```
+
+correlate landmarks with NMF components?
+
+
+above not quite there yet
+
+let's see correlations
+
+```{r}
+
+nrow(df_OF_output_land_posed_binned_select_alligned_eyes)
+nrow(df_OF_output_land_posed_binned_select)
+# correlation between land mark and AUS
+
+df_OF_output_land_posed_binned_select_alligned_eyes
+colnames(df_OF_output_land_posed_binned_select_alligned_eyes)
+
+# dcast for merging with NMF results
+df_OF_output_land_posed_binned_select_dcast <- setDT(df_OF_output_land_posed_binned_select_alligned_eyes[c(1:4,9,13:14)])%>%
+  mutate(x_norm_diff = if_else(bin_frame == 1, 0, x_norm_diff),
+         y_norm_diff = if_else(bin_frame == 1, 0, y_norm_diff))%>%
+
+  setDT()%>%
+  dcast(filename+bin_frame+expression+subject~lanmark_id, value.var = c("x_norm_diff","y_norm_diff"))
+
+nrow(df_OF_output_land_posed_binned_select_dcast)
+nrow(df_OF_output_AUsW_unblind_posed_binned)
+  # both should be 22800
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+# merge with landmars
+
+df_OF_output_land_posed_binned_select_dcast<- left_join(df_OF_output_land_posed_binned_select_dcast,df_OF_output_AUsW_unblind_posed_binned[,c(1,2,34:36)])
+
+df_OF_output_land_posed_binned_select_dcast<- df_OF_output_land_posed_binned_select_dcast%>%
+  group_by(filename)%>%
+  mutate(comp1_max_norm = maxnormalize(comp1),
+         comp2_max_norm = maxnormalize(comp2),
+         comp3_max_norm = maxnormalize(comp3))
+
+# df_OF_output_land_posed_binned_select_dcast%>%
+
+
+df_OF_output_land_posed_binned_select_dcast
+
+
+# df_AU_land_bin<- left_join(df_OF_output_AUsW_unblind_posed_binned1,df_OF_output_land_posed_binned_select_dcast,
+#           by = c("filename", "expression", "bin_frame"))
+
+
+# Select the two groups of variables
+colnames(df_OF_output_land_posed_binned_select_dcast)
+vars_x <- select(df_OF_output_land_posed_binned_select_dcast, 144:146)
+
+# we can just take y to start
+vars_y <- select(df_OF_output_land_posed_binned_select_dcast, 73:140)
+
+# Compute the correl
+cor_matrix<- cor(vars_x[,2:4], vars_y[,2:69], use="pairwise.complete.obs")
+
+
+# Visualize the correlations
+library(corrplot)
+corrplot(cor_matrix)
+cor_matrix
+
+above_thresh<- as.data.frame(abs(cor_matrix))%>%
+  summarise_if(is.numeric, max, na.rm = T)%>%
+  gather(key, values)
+  # subset(values>.3)
+
+# View(above_thresh)
+
+
+# cor_matrix_tresh<- as.data.frame(abs(cor_matrix))
+# range(cor_matrix_tresh)
+# cor_matrix_tresh_repl<- replace(cor_matrix_tresh, cor_matrix_tresh < .3, 0)
+
+
+cor_matrix_tresh_repl_gath<- cor_matrix_tresh%>%
+  mutate(comp = rownames(cor_matrix_tresh_repl))%>%
+  gather(land_y, value,-comp)
+  
+
+
+cor_matrix_tresh_repl_gath%>%
+  ggplot(aes(value))+
+  geom_histogram()
+
+
+cor_matrix_tresh_repl_gath_dcast<- cor_matrix_tresh_repl_gath%>%
+  mutate(comp = paste0("abs_cor",comp))%>%
+  setDT()%>%
+  dcast(land_y~comp, value.var = "value")
+
+cor_matrix_tresh_repl_gath_dcast<-cor_matrix_tresh_repl_gath_dcast%>%
+  mutate(lanmark_id = substr(land_y,13,14))
+
+# combine with original data
+df_OF_output_land_posed_binned_select_alligned_eyes
+
+cor_matrix_tresh_repl_gath_dcast$lanmark_id<- as.numeric(cor_matrix_tresh_repl_gath_dcast$lanmark_id)
+df_OF_output_land_posed_binned_select_alligned_eyes$lanmark_id
+
+# nrow(df_OF_output_land_posed_binned_select_alligned_eyes)==nrow(
+# left_join(df_OF_output_land_posed_binned_select_alligned_eyes,cor_matrix_tresh_repl_gath_dcast))#true
+
+df_OF_output_land_posed_binned_select_alligned_eyes<- left_join(df_OF_output_land_posed_binned_select_alligned_eyes,cor_matrix_tresh_repl_gath_dcast)
+
+colnames(df_OF_output_land_posed_binned_select_alligned_eyes)
+df_OF_output_land_posed_binned_select_alligned_eyes
+
+
+df_OF_output_land_posed_binned_select_alligned_eyes<- df_OF_output_land_posed_binned_select_alligned_eyes%>%
+  # thresholded
+  mutate(abs_corcomp1_max_norm_trsh = if_else(abs_corcomp1_max_norm< .02,0,abs_corcomp1_max_norm),
+         abs_corcomp2_max_norm_trsh = if_else(abs_corcomp2_max_norm< .02,0,abs_corcomp2_max_norm),
+         abs_corcomp3_max_norm_trsh = if_else(abs_corcomp3_max_norm< .02,0,abs_corcomp3_max_norm))
+
+# comp3
+df_OF_output_land_posed_binned_select_alligned_eyes%>%
+ filter(bin_frame>40 & bin_frame<75)%>%
+  # subset(subject == 1)%>% # explore specific subj
+  group_by( lanmark_id)%>% #posed.spoken
+  # mutate()
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+    ungroup()%>%
+  
+  mutate(coef_fill = cum_x_y_norm_abs_diff_mean_fill_norm*abs_corcomp3_max_norm)%>%
+  mutate(coef_fill = maxnormalize(coef_fill))%>%
+  ggplot(aes(x = x_new_norm_rot2, y = 1-y_new_norm_rot2, fill =coef_fill ,
+               colour = coef_fill))+
+   geom_voronoi_tile(aes(fill = coef_fill), colour =NA)+
+   geom_point(aes(y = 1-y_new_norm_rot2), colour = "white",size = .5,alpha = .5)+
+     scale_color_viridis_c(option = "magma")+
+  scale_fill_viridis_c(option = "magma")+
+    # facet_grid(~expression)+
+  geom_hline(yintercept = 1)+
+  theme(legend.title= element_blank())+
+  ggtitle("comp3")
+
+
+# comp2
+# df_OF_output_land_posed_binned_select_alligned_eyes%>%
+#  filter(bin_frame>40 & bin_frame<75)%>%
+#   subset(subject == 1)%>% # explore specific subj
+#   group_by( lanmark_id)%>% #posed.spoken
+#   # mutate()
+#   summarise_if(is.numeric, mean, na.rm = T)%>%
+# 
+#     group_by( lanmark_id)%>%
+#   
+#   mutate(coef_fill = cum_x_y_norm_abs_diff_mean_fill_norm*abs_corcomp2_max_norm)%>%
+#   mutate(coef_fill = maxnormalize(coef_fill))%>%
+#   ggplot(aes(x = x_new_norm_rot2, y = 1-y_new_norm_rot2, fill =coef_fill ,
+#                colour = coef_fill))+
+#    geom_voronoi_tile(aes(fill = coef_fill), colour =NA)+
+#    geom_point(aes(y = 1-y_new_norm_rot2), colour = "white",size = .5,alpha = .5)+
+#      scale_color_viridis_c(option = "magma")+
+#   scale_fill_viridis_c(option = "magma")+
+#     # facet_grid(~expression)+
+#   geom_hline(yintercept = 1)+
+#   theme(legend.title= element_blank())
+
+
+df_OF_output_land_posed_binned_select_alligned_eyes%>%
+ filter(bin_frame>40 & bin_frame<75)%>%
+  # subset(subject == 1)%>% # explore specific subj
+  group_by( lanmark_id)%>% #posed.spoken
+  # mutate()
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+    ungroup()%>%
+  
+  mutate(coef_fill = cum_x_y_norm_abs_diff_mean_fill_norm*abs_corcomp2_max_norm)%>%
+  mutate(coef_fill = maxnormalize(coef_fill))%>%
+  ggplot(aes(x = x_new_norm_rot2, y = 1-y_new_norm_rot2, fill =coef_fill ,
+               colour = coef_fill))+
+   geom_voronoi_tile(aes(fill = coef_fill), colour =NA)+
+   geom_point(aes(y = 1-y_new_norm_rot2), colour = "white",size = .5,alpha = .5)+
+     scale_color_viridis_c(option = "magma")+
+  scale_fill_viridis_c(option = "magma")+
+    # facet_grid(~expression)+
+  geom_hline(yintercept = 1)+
+  theme(legend.title= element_blank())+
+    ggtitle("comp2")
+
+
+# comp1
+df_OF_output_land_posed_binned_select_alligned_eyes%>%
+ filter(bin_frame>40 & bin_frame<75)%>%
+  # subset(subject == 1)%>% # explore specific subj
+  group_by( lanmark_id)%>% #posed.spoken
+  # mutate()
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  ungroup()%>%
+  
+  mutate(coef_fill = cum_x_y_norm_abs_diff_mean_fill_norm*abs_corcomp1_max_norm)%>%
+  mutate(coef_fill = maxnormalize(coef_fill))%>%
+  ggplot(aes(x = x_new_norm_rot2, y = 1-y_new_norm_rot2, fill =coef_fill ,
+               colour = coef_fill))+
+   geom_voronoi_tile(aes(fill = coef_fill), colour =NA)+
+   geom_point(aes(y = 1-y_new_norm_rot2), colour = "white",size = .5,alpha = .5)+
+     scale_color_viridis_c(option = "magma")+
+  scale_fill_viridis_c(option = "magma")+
+    # facet_grid(~expression)+
+  geom_hline(yintercept = 1)+
+  theme(legend.title= element_blank())+
+    ggtitle("comp1")
+
+
+```
+
+
+delaunay with the new data
+
+```{r}
+
+# one colour per triangle
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg2<- df_OF_output_land_posed_binned_select_alligned_eyes%>%
+ filter(bin_frame>40 & bin_frame<75)%>%
+  # subset(subject == 10)%>% # explore specific subj
+  group_by(lanmark_id)%>% #posed.spoken
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  ungroup()%>%
+  
+  mutate(comp1_fill = cum_x_y_norm_abs_diff_mean_fill_norm*abs_corcomp1_max_norm,
+         comp2_fill = cum_x_y_norm_abs_diff_mean_fill_norm*abs_corcomp2_max_norm,
+         comp3_fill = cum_x_y_norm_abs_diff_mean_fill_norm*abs_corcomp3_max_norm)%>%
+  mutate(comp1_fill = maxnormalize(comp1_fill),
+         comp2_fill = maxnormalize(comp2_fill),
+         comp3_fill = maxnormalize(comp3_fill))
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg2$comp1_fill
+
+library(deldir)
+
+# comp 1
+data.frame(x_new_norm_rot2 = tri_happy[[x]]$x, y_new_norm_rot2 = tri_happy[[x]]$y, 
+             coef_fill = mean(happy_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_happy[[x]]$ptNum]),
+             tri_happy = x)
+
+
+
+tri_comp1 <- triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+triangle_plots$delaunay_tri_comp1<-
+
+do.call(rbind, lapply(seq_along(tri_comp1), 
+                      function(x) {
+data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$y, 
+             comp1_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$comp1_fill[tri_comp1[[x]]$ptNum]),
+             tri_comp1 = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_polygon(aes(fill = comp1_fill, group = tri_comp1)) +
+
+  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
+
+triangle_plots$delaunay_tri_comp1
+
+
+
+```
+
+# do the fill gradient
+
+```{r}
+# fill gradients
+# Additional
+
+# To gradient fill your triangles, probably best to draw blank triangles over a 2D interpolation:
+# install.packages("interp")
+library(interp)
+library(ggforce)
+
+
+colnames(df_OF_output_land_posed_binned_select_alligned_eyes_agg2)
+
+gradient_df<-list()
+
+gradient_df$comp1 <-df_OF_output_land_posed_binned_select_alligned_eyes_agg2[,c(21,22,29)]
+
+colnames(gradient_df$comp1)
+
+# test_gradient$coef_fill<- test_gradient$cum_x_y_norm_abs_diff_mean_fill_norm
+# test_gradient$cum_x_y_norm_abs_diff_mean_fill_norm<-NULL
+
+triangle_plots$delaunay_tri_comp1_grad<- interp(gradient_df$comp1$x_new_norm_rot2,
+       gradient_df$comp1$y_new_norm_rot2, 
+       gradient_df$comp1$comp1_fill, 
+              duplicate = "mean", nx = 1000, ny = 1000) |>
+  interp2xyz() |>
+  as.data.frame() |>
+  setNames(names(gradient_df$comp1)[1:3]) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_raster(aes(fill = comp1_fill),alpha = .7) +
+  scale_fill_continuous(na.value = NA) +
+   # geom_delaunay_tile(data = gradient_df$comp1,aes(colour = comp1_fill, fill = comp1_fill), alpha = .5)+
+   geom_delaunay_segment2(data = gradient_df$comp1,aes(colour = comp1_fill, fill = comp1_fill),alpha = .8)+
+  geom_point(data = gradient_df$comp1,aes(colour = comp1_fill, fill = comp1_fill), alpha = .8,size = .9)+
+  # geom_delaunay_tile(data = gradient_df$comp1, fill = NA, color = "#00000050")+
+  
+    # geom_delaunay_segment(aes(colour = comp1_fill), size = 2)+
+   # geom_delaunay_segment2(data = gradient_df$comp1, aes(colour = comp1_fill))+
+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()
+
+triangle_plots$delaunay_tri_comp1_grad
+```
+comp2
+```{r}
+# one colour per triangle
+
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg2$comp2_fill
+
+library(deldir)
+
+# comp 1
+
+
+
+tri_comp1 <- triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+triangle_plots$delaunay_tri_comp2<-
+
+do.call(rbind, lapply(seq_along(tri_comp1), 
+                      function(x) {
+data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$y, 
+             comp2_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$comp2_fill[tri_comp1[[x]]$ptNum]),
+             tri_comp1 = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_polygon(aes(fill = comp2_fill, group = tri_comp1)) +
+
+  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
+
+triangle_plots$delaunay_tri_comp2
+
+
+```
+
+comp 3
+
+```{r}
+# one colour per triangle
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg2$comp3_fill
+
+library(deldir)
+
+# comp 1
+
+
+
+tri_comp1 <- triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+triangle_plots$delaunay_tri_comp3<-
+
+do.call(rbind, lapply(seq_along(tri_comp1), 
+                      function(x) {
+data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$y, 
+             comp3_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$comp3_fill[tri_comp1[[x]]$ptNum]),
+             tri_comp1 = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_polygon(aes(fill = comp3_fill, group = tri_comp1)) +
+
+  geom_point(aes(colour = comp3_fill),colour = "white", alpha = .5)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
+
+triangle_plots$delaunay_tri_comp3+theme_void()+theme(legend.position = "none")
+triangle_plots$delaunay_tri_comp2+theme_void()+theme(legend.position = "none")
+
+triangle_plots$delaunay_tri_comp1+theme_void()+theme(legend.position = "none")
+triangle_plots$delaunay_tri_comp3
+
+```
+
+
+```{r}
+library(patchwork)
+panel_comps<- (((triangle_plots$ delaunay_tri_comp1+
+ triangle_plots$  delaunay_tri_comp2+
+ triangle_plots$  delaunay_tri_comp3)+
+  plot_layout(guides = "collect"))/
+((triangle_plots$delaunay_tri_ang+
+  triangle_plots$delaunay_tri_happy+
+  triangle_plots$delaunay_tri_sad)+
+    plot_layout(guides = "collect")))+
+    # theme_dark()+
+  # theme_void()+
+  theme(plot.background = element_rect(fill = "black"))
+patchwork::plot_layout()
+
+panel_comps+
+  theme(plot.background = element_rect(fill = "black"))
+
+```
+# combine with the plots
+NMF3_k3_res<- as.data.frame(res_k3@fit@H)%>%
+  mutate(component = 1:n())%>%
+  gather(AU, coef, -component)%>%
+  group_by(component)%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )
+
+NMF3_k3_res$comp<- NMF3_k3_res$component
+lan_AU_comp_paired<- left_join(NMF3_k3_res$,cor_matrix_tresh_repl_gath)
+# avoid multiplication y zero
+
+lan_AU_comp_paired$value<- lan_AU_comp_paired$value+0.0001
+
+lan_AU_comp_paired$lanmark_id<- substr(lan_AU_comp_paired$land_y, 12,13)
+# 
+# group_by(as.factor(AU))%>%
+#     arrange(desc(value))
+  
+```
+
+
+# need t do each expression separatelly I think
+
+
+tri <- triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg$y_new_norm_rot2))
+
+delaunay_tri_all<- do.call(rbind, lapply(seq_along(tri), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri[[x]]$x, y_new_norm_rot2 = tri[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg$cum_x_y_norm_abs_diff_mean_fill_norm[tri[[x]]$ptNum]),
+             tri = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_polygon(aes(fill = coef_fill, group = tri)) +
+
+  geom_point(aes(colour = coef_fill))+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")
+
+delaunay_tri_all
+
+View(delaunay_tri_all)
+
+```
+
+
+
+
 tri <- triang.list(deldir(iris$Sepal.Length, iris$Sepal.Width))
 do.call(rbind, lapply(seq_along(tri), 
                       function(x) {
@@ -203,10 +1039,10 @@ do.call(rbind, lapply(seq_along(tri),
   ggplot(aes(Sepal.Length, Sepal.Width)) +
   geom_polygon(aes(fill = Petal.Length, group = tri)) 
 
-# fil gradients
-Additional
+# fill gradients
+# Additional
 
-To gradient fill your triangles, probably best to draw blank triangles over a 2D interpolation:
+# To gradient fill your triangles, probably best to draw blank triangles over a 2D interpolation:
 
 library(interp)
 library(ggforce)
@@ -287,11 +1123,6 @@ paneled
 unique(test_happy_dcast$frame)
 
 
-
-  
-    test_happy_dcast
-  
-  
 # 
 # library(deldir)
 #   frame_1<- subset(test_happy_dcast, test_happy_dcast$frame == 1)
@@ -355,7 +1186,7 @@ test_happy_dcast_summ_paired_test%>%
   
     test_happy_dcast
   
-```
+
 
 stack question
 ```{r}
@@ -378,7 +1209,14 @@ library(deldir)
 ?deldir
 deldir_output<-deldir(iris$Sepal.Length, iris$Sepal.Width, plot=TRUE)
 deldir_output
+
+
 ```
+
+
+```
+
+
 
 
 
@@ -420,6 +1258,10 @@ lan_AU_comp_paired_W %>%
   mutate(cum_x_y_norm_abs_diff_mean_fill_norm = maxnormalize(cum_y_norm_abs_diff))
 ```
 
+
+
+
+
 NMF of landmarks?
 
 ```{r}
@@ -447,19 +1289,13 @@ colnames(df_OF_output_land_posed_binned)
  df_OF_output_land_posed_binned_select%>%
   group_by(filename,bin_frame)%>%
   arrange(as.numeric(lanmark_id),bin_frame)
-df_OF_output_land_posed_binned_select_dcast <- setDT(df_OF_output_land_posed_binned_select)%>%
-  # group_by(filename)%>%
-  # arrange(bin_frame,as.numeric(as.factor(lanmark_id)) ) %>%
-  # setDT()%>%
-  dcast(filename+bin_frame+expression+frame~lanmark_id, value.var = c("x_new_norm","y_new_norm"))
-
-df_OF_output_land_posed_binned_select_dcast
 
 ```
 
 NMF on landmarks
 
 ```{r}
+<!-- use the alligned ones -->
 df_OF_output_land_posed_binned_select_dcast
 library(NMF)
 
@@ -539,90 +1375,8 @@ left_join(res_k3_land_W_gath, res_k3_land_H_dcast)%>%
 ```
 
 
-above not quite there yet
-
-let's see correlations
-
-```{r}
-# correlation between land mark and AUS
-df_OF_output_AUsW_unblind_posed_binned1
-df_OF_output_land_posed_binned_select_dcast
-colnames(df_OF_output_land_posed_binned_select_dcast)
-df_AU_land_bin<- left_join(df_OF_output_AUsW_unblind_posed_binned1,df_OF_output_land_posed_binned_select_dcast,
-          by = c("filename", "expression", "bin_frame"))
-
-df_AU_land_bin
-
-# Select the two groups of variables
-colnames(df_AU_land_bin)
-vars_x <- select(df_AU_land_bin, 16:32)
-
-# we can just take y to start
-vars_y <- select(df_AU_land_bin, 119:186)
-
-# Compute the correl
-cor(vars_x, vars_y, use="pairwise.complete.obs")
-
-# Compute the correlations as before
-cor_matrix <- cor(vars_x, vars_y, use="pairwise.complete.obs")
-
-# Visualize the correlations
-library(corrplot)
-corrplot(cor_matrix)
-
-# selected_vars <- vars_y[which(abs(cor_matrix[,1]) > .3),]
-# 
-# vars_y[,which(abs(cor_matrix[1,]) > .3)]
-# 
-# selected_vars
-
-above_thresh<- as.data.frame(abs(cor_matrix))%>%
-  summarise_if(is.numeric, max, na.rm = T)%>%
-  gather(key, values)
-  subset(values>.3)
-
-View(above_thresh)
 
 
-cor_matrix
-df_OF_output_land_posed_binned
-cor_matrix_tresh<- as.data.frame(abs(cor_matrix))
-  select(c(above_thresh$key))
-  
-cor_matrix_tresh_repl<- replace(cor_matrix_tresh, cor_matrix_tresh < .3, 0)
-
-
-cor_matrix_tresh_repl_gath<- cor_matrix_tresh_repl%>%
-  mutate(AU = rownames(cor_matrix_tresh_repl))%>%
-  gather(land_y, value,-AU)
-  
-colnames(cor_matrix_tresh_repl_gath)
-
-unique(cor_matrix_tresh_repl_gath$land_y)
-
-# combine with the plots
-NMF3_k3_res<- as.data.frame(res_k3@fit@H)%>%
-  mutate(component = 1:n())%>%
-  gather(AU, coef, -component)%>%
-  group_by(component)%>%
-  mutate(max_comp = max(coef),
-         coef = coef/max_comp,
-         # AU = substring(AU,8,40),
-         AU_code = substring(AU,4,5)
-         )
-
-NMF3_k3_res$comp<- NMF3_k3_res$component
-lan_AU_comp_paired<- left_join(NMF3_k3_res$,cor_matrix_tresh_repl_gath)
-# avoid multiplication y zero
-
-lan_AU_comp_paired$value<- lan_AU_comp_paired$value+0.0001
-
-lan_AU_comp_paired$lanmark_id<- substr(lan_AU_comp_paired$land_y, 12,13)
-# 
-# group_by(as.factor(AU))%>%
-#     arrange(desc(value))
-  
-```
 
 
 go back tothebig dataset at the start
