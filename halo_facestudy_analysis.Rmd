@@ -1161,11 +1161,13 @@ paper_plots$NMF_panel_posed
 
 test<-(chool_talk$AU_NM|(paper_plots$posed_comp_ts/paper_plots$posed_comp_ts_hm))
 
+
+test2
 test3<-grid:: (test)
 
 
 
-wrap_elements(full = test) + wrap_elements(full = test2) + plot_layout(ncol = 1)
+wrap_elements(full = test) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = )
 
 patchwork::wrap_elements(test3)/test2
 test2<-(chool_talk$ts_smooth/chool_talk$ts_hm)
@@ -1193,6 +1195,31 @@ ggsave("fig2_NMF_panel_posed.tiff", paper_plots$NMF_panel_posed, device = "tiff"
 
 
 # spoken
+
+
+require(ggplot2); require(grid); require(png); require(RCurl)
+install.packages("RCurl")
+require(RCurl)
+
+p = ggplot(iris, aes(Sepal.Length, Sepal.Width)) + geom_point() + facet_wrap(~Species)
+
+img1 = readPNG(getURLContent('https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/ang.png'))
+img2 = readPNG(getURLContent('https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/hap.png'))
+img3 = readPNG(getURLContent('https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/sad.png'))
+
+
+annotation_custom2 <- 
+function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data){ layer(data = data, stat = StatIdentity, position = PositionIdentity, 
+        geom = ggplot2:::GeomCustomAnn,
+        inherit.aes = TRUE, params = list(grob = grob, 
+                                          xmin = xmin, xmax = xmax, 
+                                          ymin = ymin, ymax = ymax))}
+
+a1 = annotation_custom2(rasterGrob(img1, interpolate=TRUE), xmin=7, xmax=8, ymin=3.75, ymax=4.5, data=iris[1,])
+a2 = annotation_custom2(rasterGrob(img2, interpolate=TRUE), xmin=7, xmax=8, ymin=3.75, ymax=4.5, data=iris[51,])
+a3 = annotation_custom2(rasterGrob(img3, interpolate=TRUE), xmin=7, xmax=8, ymin=3.75, ymax=4.5, data=iris[101,])
+
+p + a1 + a2 + a3
 
 ```
 
