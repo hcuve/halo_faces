@@ -1118,6 +1118,15 @@ chool_talk$ts_smooth <- chool_talk$ts_smooth + scale_x_continuous(breaks=c(0,50,
   theme(panel.spacing.x = unit(1.5, "lines"))+
   theme(legend.position = "top")
 
+
+test4pot5
+
+
+chool_talk$ts_smooth <- test4pot5 + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+    scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+  theme(panel.spacing.x = unit(1.5, "lines"))+
+  theme(legend.position = "top")
+
 chool_talk$ts_hm <- chool_talk$ts_hm +scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
   theme(panel.spacing.x = unit(1.5, "lines"))
 
@@ -1167,14 +1176,14 @@ test3<-grid:: (test)
 
 
 
-wrap_elements(full = test) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = )
-
 patchwork::wrap_elements(test3)/test2
 test2<-(chool_talk$ts_smooth/chool_talk$ts_hm)
   plot_layout(nrow = 2)
   (chool_talk$ts_smooth/chool_talk$ts_hm))+
   plot_layout(ncol = 2, widths = c(.7,2))
 
+
+wrap_elements(full = test) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = )
 
 design<-'AAB
 ABC'
@@ -1215,12 +1224,40 @@ function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data){ layer(d
                                           xmin = xmin, xmax = xmax, 
                                           ymin = ymin, ymax = ymax))}
 
-a1 = annotation_custom2(rasterGrob(img1, interpolate=TRUE), xmin=7, xmax=8, ymin=3.75, ymax=4.5, data=iris[1,])
-a2 = annotation_custom2(rasterGrob(img2, interpolate=TRUE), xmin=7, xmax=8, ymin=3.75, ymax=4.5, data=iris[51,])
-a3 = annotation_custom2(rasterGrob(img3, interpolate=TRUE), xmin=7, xmax=8, ymin=3.75, ymax=4.5, data=iris[101,])
+test2
 
-p + a1 + a2 + a3
+test4_df<-
+ df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
 
+test4pot<-test4_df%>%
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")+
+  theme(legend.position = "top")
+
+
+a1 = annotation_custom2(rasterGrob(img1, interpolate=TRUE), xmin=60, xmax=100, ymin = .5, ymax = 1, data=test4_df%>%subset(expression == "angry"))
+a2 = annotation_custom2(rasterGrob(img2, interpolate=TRUE), xmin=60, xmax=100, ymin = .5, ymax = 1, data=test4_df%>%subset(expression == "happy"))
+a3 = annotation_custom2(rasterGrob(img3, interpolate=TRUE), xmin=60, xmax=100, ymin = .5, ymax = 1, data=test4_df%>%subset(expression == "sad"))
+
+test4_df[2000,]
+test4pot5<- test4pot + a1 + a2 + a3
+ + a1 + a2 + a3
 ```
 
 
