@@ -474,7 +474,10 @@ triangle_plots$delaunay_tri_ang<- do.call(rbind, lapply(seq_along(tri_ang),
     scale_fill_viridis_c(option = "magma")+
     scale_colour_viridis_c(option = "magma")+
   theme_void()+
-  theme(plot.background = element_rect(fill = "black"),
+    theme(
+                                       legend.position = "none")
+  
+theme(plot.background = element_rect(fill = "black"),
                                        legend.position = "none")
 
 triangle_plots$delaunay_tri_ang
@@ -550,6 +553,8 @@ triangle_plots$delaunay_tri_ang_grad
 
 happy sad
 ```{r}
+unique(happy_del$expression)
+library(deldir)
 tri_happy <- triang.list(deldir(happy_del$x_new_norm_rot2, 
                           happy_del$y_new_norm_rot2))
 
@@ -569,6 +574,9 @@ triangle_plots$delaunay_tri_happy<- do.call(rbind, lapply(seq_along(tri_happy),
     scale_colour_viridis_c(option = "magma")+
   theme_dark()+
   theme_void()+
+    theme_void()+
+    theme(
+                                       legend.position = "none")
   theme(plot.background = element_rect(fill = "black"),
         legend.position = "none")
 
@@ -654,6 +662,9 @@ triangle_plots$delaunay_tri_sad<- do.call(rbind, lapply(seq_along(tri_sad),
     scale_colour_viridis_c(option = "magma")+
   theme_dark()+
   theme_void()+
+    theme_void()+
+    theme(
+                                       legend.position = "none")
   theme(plot.background = element_rect(fill = "black"),
         legend.position = "none")
 
