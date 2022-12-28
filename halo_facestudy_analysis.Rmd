@@ -468,7 +468,7 @@ as.data.frame(res_k3@fit@H)%>%
   # scale_fill_viridis_()
     scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
                        limits =c(0,1))+#)+
-  xlab("Component")+
+  xlab("Component (K)")+
   p$graphstyle_int+
 guides(fill=guide_colorbar(ticks.colour = NA))
 chool_talk$AU_NM 
@@ -495,23 +495,27 @@ library(magick)
 # I is for italic
 labels <- c(
   `1` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1n.png'
-    width='100' /><br> 1",
+    width='50' /><br> 1",
   `2` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2n.png'
-    width='100' /><br> 2",
+    width='50' /><br> 2",
   `3` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3n.png'
-    width='100' /><br> 3"
+    width='50' /><br> 3"
 )
-
-  chool_talk$AU_NM +
+# ggtext::
+chool_talk$AU_NM<-  chool_talk$AU_NM +
+  xlab("Component (K)")+
     scale_x_discrete(
     name = NULL,
     labels = labels
   ) +
   theme(
-    axis.text.x = element_markdown(color = "black", size = 20)
+    axis.text.x = element_markdown(color = "black", size = 15),
+     axis.title.x = element_markdown(color = "black", size = 20)
   )
 
-  
+  chool_talk$AU_NM
+    ("XXX")
+    
   
 
 ```
@@ -534,7 +538,7 @@ df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
   # facet_grid(~expression )+
   theme_classic()+
    xlab("time bin")+
-  p$graphstyle_int+
+  p$graphstyle_int +
    scale_color_viridis_d(option = "magma")+
   geom_vline(xintercept = 55)+
     geom_vline(xintercept = 25)
@@ -944,17 +948,16 @@ df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
   facet_grid(expression~component)+
   theme_classic()
 
-# df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
-#   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-#   group_by(bin_framecomponent, drug.placebo, bin_frame)%>%
-#   summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-#   # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-#   ggplot(aes(bin_frame, expression, fill= coef, color = ))+
-#   geom_smooth(se = F)+
-#   # facet_grid(~component)+
-#   theme_classic()
 
 nrow(df_OF_output_AUsW_unblind_posed_binned)
+
+
+```
+
+
+
+timeseries
+```{r}
 chool_talk$ts_smooth <- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
   
@@ -974,7 +977,35 @@ chool_talk$ts_smooth <- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:
    xlab("time bin")+
   p$graphstyle_int+
    scale_color_viridis_d(option = "magma")
-   
+
+
+chool_talk$ts_smooth
+
+# just components
+paper_plots$posed_comp_ts<-
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(component, bin_frame,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  # facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+paper_plots$posed_comp_ts
+```
+
+
    
 chool_talk$ts_smooth
 
@@ -1018,7 +1049,7 @@ chool_talk$ts_smooth
 
 chool_talk$AU_NM
 
-```
+
 
 heatmap + timeseries + timeseries heatmap
 ```{r}
@@ -1047,8 +1078,36 @@ df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
 
 chool_talk$ts_hm 
 
-library(patchwork)
+paper_plots$posed_comp_ts_hm<-
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  group_by(filename,component)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max)%>%
+  # mutate_at(c("coef"), scale)%>%
+  group_by(component, bin_frame)%>%
 
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, component, fill= coef))+
+  geom_tile()+
+  xlab("time bin")+
+  scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  # facet_grid(~expression)+
+  theme_classic()+
+  p$graphstyle_int+
+  guides(fill=guide_colorbar(ticks.colour = NA))+
+  theme(panel.spacing = unit(1, "cm"))
+
+chool_talk$ts_hm 
+
+paper_plots$posed_comp_ts_hm
+
+```
+
+library(patchwork)
+```{r}
 chool_talk$ts_nmf_heat_NMF <- (chool_talk$ts_smooth/
   chool_talk$ts_hm)+
   plot_layout(heights = c(1,2))
@@ -1059,25 +1118,71 @@ chool_talk$ts_smooth <- chool_talk$ts_smooth + scale_x_continuous(breaks=c(0,50,
   theme(panel.spacing.x = unit(1.5, "lines"))+
   theme(legend.position = "top")
 
-
 chool_talk$ts_hm <- chool_talk$ts_hm +scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
   theme(panel.spacing.x = unit(1.5, "lines"))
 
-chool_talk$AU_NM<- chool_talk$AU_NM +
-  xlab("Component (K)")+
+chool_talk$ts_hm 
+# components
+paper_plots$posed_comp_ts <- paper_plots$posed_comp_ts + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+    # scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+  theme(panel.spacing.x = unit(1.5, "lines"))+
+  theme(legend.position = "top")
+
+paper_plots$posed_comp_ts_hm <-paper_plots$posed_comp_ts_hm +scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+  theme(panel.spacing.x = unit(1.5, "lines"))
+
+chool_talk$ts_smooth
+chool_talk$ts_hm 
+paper_plots$posed_comp_ts
+paper_plots$posed_comp_ts_hm
+
+```
+
+
+````{r}
+chool_talk$AU_NM <- chool_talk$AU_NM +
+  xlab("Component (K)")
+
   ggtitle("POSED EXPRESSIONS")
 
-
+chool_talk$AU_NM 
 paper_plots<- list()
 
+chool_talk$AU_NM+
+   theme(plot.background = element_rect(fill = "black"))
 # panel
-paper_plots$NMF_panel_posed <-
-(chool_talk$AU_NM |
+require(patchwork)
+paper_plots$NMF_panel_posed
+
+((chool_talk$AU_NM/(paper_plots$posed_comp_ts+paper_plots$posed_comp_ts_hm)) |
   (chool_talk$ts_smooth/chool_talk$ts_hm))+
-  plot_layout(ncol = 2, widths = c(.7,2))+
+  plot_layout(ncol = 2, widths = c(.7,2))
+
+
+test<-(chool_talk$AU_NM|(paper_plots$posed_comp_ts/paper_plots$posed_comp_ts_hm))
+
+test3<-grid:: (test)
+
+
+
+wrap_elements(full = test) + wrap_elements(full = test2) + plot_layout(ncol = 1)
+
+patchwork::wrap_elements(test3)/test2
+test2<-(chool_talk$ts_smooth/chool_talk$ts_hm)
+  plot_layout(nrow = 2)
+  (chool_talk$ts_smooth/chool_talk$ts_hm))+
+  plot_layout(ncol = 2, widths = c(.7,2))
+
+
+design<-'AAB
+ABC'
+
+wrap_plots(D = p1, C = p2, B = p3, design = layout)
+
 plot_annotation(title = "POSED EXPRESSIONS")
 
-
+(test+test2)+
+  plot_layout(nrow = 2)
 # ggsave("ts_nmf_heat_NMF.tiff", chool_talk$ts_nmf_heat_NMF, device = "tiff",
 #        width = 10, height = 7, dpi = 800)
 paper_plots$NMF_panel_posed/paper_plots$NMF_panel_posed
