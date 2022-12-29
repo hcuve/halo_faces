@@ -397,6 +397,7 @@ Combine the data and visualise
 sf = 1 # scaling factor to make it easier to change sizes of everything, in which case change here
 
 p<- list()
+
 p$graphstyle_int <-  theme(#base plot theme
   
   # axis lines
@@ -407,12 +408,12 @@ p$graphstyle_int <-  theme(#base plot theme
   axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)),
   
   # text
-  strip.text.x = element_text(size = 12*(sf+.5),  colour = "black"),
-  strip.text.y = element_text(size = 12*(sf+.5),  colour = "black"),
+  strip.text.x = element_text(size = 16*(sf+.5),  colour = "black"),
+  strip.text.y = element_text(size = 16*(sf+.5),  colour = "black"),
   
   text=element_text(size = 14),
-  axis.text.x = element_text(size = 14*(sf+.5), colour = "black",),
-  axis.text.y = element_text(size = 14*(sf+.5), colour = "black"),
+  axis.text.x = element_text(size = 15*(sf+.5), colour = "black",),
+  axis.text.y = element_text(size = 15*(sf+.5), colour = "black"),
   
   
   # panel
@@ -430,7 +431,8 @@ p$graphstyle_int <-  theme(#base plot theme
   # legend.k
   #legend.direction = "horizontal",
 
-  legend.text = element_text(size = 10*(sf+.3)),
+  legend.text = element_text(size = 16*(sf+.3)),
+  legend.title= element_text(size = 16*(sf+.3)),
   # legend.title = element_text(size = 10*(sf+.3)),
   # legend line tends to be really small in print so adjust here
   # legend.key.height = unit(.5, "cm"),
@@ -469,10 +471,49 @@ as.data.frame(res_k3@fit@H)%>%
     scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
                        limits =c(0,1))+#)+
   xlab("Component (K)")+
-  p$graphstyle_int+
+
   scale_x_discrete(position = "top")+
 guides(fill=guide_colorbar(ticks.colour = NA))
-chool_talk$AU_NM 
+
+# chool_talk$AU_NM<- chool_talk$AU_NM 
+  # guides(fill = guide_colourbar(barwidth = 1.5,ticks.colour = NA, barheight = 5))
+  #   p$graphstyle_int
+  # theme()
+
+
+library(ggplot2)
+
+library(ggplot2)
+
+# Create some sample data
+df <- data.frame(x = 1:10, y = 1:10, z = 1:10)
+
+# Create the plot
+p <- ggplot(df, aes(x, y, color = z)) +
+  geom_point()
+
+# Set the plot margins to match the height of the color bar
+p + theme(plot.margin = unit(c(1,1,1,5), "lines"))
+
+p + theme(plot.margin = unit(c(1,1,1,5), "lines"), legend.position = "bottom")
+
+p + theme(plot.margin = unit(c(1,1,1,5), "lines"), legend.position = "bottom")
+
+
+library(ggplot2)
+library(reshape2)
+dat <- iris[,1:4]
+cor <- melt(cor(dat, use="p"))
+head(cor)
+##           Var1         Var2      value
+## 1 Sepal.Length Sepal.Length  1.0000000
+## 2  Sepal.Width Sepal.Length -0.1175698
+## 3 Petal.Length Sepal.Length  0.8717538
+## 4  Petal.Width Sepal.Length  0.8179411
+## 5 Sepal.Length  Sepal.Width -0.1175698
+## 6  Sepal.Width  Sepal.Width  1.0000000
+heat <- ggplot(data=cor, aes(x=Var1, y=Var2, fill=value)) 
+heat + geom_tile() + labs(x = "", y = "") + scale_fill_gradient2(limits=c(-1, 1))
 
 ```
 
@@ -505,55 +546,34 @@ labels <- c(
 )
 # ggtext::
 chool_talk$AU_NM<-  chool_talk$AU_NM +
-  # xlab("Component (K)")+
+  xlab("Component (K)")+
     scale_x_discrete(
       position = "top",
-    name = NULL,
+    # name = NULL,
     labels = labels
   ) +
   theme(
-     axis.text.x.top = element_markdown(color = "black", size = 30) #update this
+     axis.text.x.top = element_markdown(color = "black", size = 16*(sf+.5)),
+     axis.title.x = element_text(size = 16*(sf+.5)),#update this,
+     axis.text.x = element_text(size = 15*(sf+.5), colour = "black"),
+  axis.text.y = element_text(size = 15*(sf+.5), colour = "black")
     # axis.text.x = element_markdown(color = "black", size = 15),
        # axis.text.x.top = element_markdown(size = 8, lineheight = 1.05)
      # axis.title.x = element_markdown(color = "black", size = 20)
   )
 
-  # chool_talk$AU_NM+theme(
-  #   # axis.text.x = element_markdown(color = "black", size = 15),
-  #      axis.text.x.top = element_markdown(size = 8, lineheight = 1.05)
-  #    # axis.title.x = element_markdown(color = "black", size = 20)
-  # )
-  #   ("XXX")
-    
   
   chool_talk$AU_NM
+    # axis.title.x = element_textbox_simple(
+    #   width = NULL,
+    #   padding = margin(4, 4, 4, 4),
+    #   margin = margin(4, 0, 0, 0),
+    #   linetype = 1,
+    #   r = grid::unit(8, "pt"),
+    #   fill = "azure1")
 ```
 
 # plot just timeseries for components
-
-```{r}
-df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  
-      group_by(component,subject)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max) %>%
-  
-  group_by( component, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  # facet_grid(~expression )+
-  theme_classic()+
-   xlab("time bin")+
-  p$graphstyle_int +
-   scale_color_viridis_d(option = "magma")+
-  geom_vline(xintercept = 55)+
-    geom_vline(xintercept = 25)
-
-```
-
 
 
 Lanmarking
@@ -888,9 +908,9 @@ Figure 2
 
   
 ```{r}
-chool_talk$AU_NM2<- chool_talk$AU_NM+
-  theme(axis.text.y = element_blank())+
-  ylab("Motor Action Unit")
+# chool_talk$AU_NM2<- chool_talk$AU_NM+
+#   theme(axis.text.y = element_blank())+
+#   ylab("Motor Action Unit")
 
 chool_talk$AU_NM2
 chool_talk$ts_smooth
@@ -1084,6 +1104,7 @@ df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
   p$graphstyle_int+
   guides(fill=guide_colorbar(ticks.colour = NA))+
   theme(panel.spacing = unit(1, "cm"))
+   # guides(fill = guide_colourbar(barwidth = 1.5,ticks.colour = NA, barheight = 5))
 
 chool_talk$ts_hm 
 
@@ -1105,9 +1126,10 @@ df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
                        limits =c(0,1))+#)+
   # facet_grid(~expression)+
   theme_classic()+
-  p$graphstyle_int+
+  p$graphstyle_int +
   guides(fill=guide_colorbar(ticks.colour = NA))+
   theme(panel.spacing = unit(1, "cm"))
+   # guides(fill = guide_colourbar(barwidth = 1.5,ticks.colour = NA, barheight = 5))
 
 chool_talk$ts_hm 
 
@@ -1117,9 +1139,9 @@ paper_plots$posed_comp_ts_hm
 
 library(patchwork)
 ```{r}
-chool_talk$ts_nmf_heat_NMF <- (chool_talk$ts_smooth/
-  chool_talk$ts_hm)+
-  plot_layout(heights = c(1,2))
+# chool_talk$ts_nmf_heat_NMF <- (chool_talk$ts_smooth/
+#   chool_talk$ts_hm)+
+#   plot_layout(heights = c(1,2))
 
 # soace out values in x axis
 chool_talk$ts_smooth <- chool_talk$ts_smooth + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
@@ -1132,10 +1154,10 @@ chool_talk$ts_smooth
 test4pot5
 
 
-chool_talk$ts_smooth <- test4pot5 + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
-    scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
-  theme(panel.spacing.x = unit(1.5, "lines"))+
-  theme(legend.position = "top")
+# chool_talk$ts_smooth <- test4pot5 + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+#     scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+#   theme(panel.spacing.x = unit(1.5, "lines"))+
+#   theme(legend.position = "top")
 
 chool_talk$ts_hm <- chool_talk$ts_hm +scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
   theme(panel.spacing.x = unit(1.5, "lines"))
@@ -1159,23 +1181,24 @@ paper_plots$posed_comp_ts_hm
 
 
 ````{r}
-chool_talk$AU_NM <- chool_talk$AU_NM +
-  xlab("Component (K)")
+# chool_talk$AU_NM <- chool_talk$AU_NM +
+#   xlab("Component (K)")
+# 
+#   ggtitle("POSED EXPRESSIONS")
 
-  ggtitle("POSED EXPRESSIONS")
-
-chool_talk$AU_NM 
-paper_plots<- list()
-
-chool_talk$AU_NM+
-   theme(plot.background = element_rect(fill = "black"))
+# chool_talk$AU_NM 
+# paper_plots<- list()
+# 
+# chool_talk$AU_NM+
+#    theme(plot.background = element_rect(fill = "black"))
 # panel
 require(patchwork)
+
 paper_plots$NMF_panel_posed
 
-((chool_talk$AU_NM/(paper_plots$posed_comp_ts+paper_plots$posed_comp_ts_hm)) 
-  (chool_talk$ts_smooth/chool_talk$ts_hm))+
-  plot_layout(ncol = 2, widths = c(.7,2))
+# ((chool_talk$AU_NM/(paper_plots$posed_comp_ts+paper_plots$posed_comp_ts_hm)) 
+#   (chool_talk$ts_smooth/chool_talk$ts_hm))+
+#   plot_layout(ncol = 2, widths = c(.7,2))
 
 
 test
@@ -1192,22 +1215,34 @@ theme_void()+theme(legend.position = "none",
 theme_void()+theme(legend.position = "none",
                      axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp1")
 
- test1<- (wrap_elements(full =chool_talk$AU_NM)|
-    ((triangle_plots$delaunay_tri_comp3.1) /
-        (triangle_plots$delaunay_tri_comp2.1)/
-       (triangle_plots$delaunay_tri_comp1.1))|
-       (chool_talk$ts_smooth/chool_talk$ts_hm))+
-  plot_layout(ncol = 3, widths = c(1.2,.5,1))
+
+comp1_2_3<- triangle_plots$delaunay_tri_comp3.1 /
+        triangle_plots$delaunay_tri_comp2.1/
+       triangle_plots$delaunay_tri_comp1.1
+
+paper_plots$posed_comp_ts
+paper_plots$posed_comp_ts_hm
+
+ts_ts_hm_compns<- (paper_plots$posed_comp_ts/paper_plots$posed_comp_ts_hm)
+ 
+test1 <- (wrap_elements(full =chool_talk$AU_NM)+ wrap_elements(full = comp1_2_3)+wrap_elements(ts_ts_hm_compns))+
+    plot_layout(ncol = 3, widths = c(1.2,.5,1))
+ 
+ 
+# (wrap_elements(full =chool_talk$AU_NM)+(wrap_elements(full = (
+#     ((triangle_plots$delaunay_tri_comp3.1) /
+#         (triangle_plots$delaunay_tri_comp2.1)/
+#        (triangle_plots$delaunay_tri_comp1.1))))|
+#        (chool_talk$ts_smooth/chool_talk$ts_hm)))+
+  # plot_layout(ncol = 3, widths = c(1.2,.5,1))
       
         
-
-  
-  |wrap_elements( full= (paper_plots$posed_comp_ts/paper_plots$posed_comp_ts_hm)))+
-  plot_layout(ncol = 2)
-
-
-test2
-test3<-grid:: (test)
+# 
+#   
+#   |wrap_elements( full= (paper_plots$posed_comp_ts/paper_plots$posed_comp_ts_hm)))+
+#   plot_layout(ncol = 2)
+# 
+# 
 
 
 triangle_plots$delaunay_tri_ang<-triangle_plots$delaunay_tri_ang+scale_x_continuous(limits = c(-.2,1.2))
@@ -1218,6 +1253,7 @@ triangle_plots$delaunay_tri_sad<-triangle_plots$delaunay_tri_sad+scale_x_continu
 
 ```{r}
 patchwork::wrap_elements(test3)/test2
+
 test2 <-(chool_talk$ts_smooth/(triangle_plots$delaunay_tri_ang +
                          triangle_plots$delaunay_tri_happy+
                          triangle_plots$delaunay_tri_sad)/
@@ -1237,11 +1273,31 @@ test2
 ```{r} 
  # (chool_talk$ts_smooth/chool_talk$ts_hm)+
   # plot_layout(ncol = 2, widths = c(.7,2))
+require(ggtext)
+require(tidyverse)
 
+require(patchwork)
 
+paper_plots$panel_NMF_posed<-
 wrap_elements(full = test1) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))
 
 
+paper_plots$panel_NMF_posed
+
+ggsave("panel_NMF_posed.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
+       width = 15,
+       height = 15,
+       dpi = 800)
+
+ggsave("panel_NMF_poseddpi300.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
+       width = 25,
+       height = 25,
+       dpi = 300)
+
+ggsave("panel_NMF_posed1.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
+       width = 25,
+       height = 25,
+       dpi = 800)
 
 ```
 

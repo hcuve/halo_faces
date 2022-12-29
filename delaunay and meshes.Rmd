@@ -1089,11 +1089,11 @@ data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$
 do.call(rbind, lapply(seq_along(tri_comp1), 
                       function(x) {
 data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$y, 
-             comp1_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$comp1_fill_land[tri_comp1[[x]]$ptNum]),
+             comp1_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$abs_corcomp1_max_norm_trsh [tri_comp1[[x]]$ptNum]),
              tri_comp1 = x)
   })) |>
   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
-  geom_polygon(aes(fill = -comp1_fill, group = tri_comp1)) +
+  geom_polygon(aes(fill = comp1_fill, group = tri_comp1)) +
 
   geom_point(colour = "white", alpha = .1, size = .4)+
     scale_fill_viridis_c(option = "magma")+
@@ -1102,6 +1102,22 @@ data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$
   theme_void()+
   theme(plot.background = element_rect(fill = "black"), legend.position = "none")
 # for landm I need to reverse it to be consisiustent and is brighter
+
+do.call(rbind, lapply(seq_along(tri_comp1), 
+                      function(x) {
+data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$y, 
+             comp1_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$comp1_fill[tri_comp1[[x]]$ptNum]),
+             tri_comp1 = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_polygon(aes(fill = comp1_fill, group = tri_comp1)) +
+
+  geom_point(colour = "white", alpha = .1, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"), legend.position = "none")
 
 ```
 
@@ -1191,6 +1207,31 @@ geom_point(colour = "white", alpha = .1, size = .4)+
 
 triangle_plots$delaunay_tri_comp2
 
+do.call(rbind, lapply(seq_along(tri_comp1), 
+                      function(x) {
+data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$y, 
+             comp2_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$abs_corcomp2_max_norm_trsh[tri_comp1[[x]]$ptNum]),
+             tri_comp1 = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_polygon(aes(fill = comp2_fill, group = tri_comp1)) +
+
+geom_point(colour = "white", alpha = .1, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  # theme(plot.background = element_rect(fill = "black"))
+  theme( legend.position = "none")
+ # geom_point(aes(colour = comp3_fill),colour = "white", alpha = .1, size = .1)+
+
+triangle_plots$delaunay_tri_comp2
+
+
+```
+
+
+
 # ANMF3_k3_res
 
 do.call(rbind, lapply(seq_along(tri_comp1), 
@@ -1211,6 +1252,9 @@ geom_point(colour = "white", alpha = .1, size = .4)+
   theme(plot.background = element_rect(fill = "black"), legend.position = "none")
  # geom_point(aes(colour = comp3_fill),colour = "white", alpha = .1, size = .1)+
 # very similar
+
+
+
 
 
 # LAND NMF
@@ -1234,7 +1278,7 @@ geom_point(colour = "white", alpha = .1, size = .4)+
 
 # not cosistent
 
-```
+
 
 comp 3
 
@@ -1270,7 +1314,33 @@ data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$
   theme(
         legend.position = "none")
 
-triangle_plots$delaunay_tri_comp3
+triangle_plots$delaunay_tri_comp3+  theme_dark()+
+  theme_void()+
+  # plot.background = element_rect(fill = "black"),
+  theme(
+        legend.position = "none")
+
+do.call(rbind, lapply(seq_along(tri_comp1), 
+                      function(x) {
+data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$y, 
+             comp3_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$abs_corcomp3_max_norm_trsh[tri_comp1[[x]]$ptNum]),
+             tri_comp1 = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  geom_polygon(aes(fill = comp3_fill, group = tri_comp1)) +
+
+ geom_point(colour = "white", alpha = .1, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_dark()+
+  theme_void()+
+  # plot.background = element_rect(fill = "black"),
+  theme(
+        legend.position = "none")
+
+
+
+```
 # AU fill
 do.call(rbind, lapply(seq_along(tri_comp1), 
                       function(x) {
@@ -1310,19 +1380,19 @@ data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$
         legend.position = "none")
 
 
-
-triangle_plots$delaunay_tri_comp3
-triangle_plots$delaunay_tri_comp3+theme_void()+theme(legend.position = "none")
-triangle_plots$delaunay_tri_comp2+theme_void()+theme(legend.position = "none")
-
-triangle_plots$delaunay_tri_comp1+theme_void()+theme(legend.position = "none")
-triangle_plots$delaunay_tri_comp3
-
-
-triangle_plots$delaunay_tri_comp3+theme(legend.position = "none")
-triangle_plots$delaunay_tri_comp2+theme(legend.position = "none")
-
-triangle_plots$delaunay_tri_comp1+theme(legend.position = "none")
+```{r}
+# triangle_plots$delaunay_tri_comp3
+# triangle_plots$delaunay_tri_comp3+theme_void()+theme(legend.position = "none")
+# triangle_plots$delaunay_tri_comp2+theme_void()+theme(legend.position = "none")
+# 
+# triangle_plots$delaunay_tri_comp1+theme_void()+theme(legend.position = "none")
+# triangle_plots$delaunay_tri_comp3
+# 
+# 
+# triangle_plots$delaunay_tri_comp3+theme(legend.position = "none")
+# triangle_plots$delaunay_tri_comp2+theme(legend.position = "none")
+# 
+# triangle_plots$delaunay_tri_comp1+theme(legend.position = "none")
 
 triangle_plots$delaunay_tri_comp1<-triangle_plots$delaunay_tri_comp1+  theme(plot.background = element_rect(fill = "black"))
 triangle_plots$delaunay_tri_comp2<-triangle_plots$delaunay_tri_comp2+  theme(plot.background = element_rect(fill = "black"))
@@ -1662,6 +1732,24 @@ res_k3_land_H<- as.data.frame(res_k3_land@fit@H)%>%
 options(scipen = 999)
 res_k3_land_H
 
+colnames(df_OF_output_land_posed_binned_select_dcast)
+df_OF_output_land_posed_binned_select_dcast[, c(1:4,150:155)]%>%
+  group_by(bin_frame, expression,subject)%>%
+    # group_by(filename,bin_frame, expression,subject)%>%
+    summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(bin_frame, comp1_NMFLand))+
+  geom_smooth(colour = "#1B9E77" )+
+  geom_smooth(aes(y = comp2_NMFLand), colour = "#D95F02")+
+  geom_smooth(aes(y = comp3_NMFLand), colour = "#7570B3")+
+  facet_grid(~expression)+
+  theme_bw()+
+  p$graphstyle_int
+
+RColorBrewer::brewer.pal.info(Dark2)
+
+RColorBrewer::brewer.pal(3, "Dark2")
+  
+brewer.pal('Dark2', "Paired")
 ```
 
 ```{r}
