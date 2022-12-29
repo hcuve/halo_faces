@@ -512,7 +512,7 @@ chool_talk$AU_NM<-  chool_talk$AU_NM +
     labels = labels
   ) +
   theme(
-     axis.text.x.top = element_markdown(color = "black", size = 11)
+     axis.text.x.top = element_markdown(color = "black", size = 30) #update this
     # axis.text.x = element_markdown(color = "black", size = 15),
        # axis.text.x.top = element_markdown(size = 8, lineheight = 1.05)
      # axis.title.x = element_markdown(color = "black", size = 20)
@@ -1210,7 +1210,13 @@ test2
 test3<-grid:: (test)
 
 
+triangle_plots$delaunay_tri_ang<-triangle_plots$delaunay_tri_ang+scale_x_continuous(limits = c(-.2,1.2))
+triangle_plots$delaunay_tri_happy<-triangle_plots$delaunay_tri_happy+scale_x_continuous(limits = c(-.2,1.2))
 
+triangle_plots$delaunay_tri_sad<-triangle_plots$delaunay_tri_sad+scale_x_continuous(limits = c(-.2,1.2))
+```
+
+```{r}
 patchwork::wrap_elements(test3)/test2
 test2 <-(chool_talk$ts_smooth/(triangle_plots$delaunay_tri_ang +
                          triangle_plots$delaunay_tri_happy+
@@ -1219,12 +1225,29 @@ test2 <-(chool_talk$ts_smooth/(triangle_plots$delaunay_tri_ang +
     chool_talk$ts_hm)+
   plot_layout(nrow = 3, heights = c(1,1.5,1))
   
+
+test2
+
+
+```
   
-  # (chool_talk$ts_smooth/chool_talk$ts_hm)+
+ 
+ 
+ 
+```{r} 
+ # (chool_talk$ts_smooth/chool_talk$ts_hm)+
   # plot_layout(ncol = 2, widths = c(.7,2))
 
 
-wrap_elements(full = test) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1.4))
+wrap_elements(full = test1) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))
+
+
+
+```
+
+# setting
+# 2300 vy 1200 for test 2
+# 2300 by 2300
 
 design<-'AAB
 ABC'
@@ -1233,8 +1256,9 @@ wrap_plots(D = p1, C = p2, B = p3, design = layout)
 
 plot_annotation(title = "POSED EXPRESSIONS")
 
-(test+test2)+
-  plot_layout(nrow = 2)
+
+
+
 # ggsave("ts_nmf_heat_NMF.tiff", chool_talk$ts_nmf_heat_NMF, device = "tiff",
 #        width = 10, height = 7, dpi = 800)
 paper_plots$NMF_panel_posed/paper_plots$NMF_panel_posed
