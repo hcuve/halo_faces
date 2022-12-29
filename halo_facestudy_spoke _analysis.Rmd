@@ -1826,7 +1826,8 @@ boundaryplots$pc1_2
 #   ylab("comp2")
 
 
-boundaryplots$pc1_2 <- 
+boundaryplots$pc1_2 
+
   
 ggplot(df, aes(PC1, PC2, fill = expression)) +
 
@@ -1876,8 +1877,10 @@ boundaryplots$pc1_2_box
 
 # ggside solution PC1 and 2
 
+require(ggside)
+boundaryplots$pc1_2_ggside <-
 
-boundaryplots$pc1_2_ggside<-
+
 ggplot(df, aes(PC1, PC2,fill = expression)) +
 
   geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
@@ -1904,6 +1907,7 @@ ggplot(df, aes(PC1, PC2,fill = expression)) +
 
 
 boundaryplots$pc1_2_box
+
 boundaryplots$pc1_2_ggside<- boundaryplots$pc1_2_ggside+
   # ggtitle("comp1") +
   theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5),
@@ -1912,8 +1916,8 @@ boundaryplots$pc1_2_ggside<- boundaryplots$pc1_2_ggside+
        )
 
 boundaryplots$pc1_2_ggside
-boundaryplots$pc1_2_ggside+
-  boundaryplots$pc1_2_ggside
+# boundaryplots$pc1_2_ggside+
+#   boundaryplots$pc1_2_ggside
 
 ```
   ggMarginal(piris, groupColour = TRUE, groupFill = TRUE)
@@ -1953,6 +1957,12 @@ ggplot(df, aes(PC1, PC2,fill = expression)) +
 
 
 # ggside
+
+
+```
+
+
+```{r}
 
 df$expression<- as.factor(as.character(df$expression, levels = c("angry", "happy", "sad")))
 
@@ -2152,6 +2162,8 @@ boundaryplots$pc1_3
 
 
 
+
+
 library(ggExtra)
 
 boundaryplots$pc1_3_box <- ggMarginal(boundaryplots$pc1_3,groupFill = T, groupColour = T, type = c("boxplot"),
@@ -2170,9 +2182,11 @@ boundaryplots$pc1_3_box$grobs[ boundaryplots$pc1_3_box$layout$name == "topMargPl
   boundaryplots$pc1_3_box
   # boundaryplots$pc1_3_den
   
-  
+``` 
   
   # ggside OPC1 - 3
+  
+```{r}
   
   
   boundaryplots$pc1_3_ggside <- ggplot(df, aes(PC3, PC1,fill = expression)) +
@@ -2214,6 +2228,8 @@ boundaryplots$pc1_3_box$grobs[ boundaryplots$pc1_3_box$layout$name == "topMargPl
   boundaryplots$pc1_3_ggside 
 
 ```
+
+
 
 ```{r eval=FALSE, include=FALSE}
 install.packages("ggside")
@@ -2322,7 +2338,11 @@ boundaryplots$pc2_3_box
 
 # library(patchwork)
 
+```
 
+
+
+````{r}
 # ggside
 
 boundaryplots$pc2_3_ggside<-
@@ -2438,19 +2458,19 @@ boundaryplots$panel_posed2
 paper_plots$conf_mat_posed 
 
 
-
-  (patchwork::wrap_elements(getleg)/
-(patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
-  patchwork::wrap_elements(boundaryplots$pc2_3_box)+
-    patchwork::wrap_elements(boundaryplots$pc1_3_box))/ 
-  (paper_plots$ROC_posed+paper_plots$conf_mat_posed))+
-  
-  
-   plot_layout(nrow = 3, heights = c(.1,2,1))
-
-(patchwork::wrap_plots(boundaryplots$panel_posed2)/
-  (paper_plots$ROC_posed|paper_plots$conf_mat_posed))+
-  plot_layout(nrow = 2)
+# 
+#   (patchwork::wrap_elements(getleg)/
+# (patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
+#   patchwork::wrap_elements(boundaryplots$pc2_3_box)+
+#     patchwork::wrap_elements(boundaryplots$pc1_3_box))/ 
+#   (paper_plots$ROC_posed+paper_plots$conf_mat_posed))+
+#   
+#   
+#    plot_layout(nrow = 3, heights = c(.1,2,1))
+# 
+# (patchwork::wrap_plots(boundaryplots$panel_posed2)/
+#   (paper_plots$ROC_posed|paper_plots$conf_mat_posed))+
+#   plot_layout(nrow = 2)
 
 
 
@@ -2459,29 +2479,6 @@ paper_plots$conf_mat_posed
 library(cowplot)
 legend_side<- get_legend(legendtop+
   theme(legend.position = "right"))
-
-
-# (patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
-#  legend_side +
-#   patchwork::wrap_elements(boundaryplots$pc1_3_box) +
-#   patchwork::wrap_elements(boundaryplots$pc2_3_box)|(paper_plots$ROC_posed/paper_plots$conf_mat_posed))+
-#   plot_layout(ncol = 2, widths = c(2,.8))
-#   plot_layout(guides = "collect")
-
-  
-  
-# (patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
-#  legend_side +
-#           paper_plots$ROC_posed+
-#        patchwork::wrap_elements(boundaryplots$pc2_3_box)+
-#     patchwork::wrap_elements(boundaryplots$pc1_3_box) +
-# 
-#   paper_plots$conf_mat_posed)+
-#   plot_layout(ncol = 3)
-#   plot_layout(guides = "collect")
-  
-  
-
 
 
 
@@ -2499,19 +2496,10 @@ patchwork::wrap_elements(boundaryplots$pc1_2_box) +
 # hwork::wrap_elements(boundaryplots$pc1_3_box)))
 
 
-# <!-- ((patchwork::wrap_elements(boundaryplots$pc1_2_box) +  -->
-# <!--                             patchwork::wrap_elements(legend_side)+ -->
-# <!--   patchwork::wrap_elements(boundaryplots$pc2_3_box)+ -->
-# <!--     patchwork::wrap_elements(boundaryplots$pc1_3_box))+  -->
-# <!-- plot_layout(nrow = 2, heights = c(1,1))| (paper_plots$ROC_posed/ -->
-# <!--   paper_plots$conf_mat_posed)+plot_layout(nrow = 2, heights = c(.5,.5)))+ -->
-# <!--   plot_layout(nrow = 2, heights = c(.5,.5), -->
-# <!--                                           widths =c(2,1)) -->
-# 
 
 # 1500 buy 900 seems to work - save this
 
-paper_plots$panel_posed_fig3<-
+paper_plots$panel_posed_fig3 <-
 (patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
                             patchwork::wrap_elements(legend_side)+
 
