@@ -42,7 +42,7 @@ colnames(df_OF_output_land_posed_binned)
 unique(df_OF_output_land_posed_binned$bin_frame)
 
 # dcasted
-df_OF_output_land_posed_binned
+df_OF_output_land_posed_binned$
 df_OF_output_land_posed_binned_select
 # group_by(filename)%>%
 #   gather(key, value, -frame, -timestamp,-filename) %>%
@@ -106,6 +106,7 @@ for (f in 1:length(filename_unique)) {
 
 
 # unique(temp_df_bind$filename)
+unique(temp_df_bind$filename)
 ```
 
 after this we want to plot again the average landmark position for each expression

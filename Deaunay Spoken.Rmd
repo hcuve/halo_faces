@@ -62,26 +62,52 @@ names(df_OF_output_AU_andLand_unblind)[142:175]<- cname2[6:39]
 colnames(df_OF_output_AU_andLand_unblind)
 
 
-unique(df_OF_output_AU_andLand_unblind$posed.spoken)
-
 # binify
-df_OF_output_AU_andLandW_unblind_spoken1_2_binned <-df_OF_output_AU_andLandW_unblind_spoken1_2%>%
+unique(df_OF_output_AU_andLand_unblind$posed.spoken)
+df_OF_output_AU_andLand_unblind_spoken_binned <-df_OF_output_AU_andLand_unblind%>%
+  subset(posed.spoken == "spoken")%>%
   group_by(filename, subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression,posed.spoken )%>%
   mutate(bin_frame = cut(frame, 100, labels = FALSE))%>%
   group_by(filename,bin_frame,subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression,posed.spoken)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE)
 
-df_OF_output_land_posed_binned_select$Stimuli_frame <- paste0(df_OF_output_land_posed_binned_select$filename,df_OF_output_land_posed_binned_select$bin_frame)
+colnames(df_OF_output_AU_andLand_unblind_spoken_binned)
 
-filename_unique<-unique(df_OF_output_land_posed_binned_select$Stimuli_frame)
+# gather lamndmarks
+require(data.table)
+df_OF_output_andLand_unblind_spoken_binned_dcast<- df_OF_output_AU_andLand_unblind_spoken_binned[,-c(153:186)] %>%
+group_by(filename)%>%
+  gather(key, value, -c(1:16)) %>%
+  mutate(coordinate = substr(key,1,1))%>%
+  mutate(lanmark_id = substr(key,3,4)) %>%
+  setDT%>%  dcast(filename+bin_frame+timestamp+subject+test.day+ age +gender +BMI + drug.day + drug.placebo+
+          expression+posed.spoken+confidence+success+lanmark_id~coordinate, value.var = "value",  mean)
 
+
+df_OF_output_andLand_unblind_spoken_binned_dcast<-df_OF_output_andLand_unblind_spoken_binned_dcast%>%
+  group_by(filename)%>%
+  arrange(as.numeric(lanmark_id))
+
+
+
+```
+
+rotate landmarks to align eyes and normalise position to remove gross movement
+```{r}
+# create a unique ID fr frame and stim
+
+df_OF_output_andLand_unblind_spoken_binned_dcast$Stimuli_frame <- paste0(df_OF_output_andLand_unblind_spoken_binned_dcast$filename,df_OF_output_andLand_unblind_spoken_binned_dcast$bin_frame)
+
+filename_unique<-unique(df_OF_output_andLand_unblind_spoken_binned_dcast$Stimuli_frame)
+colnames(df_OF_output_andLand_unblind_spoken_binned_dcast)
 f = 1
+
 temp_df_bind<- data.frame() # e empty dataframe to store results
 
 for (f in 1:length(filename_unique)) {
   # f = 2
   # video = filename_video[f]
-  temp_df <- df_OF_output_land_posed_binned_select%>%
+  temp_df <- df_OF_output_andLand_unblind_spoken_binned_dcast%>%
     subset(Stimuli_frame == filename_unique[f])
   
     # start
@@ -109,15 +135,15 @@ for (f in 1:length(filename_unique)) {
   mat <- matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), 2)
 
 # Now we multiply each x, y point by this matrix to get our rotated points, and write it back into our original data frame:
-  temp_df$x_new_norm_rot <- t(apply(temp_df[,7:8], 1, function(x) mat %*% x))[,1]
-  temp_df$y_new_norm_rot <- t(apply(temp_df[,7:8], 1, function(x) mat %*% x))[,2] 
+  temp_df$x_new_norm_rot <- t(apply(temp_df[,16:17], 1, function(x) mat %*% x))[,1]
+  temp_df$y_new_norm_rot <- t(apply(temp_df[,16:17], 1, function(x) mat %*% x))[,2] 
    
   message(paste0("bind datasets"))
   
     temp_df_bind<- bind_rows(temp_df_bind,temp_df)
 }
 
-
+temp_df_bind
 # unique(temp_df_bind$filename)
 unique(temp_df_bind$filename)
 ```
