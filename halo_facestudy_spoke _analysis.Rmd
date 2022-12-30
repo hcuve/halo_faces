@@ -73,12 +73,20 @@ coefmap(res_k3_spoken1) #hidden variables
 # res_k3_em
 
 ```
+face heatmaps for Spoje NMF
+
+
 
 
 some custom visualisations
 
 custom visalisation of H (mixing components)
 ```{r}
+
+paper_plots$spoken_NMF
+paper_plots$spoken_NMF_hm
+paper_plots$spoken_NMF_ts_hm
+# paper_plots
 # chool_talk$AU_NM 
 paper_plots$spoken_NMF_hm <-
 

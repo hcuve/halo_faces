@@ -1,0 +1,125 @@
+---
+title: "Delaunay triangulation Spoken"
+author: "Helio"
+date: "2022-12-30"
+output: html_document
+---
+
+
+ROTATE STIMULI and ALLIgn
+
+```{r}
+colnames(df_OF_output_AUsW_unblind_spoken1_binned)
+df_OF_output_AUsW_unblind_spoken1_binned
+
+# select_AUS and landmarks
+
+colnames(df_OF_output)
+
+df_OF_output_AU_andLand<- df_OF_output[,c(1:5,300:435, 680:715)]
+colnames(df_OF_output_AU_andLand)
+
+
+# create necessary columns
+library(stringr)
+library(tidyverse)
+df_OF_output_AU_andLand$subject<- sub(".*_p", "", str_match(df_OF_output_AU_andLand$filename, "p\\s*(.*?)\\s*.csv")[,2])
+
+df_OF_output_AU_andLand$test.day<- str_match(df_OF_output_AU_andLand$filename, "_day\\s*(.*?)\\s*_p")[,2]
+
+# merge
+df_OF_output_AU_andLand$subject<- as.factor(as.character( df_OF_output_AU_andLand$subject))
+Unblinding_BMI_drugday$subject<-as.factor(as.character(Unblinding_BMI_drugday$subject))
+
+# expected rows()
+# nrow(df_OF_output_AU_andLand)  =131476
+df_OF_output_AU_andLand_unblind<- left_join(df_OF_output_AU_andLand, Unblinding_BMI_drugday)
+
+# if test.day == drugday  = "halo, vs placebo
+colnames(df_OF_output_AU_andLand_unblind)
+
+df_OF_output_AU_andLand_unblind$drug.placebo <- if_else(df_OF_output_AU_andLand_unblind$test.day == df_OF_output_AU_andLand_unblind$drug.day, "drug", "placebo")
+
+# add emotion
+# return word between 3rd and 4rth underscore df$values = sapply(strsplit(df$V1, "_"), function(x) x[3])
+
+df_OF_output_AU_andLand_unblind$expression <-sapply(strsplit(df_OF_output_AU_andLand_unblind$filename, "_"), function(x) x[3])
+# 2nd and 3rd undrcore
+# unique( sapply(strsplit(df_OF_output_AU_andLand_unblind$filename, "_"), function(x) x[2]))
+df_OF_output_AU_andLand_unblind$posed.spoken<- sapply(strsplit(df_OF_output_AU_andLand_unblind$filename, "_"), function(x) x[2])
+
+cname2<-c(cnames1[1:5],t(AU_OF_codes_merged$AU_Code_OF_r),t(AU_OF_codes_merged$AU_Code_OF_c), "filename")
+# cnames1
+# t(AU_OF_codes_merged$AU_Code_OF_r)
+# note OF addded a new action fpr presence 28 (lipsuck) I will exclude this for now
+df_OF_output_AU_andLand_unblind$AU28_c<-NULL
+
+# df_OF_output_AUstest<-df_OF_output_AUs
+# names(df_OF_output_AUstest)<- cname2
+
+colnames(df_OF_output_AU_andLand_unblind)
+names(df_OF_output_AU_andLand_unblind)[142:175]<- cname2[6:39]
+colnames(df_OF_output_AU_andLand_unblind)
+
+
+unique(df_OF_output_AU_andLand_unblind$posed.spoken)
+
+# binify
+df_OF_output_AU_andLandW_unblind_spoken1_2_binned <-df_OF_output_AU_andLandW_unblind_spoken1_2%>%
+  group_by(filename, subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression,posed.spoken )%>%
+  mutate(bin_frame = cut(frame, 100, labels = FALSE))%>%
+  group_by(filename,bin_frame,subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression,posed.spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+
+df_OF_output_land_posed_binned_select$Stimuli_frame <- paste0(df_OF_output_land_posed_binned_select$filename,df_OF_output_land_posed_binned_select$bin_frame)
+
+filename_unique<-unique(df_OF_output_land_posed_binned_select$Stimuli_frame)
+
+f = 1
+temp_df_bind<- data.frame() # e empty dataframe to store results
+
+for (f in 1:length(filename_unique)) {
+  # f = 2
+  # video = filename_video[f]
+  temp_df <- df_OF_output_land_posed_binned_select%>%
+    subset(Stimuli_frame == filename_unique[f])
+  
+    # start
+  message(paste0("running video no_: ", f), paste0("_",filename_unique[f]))
+
+
+  
+  # First, isolate the points of interest (the subject's left and right eyes)
+  left_eye  <- temp_df[temp_df$lanmark_id == 42,]
+  right_eye <- temp_df[temp_df$lanmark_id == 39,] 
+  
+  # now find the difference in the y co-ordinates and x co-ordinates between these two points:
+  diff_x <- left_eye$x - right_eye$x
+  diff_y <- left_eye$y - right_eye$y
+  
+   message(paste0("angle - ratio - transform"))
+  # The arctangent of the ratio will be the angle you need to rotate all the points by:
+  theta  <- atan2(-diff_y, diff_x)
+  
+# print("matrix") 
+# To transform the points, you need to create a rotation matrix, which is a specific two-by-two matrix which you can use to rotate the original points:
+# 
+# enter image description here - https://stackoverflow.com/questions/74493141/align-x-and-y-coordinates-of-face-landmarks-in-r/74493424?noredirect=1#comment131500839_74493424
+  
+  mat <- matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), 2)
+
+# Now we multiply each x, y point by this matrix to get our rotated points, and write it back into our original data frame:
+  temp_df$x_new_norm_rot <- t(apply(temp_df[,7:8], 1, function(x) mat %*% x))[,1]
+  temp_df$y_new_norm_rot <- t(apply(temp_df[,7:8], 1, function(x) mat %*% x))[,2] 
+   
+  message(paste0("bind datasets"))
+  
+    temp_df_bind<- bind_rows(temp_df_bind,temp_df)
+}
+
+
+# unique(temp_df_bind$filename)
+unique(temp_df_bind$filename)
+```
+
+```

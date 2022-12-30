@@ -452,7 +452,18 @@ coefmap(res_k3)+
   scale_fill_viridis_c()
 chool_talk<-list()
 
+make_fullsize <- function() structure("", class = "fullsizebar")
 
+ggplot_add.fullsizebar <- function(obj, g, name = "fullsizebar") {
+  h <- ggplotGrob(g)$heights
+  panel <- which(grid::unitType(h) == "null")
+  panel_height <- unit(1, "npc") - sum(h[-panel])
+  
+  g + 
+    guides(fill = guide_colorbar(barheight = panel_height,
+                                 title.position = "right")) +
+    theme(legend.title = element_text(angle = -90, hjust = 0.5))
+}
 chool_talk$AU_NM <-
 as.data.frame(res_k3@fit@H)%>%
   mutate(component = as.factor(1:n()))%>%
@@ -466,6 +477,9 @@ as.data.frame(res_k3@fit@H)%>%
   arrange(AU_code)%>%
   ggplot(aes(component,AU, fill = coef))+
   geom_tile()+
+  coord_cartesian(expand = FALSE)+
+  make_fullsize()
+  
   theme_classic()+
   # scale_fill_viridis_()
     scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
@@ -474,6 +488,9 @@ as.data.frame(res_k3@fit@H)%>%
 
   scale_x_discrete(position = "top")+
 guides(fill=guide_colorbar(ticks.colour = NA))
+  
+
+
 
 # chool_talk$AU_NM<- chool_talk$AU_NM 
   # guides(fill = guide_colourbar(barwidth = 1.5,ticks.colour = NA, barheight = 5))
@@ -564,13 +581,30 @@ chool_talk$AU_NM<-  chool_talk$AU_NM +
 
   
   chool_talk$AU_NM
-    # axis.title.x = element_textbox_simple(
-    #   width = NULL,
-    #   padding = margin(4, 4, 4, 4),
-    #   margin = margin(4, 0, 0, 0),
-    #   linetype = 1,
-    #   r = grid::unit(8, "pt"),
-    #   fill = "azure1")
+
+  # make legend key same height as plot
+  make_fullsize <- function() structure("", class = "fullsizebar")
+
+ggplot_add.fullsizebar <- function(obj, g, name = "fullsizebar") {
+  h <- ggplotGrob(g)$heights
+  panel <- which(grid::unitType(h) == "null")
+  panel_height <- unit(1, "npc") - sum(h[-panel])
+  
+  g + 
+    guides(fill = guide_colorbar(barheight = panel_height,
+                                 title.position = "top")) +
+    theme(legend.title = element_text(hjust = 0.5))
+}
+
+
+ggplot(corrs, aes(x = Var1, y = Var2, fill = value)) + 
+  geom_tile()
+
+
+  chool_talk$AU_NM +
+  coord_cartesian(expand = FALSE) +
+
+
 ```
 
 # plot just timeseries for components

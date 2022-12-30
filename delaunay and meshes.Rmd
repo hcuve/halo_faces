@@ -105,6 +105,7 @@ for (f in 1:length(filename_unique)) {
 }
 
 
+# unique(temp_df_bind$filename)
 ```
 
 after this we want to plot again the average landmark position for each expression
@@ -328,7 +329,7 @@ try del amnd vor plots
 require(ggforce)
 # one colour per triangle
 
-
+df_OF_output_land_posed_binned_select_alligned_eyes
 df_OF_output_land_posed_binned_select_alligned_eyes_agg<- df_OF_output_land_posed_binned_select_alligned_eyes%>%
   group_by(filename)%>%
    mutate(comp1_normmax = maxnormalize(comp1),
@@ -460,7 +461,10 @@ tri_ang <- triang.list(deldir(anger_del$x_new_norm_rot2,
                           anger_del$y_new_norm_rot2))
 
 
-triangle_plots$delaunay_tri_ang<- do.call(rbind, lapply(seq_along(tri_ang), 
+triangle_plots$delaunay_tri_ang
+
+
+do.call(rbind, lapply(seq_along(tri_ang), 
                       function(x) {
   data.frame(x_new_norm_rot2 = tri_ang[[x]]$x, y_new_norm_rot2 = tri_ang[[x]]$y, 
              coef_fill = mean(anger_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_ang[[x]]$ptNum]),
@@ -477,8 +481,67 @@ triangle_plots$delaunay_tri_ang<- do.call(rbind, lapply(seq_along(tri_ang),
     theme(
                                        legend.position = "none")
   
-theme(plot.background = element_rect(fill = "black"),
+# theme(plot.background = element_rect(fill = "black"),
+#                                        legend.position = "none")
+
+
+do.call(rbind, lapply(seq_along(tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_ang[[x]]$x, y_new_norm_rot2 = tri_ang[[x]]$y, 
+             coef_fill = mean(anger_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_ang[[x]]$ptNum]),
+             tri_ang = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_ang)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+    scale_y_reverse()+
+  theme_void()+
+    theme(
                                        legend.position = "none")
+  
+  
+```
+
+
+make legend bar size of plot
+```{r}
+library(ggplot2)
+library(reshape2)
+dat <- iris[,1:4]
+cor <- melt(cor(dat, use="p"))
+head(cor)
+heat <- ggplot(data=cor, aes(x=Var1, y=Var2, fill=value)) 
+heat + geom_tile() + labs(x = "", y = "") + scale_fill_gradient2(limits=c(-1, 1))+
+  make_fullsize
+
+library(ggplot2)
+
+make_fullsize <- function() structure("", class = "fullsizebar")
+
+ggplot_add.fullsizebar <- function(obj, g, name = "fullsizebar") {
+  h <- ggplotGrob(g)$heights
+  panel <- which(grid::unitType(h) == "null")
+  panel_height <- unit(1, "npc") - sum(h[-panel])
+  
+  g + 
+    guides(fill = guide_colorbar(barheight = panel_height,
+                                 title.position = "right")) +
+    theme(legend.title = element_text(angle = -90, hjust = 0.5))
+}
+ggplot2::ggplot(data=cor, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() + 
+  labs(x = "", y = "") + 
+  scale_fill_gradient2(limits=c(-1, 1)) +
+  coord_cartesian(expand = FALSE) +
+  make_fullsize()
+```
+  
+# theme(plot.background = element_rect(fill = "black"),
+#                                        legend.position = "none")
 
 triangle_plots$delaunay_tri_ang
 
