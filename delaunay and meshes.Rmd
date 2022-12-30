@@ -1737,10 +1737,10 @@ df_OF_output_land_posed_binned_select_dcast[, c(1:4,150:155)]%>%
   group_by(bin_frame, expression,subject)%>%
     # group_by(filename,bin_frame, expression,subject)%>%
     summarise_if(is.numeric, mean, na.rm = T)%>%
-  ggplot(aes(bin_frame, comp1_NMFLand))+
+  ggplot(aes(bin_frame, comp1_NMFLand_maxnorm))+
   geom_smooth(colour = "#1B9E77" )+
-  geom_smooth(aes(y = comp2_NMFLand), colour = "#D95F02")+
-  geom_smooth(aes(y = comp3_NMFLand), colour = "#7570B3")+
+  geom_smooth(aes(y = comp2_NMFLand_maxnorm), colour = "#D95F02")+
+  geom_smooth(aes(y = comp3_NMFLand_maxnorm), colour = "#7570B3")+
   facet_grid(~expression)+
   theme_bw()+
   p$graphstyle_int
@@ -1750,6 +1750,16 @@ RColorBrewer::brewer.pal.info(Dark2)
 RColorBrewer::brewer.pal(3, "Dark2")
   
 brewer.pal('Dark2', "Paired")
+
+nmf_land_agg<- df_OF_output_land_posed_binned_select_dcast[, c(1:4,150:155)]%>%
+  group_by(filename, expression,subject)%>%
+    # group_by(filename,bin_frame, expression,subject)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+
+write_csv(nmf_land_agg, "nmf_land_agg.csv")
+
+# we are gnerally abl;e to cl;assify reltying on landmarks
+  
 ```
 
 ```{r}

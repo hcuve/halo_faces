@@ -1919,6 +1919,48 @@ boundaryplots$pc1_2_ggside
 # boundaryplots$pc1_2_ggside+
 #   boundaryplots$pc1_2_ggside
 
+
+axis_titleimage <- c(
+  # comp1 = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1n.png'
+  #   width='100' /><br> 3",
+  comp2 = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2n.png'
+    width='100' /><br> 2",
+  comp1 = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3n.png'
+    width='100' /><br> 1"
+)
+
+x_axis_titleimage <- c(
+  # comp1 = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1n.png'
+  #   width='100' /><br> 3",
+  # comp2 = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2n.png'
+  #   width='100' /><br> 2",
+  comp1 = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3n.png'
+    width='100' /><br> 1"
+)
+
+
+boundaryplots$pc1_2_ggside+
+
+  # xlab("Component (K)")+
+    scale_x_continuous(
+      # position = "top",
+    name = x_axis_titleimage)+
+  
+   scale_y_continuous(
+      # position = "top",
+    name = x_axis_titleimage)+
+    # labels = labels) +
+  theme(
+     axis.title.x = element_markdown(color = "black", size = 16*(sf+.5)),
+     axis.title.y = element_markdown(color = "black", size = 16*(sf+.5),angle = 0)
+     
+     )
+
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+     # axis.title.x = element_text(size = 16*(sf+.5)),#update this,
+     axis.text.x = element_text(size = 15*(sf+.5), colour = "black"))
+  axis.text.y = element_text(size = 15*(sf+.5), colour = "black")
+
 ```
   ggMarginal(piris, groupColour = TRUE, groupFill = TRUE)
 
@@ -2473,9 +2515,12 @@ paper_plots$conf_mat_posed
 #   plot_layout(nrow = 2)
 
 
+```
+
+
 
 # new one
-
+```{r}
 library(cowplot)
 legend_side<- get_legend(legendtop+
   theme(legend.position = "right"))
@@ -2497,7 +2542,7 @@ patchwork::wrap_elements(boundaryplots$pc1_2_box) +
 
 
 
-# 1500 buy 900 seems to work - save this
+# 1500 but 900 seems to work - save this
 
 paper_plots$panel_posed_fig3 <-
 (patchwork::wrap_elements(boundaryplots$pc1_2_box) + 
@@ -2517,7 +2562,7 @@ paper_plots$panel_posed_fig3 <-
 # ggside panel
 
 
-paper_plots$panel_posed_fig3_ggside<-
+paper_plots$panel_posed_fig3_ggside <-
 (boundaryplots$pc1_2_ggside + 
   patchwork::wrap_elements(legend_side)+
 
@@ -2537,11 +2582,14 @@ paper_plots$panel_posed_fig3_ggside_noxlab<-
   boundaryplots$pc2_3_ggside+
     boundaryplots$pc1_3_ggside+ 
   paper_plots$conf_mat_posed)
-ggsave("panel_posed_fig3.tiff",  paper_plots$panel_posed_fig3,
-       device = "tiff",
-       width = 15,
-       height = 9)
 
+
+# ggsave("panel_posed_fig3.tiff",  paper_plots$panel_posed_fig3,
+#        device = "tiff",
+#        width = 15,
+#        height = 9)
+
+paper_plots$panel_posed_fig3_ggside
 ggsave("panel_posed_fig3_ggside.tiff",  paper_plots$panel_posed_fig3_ggside,
        device = "tiff",
        width = 1800,
