@@ -6,11 +6,6 @@ output: html_document
 ---
 
 
-
-
-
-
-
 # landmarks and normalisation
 
 ```{r}
@@ -142,6 +137,7 @@ df_OF_output_land_posed_binned_select_alligned_eyes%>%
 # test_happy_dcast_binned<- 
   # test_happy_dcast %>%
 df_OF_output_land_posed_binned_select_alligned_eyes$bin_frame
+
 df_OF_output_land_posed_binned_select_alligned_eyes<-
 
 df_OF_output_land_posed_binned_select_alligned_eyes%>%
