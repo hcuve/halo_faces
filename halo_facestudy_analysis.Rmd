@@ -1313,7 +1313,8 @@ require(tidyverse)
 require(patchwork)
 
 paper_plots$panel_NMF_posed<-
-wrap_elements(full = test1) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))
+wrap_elements(full = test1) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))+
+   plot_annotation(tag_levels = 'A')
 
 
 paper_plots$panel_NMF_posed

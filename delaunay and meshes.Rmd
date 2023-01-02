@@ -365,7 +365,8 @@ require(ggforce)
 # one colour per triangle
 
 df_OF_output_land_posed_binned_select_alligned_eyes
-df_OF_output_land_posed_binned_select_alligned_eyes_agg
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg<-
 
 df_OF_output_land_posed_binned_select_alligned_eyes%>%
   group_by(filename)%>%
@@ -394,28 +395,38 @@ df_OF_output_land_posed_binned_select_alligned_eyes%>%
  # filter(bin_frame>40 & bin_frame<75)%>%
 
   group_by(expression, lanmark_id)%>% #posed.spoken
-  summarise_if(is.numeric, mean, na.rm = T)
-  # ggplot(aes(x = x_new_norm_rot2, y = 1-y_new_norm_rot2, fill = cum_x_y_norm_abs_diff_mean_fill_norm,
-  #              colour = cum_x_y_norm_abs_diff_mean_fill_norm))+
-  #  geom_voronoi_tile(aes(fill = cum_x_y_norm_abs_diff_mean_fill_norm), colour =NA)+
-  #  geom_point(aes(y = 1-y_new_norm_rot2), colour = "white",size = .5,alpha = .5)+
-  #    scale_color_viridis_c(option = "magma")+
-  # scale_fill_viridis_c(option = "magma")+
-  #   facet_grid(~expression)+
-  # geom_hline(yintercept = 1)
+  summarise_if(is.numeric, sum, na.rm = T)
+
+
+
 
 df_OF_output_land_posed_binned_select_alligned_eyes_agg
 
+# agg 2 for plotting components only
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg2 <-
+# colnames(df_OF_output_land_spoken_binned_select_alligned_eyes)
+df_OF_output_land_posed_binned_select_alligned_eyes_agg%>%
+  group_by(lanmark_id)%>% #posed.spoken
+  summarise_if(is.numeric, sum, na.rm = T)
+
 df_OF_output_land_posed_binned_select_alligned_eyes_agg
+df_OF_output_land_posed_binned_select_alligned_eyes_agg2
+
+```
+
+quick check
+```{r}
 
 library(deldir)
+
 tri <- triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg$x_new_norm_rot2, 
                           df_OF_output_land_posed_binned_select_alligned_eyes_agg$y_new_norm_rot2))
 
 delaunay_tri_all<- do.call(rbind, lapply(seq_along(tri), 
                       function(x) {
   data.frame(x_new_norm_rot2 = tri[[x]]$x, y_new_norm_rot2 = tri[[x]]$y, 
-             coef_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg$cum_x_y_norm_abs_diff_mean_fill_norm[tri[[x]]$ptNum]),
+             coef_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg$coef_fill_AUcomp_nmf_max_norm[tri[[x]]$ptNum]),
              tri = x)
   })) |>
   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
@@ -480,6 +491,7 @@ interp(test_gradient$x_new_norm_rot2,
 
 separate emmotions
 
+
 ```{r}
 
 df_OF_output_land_posed_binned_select_alligned_eyes_agg$expression
@@ -495,19 +507,28 @@ sad_del<-subset(df_OF_output_land_posed_binned_select_alligned_eyes_agg,
                 expression == "sad")
 
 
+
+```
+
+
+Anger
+
+
 anger_del
+
+```{r}
 
 tri_ang <- triang.list(deldir(anger_del$x_new_norm_rot2, 
                           anger_del$y_new_norm_rot2))
 
 
-triangle_plots$delaunay_tri_ang
+triangle_plots$delaunay_tri_ang<-
 
 
 do.call(rbind, lapply(seq_along(tri_ang), 
                       function(x) {
   data.frame(x_new_norm_rot2 = tri_ang[[x]]$x, y_new_norm_rot2 = tri_ang[[x]]$y, 
-             coef_fill = mean(anger_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_ang[[x]]$ptNum]),
+             coef_fill = mean(anger_del$coef_fill_AUcomp_nmf_max_norm[tri_ang[[x]]$ptNum]),
              tri_ang = x)
   })) |>
   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
@@ -521,14 +542,15 @@ do.call(rbind, lapply(seq_along(tri_ang),
     theme(
                                        legend.position = "none")
   
-# theme(plot.background = element_rect(fill = "black"),
-#                                        legend.position = "none")
+```
 
 
+
+```{r}
 do.call(rbind, lapply(seq_along(tri_ang), 
                       function(x) {
   data.frame(x_new_norm_rot2 = tri_ang[[x]]$x, y_new_norm_rot2 = tri_ang[[x]]$y, 
-             coef_fill = mean(anger_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_ang[[x]]$ptNum]),
+             coef_fill = mean(anger_del$coef_fill_AUcomp_nmf_max_norm[tri_ang[[x]]$ptNum]),
              tri_ang = x)
   })) |>
   ggplot(aes(x_new_norm_rot2, y_new_norm_rot2)) +
@@ -542,8 +564,108 @@ do.call(rbind, lapply(seq_along(tri_ang),
   theme_void()+
     theme(
                                        legend.position = "none")
-  
-  
+
+
+
+```
+# anger comp 1
+# comp 1 anger
+
+# anger comp 2
+# anger comp3
+
+```{r}
+
+
+delaunay_spoken_data$anger_del$cor_comp1_land_cum_diff_fill_sq_max_norm
+
+# delaunay_spoken_data$tri_ang <- triang.list(deldir(delaunay_spoken_data$anger_del$x_new_norm_rot2, 
+#                           delaunay_spoken_data$anger_del$y_new_norm_rot2))
+
+# 
+# tri_angtest <- triang.list(deldir(delaunay_spoken_data$anger_del$x_new_norm_rot2, 
+#                           delaunay_spoken_data$anger_del$y_new_norm_rot2))
+# 
+
+
+delaunay_spoken_data$tri_ang
+
+# delaunay_spoken_plots$spoken_triang_ang_comp1 
+delaunay_posed_plots<-list()
+
+delaunay_posed_plots$posed_triang_ang_comp1 <-
+do.call(rbind, lapply(seq_along(tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_ang[[x]]$x, 
+             y_new_norm_rot2 = tri_ang[[x]]$y, 
+ coef_fill = mean(anger_del$cor_comp1_land_cum_diff_fill_sq_max_norm[tri_ang[[x]]$ptNum]),
+             tri_ang = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_ang)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_triang_ang_comp1
+
+
+delaunay_posed_plots$posed_triang_ang_comp2 <-
+do.call(rbind, lapply(seq_along(tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_ang[[x]]$x, 
+             y_new_norm_rot2 = tri_ang[[x]]$y, 
+ coef_fill = mean(anger_del$cor_comp2_land_cum_diff_fill_sq_max_norm[tri_ang[[x]]$ptNum]),
+             tri_ang = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_ang)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_triang_ang_comp3 <-
+do.call(rbind, lapply(seq_along(tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_ang[[x]]$x, 
+             y_new_norm_rot2 = tri_ang[[x]]$y, 
+ coef_fill = mean(anger_del$cor_comp3_land_cum_diff_fill_sq_max_norm[tri_ang[[x]]$ptNum]),
+             tri_ang = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_ang)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_triang_ang_comp1
+delaunay_posed_plots$posed_triang_ang_comp2
+delaunay_posed_plots$posed_triang_ang_comp3
+
+```
+
+```{r}
+
+require(patchwork)
+
+  triangle_plots$delaunay_tri_ang/
+    (delaunay_posed_plots$posed_triang_ang_comp1|delaunay_posed_plots$posed_triang_ang_comp2|delaunay_posed_plots$posed_triang_ang_comp3)
+
 ```
 
 
@@ -562,43 +684,31 @@ library(ggplot2)
 
 make_fullsize <- function() structure("", class = "fullsizebar")
 
-ggplot_add.fullsizebar <- function(obj, g, name = "fullsizebar") {
-  h <- ggplotGrob(g)$heights
+ggplot_add.fullsizebar <- function(obj, gtes, name = "fullsizebar") {
+  h <- ggplotGrob(gtes)$heights
   panel <- which(grid::unitType(h) == "null")
   panel_height <- unit(1, "npc") - sum(h[-panel])
   
-  g + 
+  gtes + 
     guides(fill = guide_colorbar(barheight = panel_height,
                                  title.position = "right")) +
     theme(legend.title = element_text(angle = -90, hjust = 0.5))
 }
-ggplot2::ggplot(data=cor, aes(x=Var1, y=Var2, fill=value)) +
+
+ggplot(data=cor, aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() + 
-  labs(x = "", y = "") + 
-  scale_fill_gradient2(limits=c(-1, 1)) +
-  coord_cartesian(expand = FALSE) +
+  # labs(x = "", y = "") + 
+  # scale_fill_gradient2(limits=c(-1, 1)) +
+  # coord_cartesian(expand = FALSE) +
   make_fullsize()
 ```
   
-# theme(plot.background = element_rect(fill = "black"),
-#                                        legend.position = "none")
 
 triangle_plots$delaunay_tri_ang
 
-
-triangle_plots$delaunay_tri_ang
 
 # 2
-# df_OF_output_land_posed_binned_select_alligned_eyes$comp1_NMFLand - bu matrix
-# df_OF_output_land_posed_binned_select_alligned_eyes$nmf_land_value_norm1 - small matrux
-# anger_del$comp1_NMFLand
-
-anger_del$comp1_NMFLand
-anger_del
-coef_fill_AUcomp_nmf
-coef_fill_land_comp_nmf
-  
-     
+```{r}
 
 triangle_plots$delaunay_tri_ang
 # coef_fill_land_comp_nmf_max_norm seems off and the AU seems flipped
@@ -658,6 +768,7 @@ happy sad
 ```{r}
 unique(happy_del$expression)
 library(deldir)
+
 tri_happy <- triang.list(deldir(happy_del$x_new_norm_rot2, 
                           happy_del$y_new_norm_rot2))
 
@@ -665,7 +776,7 @@ tri_happy <- triang.list(deldir(happy_del$x_new_norm_rot2,
 triangle_plots$delaunay_tri_happy<- do.call(rbind, lapply(seq_along(tri_happy), 
                       function(x) {
   data.frame(x_new_norm_rot2 = tri_happy[[x]]$x, y_new_norm_rot2 = tri_happy[[x]]$y, 
-             coef_fill = mean(happy_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_happy[[x]]$ptNum]),
+             coef_fill = mean(happy_del$coef_fill_AUcomp_nmf_max_norm[tri_happy[[x]]$ptNum]),
              tri_happy = x)
   })) |>
   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
@@ -680,14 +791,118 @@ triangle_plots$delaunay_tri_happy<- do.call(rbind, lapply(seq_along(tri_happy),
     theme_void()+
     theme(
                                        legend.position = "none")
-  theme(plot.background = element_rect(fill = "black"),
-        legend.position = "none")
+  
+# theme(plot.background = element_rect(fill = "black"),
+#         legend.position = "none")
 
+triangle_plots$delaunay_tri_ang
 triangle_plots$delaunay_tri_happy
 
 # AU NMF
 # triang.list(deldir(happy_del$x_new_norm_rot2, 
 #                           happy_del$y_new_norm_rot2))
+
+```
+
+
+happy components
+
+
+```{r}
+
+
+# delaunay_posed_plots<-list()
+
+delaunay_posed_plots$posed_triang_happy_comp1 <-
+do.call(rbind, lapply(seq_along(tri_happy), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_happy[[x]]$x, 
+             y_new_norm_rot2 = tri_happy[[x]]$y, 
+ coef_fill = mean(happy_del$cor_comp1_land_cum_diff_fill_sq_max_norm[tri_happy[[x]]$ptNum]),
+             tri_happy = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_happy)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_triang_ang_comp1
+delaunay_posed_plots$posed_triang_happy_comp1
+
+
+delaunay_posed_plots$posed_triang_happy_comp2 <-
+do.call(rbind, lapply(seq_along(tri_happy), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_happy[[x]]$x, 
+             y_new_norm_rot2 = tri_happy[[x]]$y, 
+ coef_fill = mean(happy_del$cor_comp2_land_cum_diff_fill_sq_max_norm[tri_happy[[x]]$ptNum]),
+             tri_happy = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_happy)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_triang_ang_comp2
+delaunay_posed_plots$posed_triang_happy_comp2
+
+
+delaunay_posed_plots$posed_triang_happy_comp3 <-
+do.call(rbind, lapply(seq_along(tri_happy), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_happy[[x]]$x, 
+             y_new_norm_rot2 = tri_happy[[x]]$y, 
+ coef_fill = mean(happy_del$cor_comp3_land_cum_diff_fill_sq_max_norm[tri_happy[[x]]$ptNum]),
+             tri_happy = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_happy)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_triang_ang_comp3
+delaunay_posed_plots$posed_triang_happy_comp3
+
+```
+
+
+
+
+
+```{r}
+
+require(patchwork)
+
+  (triangle_plots$delaunay_tri_ang|
+    delaunay_posed_plots$posed_triang_ang_comp1|
+    delaunay_posed_plots$posed_triang_ang_comp2|
+    delaunay_posed_plots$posed_triang_ang_comp3)/
+      (triangle_plots$delaunay_tri_happy|
+    delaunay_posed_plots$posed_triang_happy_comp1|
+   delaunay_posed_plots$posed_triang_happy_comp2|
+   delaunay_posed_plots$posed_triang_happy_comp3)
+
+```
+
+SAD
 
 
 do.call(rbind, lapply(seq_along(tri_happy), 
@@ -709,9 +924,6 @@ do.call(rbind, lapply(seq_along(tri_happy),
 # happy not accurate
 
 
-
-
-```
 # fillgradiuent
 colnames(anger_del)
 
@@ -753,7 +965,7 @@ tri_sad <- triang.list(deldir(sad_del$x_new_norm_rot2,
 triangle_plots$delaunay_tri_sad<- do.call(rbind, lapply(seq_along(tri_sad), 
                       function(x) {
   data.frame(x_new_norm_rot2 = tri_sad[[x]]$x, y_new_norm_rot2 = tri_sad[[x]]$y, 
-             coef_fill = mean(sad_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_sad[[x]]$ptNum]),
+             coef_fill = mean(sad_del$coef_fill_AUcomp_nmf_max_norm[tri_sad[[x]]$ptNum]),
              tri_sad = x)
   })) |>
   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
@@ -768,10 +980,272 @@ triangle_plots$delaunay_tri_sad<- do.call(rbind, lapply(seq_along(tri_sad),
     theme_void()+
     theme(
                                        legend.position = "none")
-  theme(plot.background = element_rect(fill = "black"),
-        legend.position = "none")
-
+  # theme(plot.background = element_rect(fill = "black"),
+  #       legend.position = "none")
+triangle_plots$delaunay_tri_ang
+triangle_plots$delaunay_tri_happy
 triangle_plots$delaunay_tri_sad
+
+
+```
+
+
+SAD components
+
+```{r}
+# delaunay_posed_plots<-list()
+
+delaunay_posed_plots$posed_triang_sad_comp1 <-
+do.call(rbind, lapply(seq_along(tri_sad), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_sad[[x]]$x, 
+             y_new_norm_rot2 = tri_sad[[x]]$y, 
+ coef_fill = mean(happy_del$cor_comp1_land_cum_diff_fill_sq_max_norm[tri_sad[[x]]$ptNum]),
+             tri_sad = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_sad)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_triang_ang_comp1
+delaunay_posed_plots$posed_triang_happy_comp1
+delaunay_posed_plots$posed_triang_sad_comp1
+
+
+```
+
+```{r}
+delaunay_posed_plots$posed_triang_sad_comp2 <-
+do.call(rbind, lapply(seq_along(tri_sad), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_sad[[x]]$x, 
+             y_new_norm_rot2 = tri_sad[[x]]$y, 
+ coef_fill = mean(happy_del$cor_comp2_land_cum_diff_fill_sq_max_norm[tri_sad[[x]]$ptNum]),
+             tri_sad = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_sad)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_triang_ang_comp2
+delaunay_posed_plots$posed_triang_happy_comp2
+delaunay_posed_plots$posed_triang_sad_comp2
+
+```
+
+```{r}
+delaunay_posed_plots$posed_triang_sad_comp3 <-
+do.call(rbind, lapply(seq_along(tri_sad), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_sad[[x]]$x, 
+             y_new_norm_rot2 = tri_sad[[x]]$y, 
+ coef_fill = mean(happy_del$cor_comp3_land_cum_diff_fill_sq_max_norm[tri_sad[[x]]$ptNum]),
+             tri_sad = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_sad)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_triang_ang_comp3
+delaunay_posed_plots$posed_triang_happy_comp3
+delaunay_posed_plots$posed_triang_sad_comp3
+
+```
+
+
+```{r}
+
+require(patchwork)
+
+  (triangle_plots$delaunay_tri_ang|
+    delaunay_posed_plots$posed_triang_ang_comp1|
+    delaunay_posed_plots$posed_triang_ang_comp2|
+    delaunay_posed_plots$posed_triang_ang_comp3)/
+      (triangle_plots$delaunay_tri_happy|
+    delaunay_posed_plots$posed_triang_happy_comp1|
+   delaunay_posed_plots$posed_triang_happy_comp2|
+   delaunay_posed_plots$posed_triang_happy_comp3)/
+   (triangle_plots$delaunay_tri_sad|
+    delaunay_posed_plots$posed_triang_sad_comp1|
+   delaunay_posed_plots$posed_triang_sad_comp2|
+   delaunay_posed_plots$posed_triang_sad_comp3)
+
+```
+
+COMPONENTS across emotions
+
+components across emotions
+```{r}
+# COMP1
+
+df_OF_output_land_posed_binned_select_alligned_eyes_agg2
+
+
+
+delaunay_posed_data<-list()
+
+delaunay_posed_data$posed_tri_comp1 <-
+triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+
+posed_tri_comp1test<-
+triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+# delaunay_spoken<-list()
+
+
+# delaunay_posed_plots$posed_tri_comp1<-
+delaunay_posed_plots$posed_tri_comp1
+do.call(rbind, lapply(seq_along(delaunay_posed_data$posed_tri_comp1), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = posed_tri_comp1test[[x]]$x, y_new_norm_rot2 = posed_tri_comp1test[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$cor_comp1_land_cum_diff_fill_sq_max_norm[posed_tri_comp1test[[x]]$ptNum]),
+             posed_tri_comp1test = x)
+  })) |>
+  
+   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = posed_tri_comp1test)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_tri_comp1
+
+
+```
+
+
+
+# comp2
+
+
+```{r}
+delaunay_posed_data$posed_tri_comp2 <-
+triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+
+posed_tri_comp2test<-
+triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+# delaunay_spoken<-list()
+
+delaunay_posed_plots$posed_tri_comp2
+# delaunay_posed_plots$posed_tri_comp2<-
+do.call(rbind, lapply(seq_along(delaunay_posed_data$posed_tri_comp2), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = posed_tri_comp2test[[x]]$x, y_new_norm_rot2 = posed_tri_comp2test[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$cor_comp2_land_cum_diff_fill_sq_max_norm[posed_tri_comp2test[[x]]$ptNum]),
+             posed_tri_comp2test = x)
+  })) |>
+  
+   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = posed_tri_comp2test)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_tri_comp1
+delaunay_posed_plots$posed_tri_comp2
+
+
+```
+
+
+
+# comp 3
+```{r}
+
+delaunay_posed_data$posed_tri_comp3 <-
+triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+
+posed_tri_comp3test <-
+triang.list(deldir(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_posed_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+# delaunay_spoken<-list()
+
+
+delaunay_posed_plots$posed_tri_comp3<-
+do.call(rbind, lapply(seq_along(delaunay_posed_data$posed_tri_comp3), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = posed_tri_comp3test[[x]]$x, y_new_norm_rot2 = posed_tri_comp3test[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_posed_binned_select_alligned_eyes_agg2$cor_comp3_land_cum_diff_fill_sq_max_norm[posed_tri_comp3test[[x]]$ptNum]),
+             posed_tri_comp3test = x)
+  })) |>
+  
+   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = posed_tri_comp3test)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_posed_plots$posed_tri_comp1
+delaunay_posed_plots$posed_tri_comp2
+delaunay_posed_plots$posed_tri_comp3
+
+
+```
+```{r}
+
+(triangle_plots$delaunay_tri_ang|
+    delaunay_posed_plots$posed_triang_ang_comp1|
+    delaunay_posed_plots$posed_triang_ang_comp2|
+    delaunay_posed_plots$posed_triang_ang_comp3)/
+      (triangle_plots$delaunay_tri_happy|
+    delaunay_posed_plots$posed_triang_happy_comp1|
+   delaunay_posed_plots$posed_triang_happy_comp2|
+   delaunay_posed_plots$posed_triang_happy_comp3)/
+   (triangle_plots$delaunay_tri_sad|
+    delaunay_posed_plots$posed_triang_sad_comp1|
+   delaunay_posed_plots$posed_triang_sad_comp2|
+   delaunay_posed_plots$posed_triang_sad_comp3)/
+  (plot_spacer()|delaunay_posed_plots$posed_tri_comp1|
+delaunay_posed_plots$posed_tri_comp2|
+delaunay_posed_plots$posed_tri_comp3)
+
+```
 
 # AU NMF
  do.call(rbind, lapply(seq_along(tri_sad), 
@@ -791,7 +1265,7 @@ triangle_plots$delaunay_tri_sad
   theme_void()+
   theme(plot.background = element_rect(fill = "black"))
 
-```
+
 # fillgradiuent
 
 triangle_plots$delaunay_tri_sad_grad<-
@@ -822,9 +1296,6 @@ triangle_plots$delaunay_tri_sad
 triangle_plots$delaunay_tri_sad_grad
 
 
-correlate landmarks with NMF components?
-
-above not quite there yet
 
 let's see correlations
 
