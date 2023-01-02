@@ -320,7 +320,7 @@ df_OF_output_land_spoken_binned_select_alligned_eyes%>%
   mutate(cum_x_y_norm_abs_diff_mean_fill_norm =
            if_else(is.na(cum_x_y_norm_abs_diff_mean_fill_norm) == TRUE, 0,
                    cum_x_y_norm_abs_diff_mean_fill_norm)) %>%
-  group_by(lanmark_id)%>% #consider grouping it by file too
+  group_by(expression, lanmark_id)%>% #consider grouping it by file too
   mutate(cor_comp1_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp1_normmax,use = "complete.obs"),
     cor_comp2_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp2_normmax,use = "complete.obs"), 
     cor_comp3_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp3_normmax, use = "complete.obs"))
@@ -405,9 +405,10 @@ df_OF_output_land_spoken_binned_select_alligned_eyes<- df_OF_output_land_spoken_
          cor_comp2_land_cum_diff_fill_sq = cor_comp2_land_cum_diff_fill^2,
          cor_comp3_land_cum_diff_fill_sq = cor_comp3_land_cum_diff_fill^2
          )
+
 df_OF_output_land_spoken_binned_select_alligned_eyes%>%
   ungroup()%>%
-  # group_by(lanmark_id)
+  group_by(filename)%>%
   mutate(cor_comp1_land_cum_diff_fill_sq_max_norm = maxnormalize(cor_comp1_land_cum_diff_fill_sq),
          cor_comp2_land_cum_diff_fill_sq_max_norm = maxnormalize(cor_comp2_land_cum_diff_fill_sq),
          cor_comp3_land_cum_diff_fill_sq_max_norm = maxnormalize(cor_comp3_land_cum_diff_fill_sq))%>%
@@ -430,7 +431,7 @@ df_OF_output_land_spoken_binned_select_alligned_eyes%>%
 df_OF_output_land_spoken_binned_select_alligned_eyes<-
 df_OF_output_land_spoken_binned_select_alligned_eyes%>%
   ungroup()%>%
-  # group_by(lanmark_id)
+  group_by(filename)%>%
   mutate(cor_comp1_land_cum_diff_fill_sq_max_norm = maxnormalize(cor_comp1_land_cum_diff_fill_sq),
          cor_comp2_land_cum_diff_fill_sq_max_norm = maxnormalize(cor_comp2_land_cum_diff_fill_sq),
          cor_comp3_land_cum_diff_fill_sq_max_norm = maxnormalize(cor_comp3_land_cum_diff_fill_sq))
@@ -441,11 +442,12 @@ delaunay plots
 
 
 ```{r}
-df_OF_output_land_spoken_binned_select_alligned_eyes_agg<-
+-
 # colnames(df_OF_output_land_spoken_binned_select_alligned_eyes)
 df_OF_output_land_spoken_binned_select_alligned_eyes%>%
   
   mutate(coef_fill =cum_x_y_norm_abs_diff_mean_fill_norm* ((cor_comp1_land_cum_diff_fill_sq_max_norm+cor_comp2_land_cum_diff_fill_sq_max_norm+cor_comp3_land_cum_diff_fill_sq_max_norm)/3))%>%
+  group_by(filename)%>%
   
   mutate(coef_fill_max_norm = maxnormalize(coef_fill))%>%
   
@@ -499,6 +501,9 @@ View(delaunay_tri_all)
 ```
 
 
+
+
+
 expressions
 
 
@@ -509,6 +514,7 @@ delaunay_spoken_data<-list()
 
 delaunay_spoken_data$anger_del<-subset(df_OF_output_land_spoken_binned_select_alligned_eyes_agg,
                 expression == "angry")
+
 delaunay_spoken_data$anger_del
 
 delaunay_spoken_data$happy_del<-subset(df_OF_output_land_spoken_binned_select_alligned_eyes_agg,
@@ -517,6 +523,10 @@ delaunay_spoken_data$happy_del<-subset(df_OF_output_land_spoken_binned_select_al
 
 delaunay_spoken_data$sad_del<-subset(df_OF_output_land_spoken_binned_select_alligned_eyes_agg,
                 expression == "sad")
+
+unique(df_OF_output_land_spoken_binned_select_alligned_eyes_agg$expression)
+delaunay_spoken_data$neutral_del<-subset(df_OF_output_land_spoken_binned_select_alligned_eyes_agg,
+                expression == "neutral")
 
 
 
@@ -549,7 +559,7 @@ delaunay_spoken_data$tri_ang
 #   
 #   
 
-delaunay_spoken_plots<-list()
+# delaunay_spoken_plots<-list()
 
 delaunay_spoken_plots$spoken_triang_ang<-
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
@@ -571,6 +581,30 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang),
                                        legend.position = "none")
 
 delaunay_spoken_plots$spoken_triang_ang
+
+
+# cum_x_y_norm_abs_diff_mean_fill_norm
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
+             y_new_norm_rot2 = tri_angtest[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$anger_del$cum_x_y_norm_abs_diff_mean_fill_norm[tri_angtest[[x]]$ptNum]),
+             tri_angtest = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_angtest)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_triang_ang
+
+```
   
 # theme(plot.background = element_rect(fill = "black"),
 #                                        legend.position = "none")
@@ -578,6 +612,8 @@ delaunay_spoken_plots$spoken_triang_ang
 
 
 # comp 1 anger
+
+```{r}
 
 
 delaunay_spoken_data$anger_del$cor_comp1_land_cum_diff_fill_sq_max_norm
@@ -700,8 +736,32 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_happy),
     theme(
                                        legend.position = "none")
 
+
+
+
+# cum_x_y_norm_abs_diff_mean_fill_norm
+
 delaunay_spoken_plots$spoken_triang_ang
 delaunay_spoken_plots$spoken_triang_happy
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_happy), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = delaunay_spoken_data$tri_happy[[x]]$x, 
+             y_new_norm_rot2 = delaunay_spoken_data$tri_happy[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$happy_del$cum_x_y_norm_abs_diff_mean_fill_norm[
+   spoken_tri_happy[[x]]$ptNum]),
+             spoken_tri_happy = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_happy)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
 
 ```
   
@@ -746,10 +806,12 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_happy),
   theme_void()+
     theme(
                                        legend.position = "none")
+delaunay_spoken_plots$spoken_triang_ang_comp1
+delaunay_spoken_plots$spoken_triang_happy_comp1
 
 ```
 
-delaunay_spoken_plots$spoken_triang_happy_comp1
+
 
 # comp 2
 
@@ -819,4 +881,431 @@ require(patchwork)
 ```
 
 
+SAD
+
+
+```{r}
+
+delaunay_spoken_data$tri_sad<- triang.list(deldir(delaunay_spoken_data$sad_del$x_new_norm_rot2, 
+                          delaunay_spoken_data$sad_del$y_new_norm_rot2))
+
+
+spoken_tri_sad<- triang.list(deldir(delaunay_spoken_data$sad_del$x_new_norm_rot2, 
+                          delaunay_spoken_data$sad_del$y_new_norm_rot2))
+
+
+
+
+delaunay_spoken_plots$spoken_triang_sad<-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_sad), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = delaunay_spoken_data$tri_sad[[x]]$x, 
+             y_new_norm_rot2 = delaunay_spoken_data$tri_sad[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$sad_del$coef_fill_max_norm[
+   spoken_tri_sad[[x]]$ptNum]),
+             spoken_tri_sad = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_sad)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_triang_ang
+delaunay_spoken_plots$spoken_triang_happy
+delaunay_spoken_plots$spoken_triang_sad
+
+```
+  
+
+
+# comp 1 sad
+
+```{r}
+
+
+delaunay_spoken_data$sad_del$cor_comp1_land_cum_diff_fill_sq_max_norm
+
+
+
+
+delaunay_spoken_plots$spoken_triang_sad_comp1 <-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_sad), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_sad[[x]]$x, 
+             y_new_norm_rot2 = spoken_tri_sad[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$sad_del$cor_comp1_land_cum_diff_fill_sq_max_norm[spoken_tri_sad[[x]]$ptNum]),
+             spoken_tri_sad = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_sad)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+delaunay_spoken_plots$spoken_triang_ang_comp1
+delaunay_spoken_plots$spoken_triang_happy_comp1
+delaunay_spoken_plots$spoken_triang_sad_comp1
+
+```
+
+
+
+# comp 2
+
+```{r}
+delaunay_spoken_plots$spoken_triang_sad_comp2 <-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_sad), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_sad[[x]]$x, 
+             y_new_norm_rot2 = spoken_tri_sad[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$sad_del$cor_comp2_land_cum_diff_fill_sq_max_norm[spoken_tri_sad[[x]]$ptNum]),
+             spoken_tri_sad = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_sad)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_triang_ang_comp2
+delaunay_spoken_plots$spoken_triang_happy_comp2
+delaunay_spoken_plots$spoken_triang_sad_comp2
+
+
+```
+
+# comp 3
+
+```{r}
+delaunay_spoken_plots$spoken_triang_sad_comp3 <-
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_sad), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_sad[[x]]$x, 
+             y_new_norm_rot2 = spoken_tri_sad[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$sad_del$cor_comp3_land_cum_diff_fill_sq_max_norm[spoken_tri_sad[[x]]$ptNum]),
+             spoken_tri_sad = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_sad)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_triang_ang_comp3
+delaunay_spoken_plots$spoken_triang_happy_comp3
+delaunay_spoken_plots$spoken_triang_sad_comp3
+
+```
+all together
+```{r}
+require(patchwork)
+  delaunay_spoken_plots$spoken_triang_ang/
+    (delaunay_spoken_plots$spoken_triang_ang_comp1|delaunay_spoken_plots$spoken_triang_ang_comp2|delaunay_spoken_plots$spoken_triang_ang_comp3)/
+     delaunay_spoken_plots$spoken_triang_sad/
+    (delaunay_spoken_plots$spoken_triang_sad_comp1|delaunay_spoken_plots$spoken_triang_sad_comp2|delaunay_spoken_plots$spoken_triang_sad_comp3)
+  
+  # i gues of we do the corelation per filename, we can get comp[onents that vary per expression]
+  
+    delaunay_spoken_plots$spoken_triang_ang/
+    (delaunay_spoken_plots$spoken_triang_ang_comp1|delaunay_spoken_plots$spoken_triang_ang_comp2|delaunay_spoken_plots$spoken_triang_ang_comp3)/
+     delaunay_spoken_plots$spoken_triang_happy/
+    (delaunay_spoken_plots$spoken_triang_happy_comp1|delaunay_spoken_plots$spoken_triang_happy_comp2|delaunay_spoken_plots$spoken_triang_happy_comp3)/ delaunay_spoken_plots$spoken_triang_sad/
+    (delaunay_spoken_plots$spoken_triang_sad_comp1|delaunay_spoken_plots$spoken_triang_sad_comp2|delaunay_spoken_plots$spoken_triang_sad_comp3)
+
+```
+
+neutral
+
+
+neutral
+
+
+```{r}
+
+delaunay_spoken_data$tri_neutral<- triang.list(deldir(delaunay_spoken_data$neutral_del$x_new_norm_rot2, 
+                          delaunay_spoken_data$neutral_del$y_new_norm_rot2))
+
+
+spoken_tri_neutral<- triang.list(deldir(delaunay_spoken_data$neutral_del$x_new_norm_rot2, 
+                          delaunay_spoken_data$neutral_del$y_new_norm_rot2))
+
+
+
+
+delaunay_spoken_plots$spoken_triang_neutral<-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_neutral), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = delaunay_spoken_data$tri_neutral[[x]]$x, 
+             y_new_norm_rot2 = delaunay_spoken_data$tri_neutral[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$neutral_del$coef_fill_max_norm[
+   spoken_tri_neutral[[x]]$ptNum]),
+             spoken_tri_neutral = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_neutral)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_triang_ang
+delaunay_spoken_plots$spoken_triang_happy
+delaunay_spoken_plots$spoken_triang_sad
+delaunay_spoken_plots$spoken_triang_neutral
+
+```
+  
+
+
+# comp 1 neutral
+
+```{r}
+
+delaunay_spoken_plots$spoken_triang_neutral_comp1 <-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_neutral), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_neutral[[x]]$x, 
+             y_new_norm_rot2 = spoken_tri_neutral[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$neutral_del$cor_comp1_land_cum_diff_fill_sq_max_norm[spoken_tri_neutral[[x]]$ptNum]),
+             spoken_tri_neutral = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_neutral)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+delaunay_spoken_plots$spoken_triang_ang_comp1
+delaunay_spoken_plots$spoken_triang_happy_comp1
+delaunay_spoken_plots$spoken_triang_sad_comp1
+delaunay_spoken_plots$spoken_triang_neutral_comp1
+
+```
+
+
+
+# comp 2
+
+```{r}
+delaunay_spoken_plots$spoken_triang_neutral_comp2 <-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_neutral), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_neutral[[x]]$x, 
+             y_new_norm_rot2 = spoken_tri_neutral[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$neutral_del$cor_comp2_land_cum_diff_fill_sq_max_norm[spoken_tri_neutral[[x]]$ptNum]),
+             spoken_tri_neutral = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_neutral)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_triang_ang_comp2
+delaunay_spoken_plots$spoken_triang_happy_comp2
+delaunay_spoken_plots$spoken_triang_sad_comp2
+delaunay_spoken_plots$spoken_triang_neutral_comp2
+
+
+```
+
+# comp 3
+
+```{r}
+delaunay_spoken_plots$spoken_triang_neutral_comp3 <-
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_neutral), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_neutral[[x]]$x, 
+             y_new_norm_rot2 = spoken_tri_neutral[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$neutral_del$cor_comp3_land_cum_diff_fill_sq_max_norm[spoken_tri_neutral[[x]]$ptNum]),
+             spoken_tri_neutral = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_neutral)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_triang_ang_comp3
+delaunay_spoken_plots$spoken_triang_happy_comp3
+delaunay_spoken_plots$spoken_triang_sad_comp3
+
+delaunay_spoken_plots$spoken_triang_neutral_comp3
+
+```
+
+all together
+```{r}
+require(patchwork)
+  delaunay_spoken_plots$spoken_triang_ang/
+    (delaunay_spoken_plots$spoken_triang_ang_comp1|delaunay_spoken_plots$spoken_triang_ang_comp2|delaunay_spoken_plots$spoken_triang_ang_comp3)/
+     delaunay_spoken_plots$spoken_triang_sad/
+    (delaunay_spoken_plots$spoken_triang_sad_comp1|delaunay_spoken_plots$spoken_triang_sad_comp2|delaunay_spoken_plots$spoken_triang_sad_comp3)
+  
+  # i gues of we do the corelation per filename, we can get comp[onents that vary per expression]
+  
+    delaunay_spoken_plots$spoken_triang_ang/
+    (delaunay_spoken_plots$spoken_triang_ang_comp1|delaunay_spoken_plots$spoken_triang_ang_comp2|delaunay_spoken_plots$spoken_triang_ang_comp3)/
+     delaunay_spoken_plots$spoken_triang_happy/
+    (delaunay_spoken_plots$spoken_triang_happy_comp1|delaunay_spoken_plots$spoken_triang_happy_comp2|delaunay_spoken_plots$spoken_triang_happy_comp3)/ delaunay_spoken_plots$spoken_triang_sad/
+    (delaunay_spoken_plots$spoken_triang_sad_comp1|delaunay_spoken_plots$spoken_triang_sad_comp2|delaunay_spoken_plots$spoken_triang_sad_comp3)/
+      delaunay_spoken_plots$spoken_triang_neutral/
+    (delaunay_spoken_plots$spoken_triang_neutral_comp1|delaunay_spoken_plots$spoken_triang_neutral_comp2|delaunay_spoken_plots$spoken_triang_neutral_comp3)
+
+```
+
+components across emotions
+```{r}
+# COMP1
+
+df_OF_output_land_spoken_binned_select_alligned_eyes_agg2 <-
+# colnames(df_OF_output_land_spoken_binned_select_alligned_eyes)
+df_OF_output_land_spoken_binned_select_alligned_eyes_agg%>%
+  group_by(lanmark_id)%>% #posed.spoken
+  summarise_if(is.numeric, mean, na.rm = T)
+
+
+df_OF_output_land_spoken_binned_select_alligned_eyes_agg2
+
+delaunay_spoken_data$spoken_tri_comp1<-
+triang.list(deldir(df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+
+spoken_tri_comp1test<-
+triang.list(deldir(df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$x_new_norm_rot2, 
+                          df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$y_new_norm_rot2))
+
+# delaunay_spoken<-list()
+
+delaunay_spoken_data$spoken_tri_comp1
+
+# 
+
+delaunay_spoken_plots$spoken_tri_comp1<-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_comp1test[[x]]$x, y_new_norm_rot2 = spoken_tri_comp1test[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$cor_comp1_land_cum_diff_fill_sq_max_norm[spoken_tri_comp1test[[x]]$ptNum]),
+             spoken_tri_comp1test = x)
+  })) |>
+  
+   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_comp1test)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_tri_comp1
+# comp2
+
+delaunay_spoken_plots$spoken_tri_comp2<-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_comp1test[[x]]$x, y_new_norm_rot2 = spoken_tri_comp1test[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$cor_comp2_land_cum_diff_fill_sq_max_norm[spoken_tri_comp1test[[x]]$ptNum]),
+             spoken_tri_comp1test = x)
+  })) |>
+  
+   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_comp1test)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_tri_comp2
+
+
+# comp 3
+
+delaunay_spoken_plots$spoken_tri_comp3<-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_comp1test[[x]]$x, y_new_norm_rot2 = spoken_tri_comp1test[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$cor_comp3_land_cum_diff_fill_sq_max_norm[spoken_tri_comp1test[[x]]$ptNum]),
+             spoken_tri_comp1test = x)
+  })) |>
+  
+   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_comp1test)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+delaunay_spoken_plots$spoken_tri_comp1
+
+delaunay_spoken_plots$spoken_tri_comp2
+delaunay_spoken_plots$spoken_tri_comp3
+
+```
+
+
+```{r}
+
+ ( (delaunay_spoken_plots$spoken_triang_ang|
+    delaunay_spoken_plots$spoken_triang_ang_comp1|delaunay_spoken_plots$spoken_triang_ang_comp2|delaunay_spoken_plots$spoken_triang_ang_comp3)/
+     (delaunay_spoken_plots$spoken_triang_happy|
+    delaunay_spoken_plots$spoken_triang_happy_comp1|delaunay_spoken_plots$spoken_triang_happy_comp2|delaunay_spoken_plots$spoken_triang_happy_comp3)/ (delaunay_spoken_plots$spoken_triang_sad|
+    delaunay_spoken_plots$spoken_triang_sad_comp1|delaunay_spoken_plots$spoken_triang_sad_comp2|delaunay_spoken_plots$spoken_triang_sad_comp3)/
+      (delaunay_spoken_plots$spoken_triang_neutral|
+    delaunay_spoken_plots$spoken_triang_neutral_comp1|delaunay_spoken_plots$spoken_triang_neutral_comp2|delaunay_spoken_plots$spoken_triang_neutral_comp3)/
+  (plot_spacer()+delaunay_spoken_plots$spoken_tri_comp1|delaunay_spoken_plots$spoken_tri_comp2|delaunay_spoken_plots$spoken_tri_comp3))+
+  plot_layout(widths = c(1,1,1,1))
+
+```
 
