@@ -1297,15 +1297,25 @@ delaunay_spoken_plots$spoken_tri_comp3
 
 ```{r}
 
- ( (delaunay_spoken_plots$spoken_triang_ang|
+  ((delaunay_spoken_plots$spoken_triang_ang)|
+    (delaunay_spoken_plots$spoken_triang_ang_comp1|delaunay_spoken_plots$spoken_triang_ang_comp2|delaunay_spoken_plots$spoken_triang_ang_comp3))/
+     ((delaunay_spoken_plots$spoken_triang_happy)|
+    (delaunay_spoken_plots$spoken_triang_happy_comp1|delaunay_spoken_plots$spoken_triang_happy_comp2|delaunay_spoken_plots$spoken_triang_happy_comp3))/ ((delaunay_spoken_plots$spoken_triang_sad)|
+    (delaunay_spoken_plots$spoken_triang_sad_comp1|delaunay_spoken_plots$spoken_triang_sad_comp2|delaunay_spoken_plots$spoken_triang_sad_comp3))/
+      ((delaunay_spoken_plots$spoken_triang_neutral)|
+    (delaunay_spoken_plots$spoken_triang_neutral_comp1|delaunay_spoken_plots$spoken_triang_neutral_comp2|delaunay_spoken_plots$spoken_triang_neutral_comp3))/
+  ((plot_spacer())|(delaunay_spoken_plots$spoken_tri_comp1|delaunay_spoken_plots$spoken_tri_comp2|delaunay_spoken_plots$spoken_tri_comp3))
+  plot_layout(widths = c(1,1,1,1))
+
+  
+  
+  ((delaunay_spoken_plots$spoken_triang_ang|
     delaunay_spoken_plots$spoken_triang_ang_comp1|delaunay_spoken_plots$spoken_triang_ang_comp2|delaunay_spoken_plots$spoken_triang_ang_comp3)/
      (delaunay_spoken_plots$spoken_triang_happy|
     delaunay_spoken_plots$spoken_triang_happy_comp1|delaunay_spoken_plots$spoken_triang_happy_comp2|delaunay_spoken_plots$spoken_triang_happy_comp3)/ (delaunay_spoken_plots$spoken_triang_sad|
     delaunay_spoken_plots$spoken_triang_sad_comp1|delaunay_spoken_plots$spoken_triang_sad_comp2|delaunay_spoken_plots$spoken_triang_sad_comp3)/
       (delaunay_spoken_plots$spoken_triang_neutral|
     delaunay_spoken_plots$spoken_triang_neutral_comp1|delaunay_spoken_plots$spoken_triang_neutral_comp2|delaunay_spoken_plots$spoken_triang_neutral_comp3)/
-  (plot_spacer()+delaunay_spoken_plots$spoken_tri_comp1|delaunay_spoken_plots$spoken_tri_comp2|delaunay_spoken_plots$spoken_tri_comp3))+
-  plot_layout(widths = c(1,1,1,1))
-
+  (plot_spacer()|delaunay_spoken_plots$spoken_tri_comp1|delaunay_spoken_plots$spoken_tri_comp2|delaunay_spoken_plots$spoken_tri_comp3))
 ```
 

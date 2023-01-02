@@ -242,6 +242,12 @@ df_OF_output_land_posed_binned_select_alligned_eyes%>%
 
 # summarise for del and vor
 ```{r}
+
+
+colnames(df_OF_output_land_posed_binned_select_alligned_eyes)
+
+
+
 df_OF_output_land_posed_binned_select_alligned_eyes<- left_join(df_OF_output_land_posed_binned_select_alligned_eyes,
 df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,10,34:36)])
 
@@ -320,6 +326,38 @@ df_OF_output_land_posed_binned_select_alligned_eyes %>%
  
 ```
 
+
+
+simpler way to find filling coeficients
+
+```{r}
+
+colnames(df_OF_output_land_posed_binned_select_alligned_eyes)
+
+
+df_OF_output_land_posed_binned_select_alligned_eyes<-
+  df_OF_output_land_spoken_binned_select_alligned_eyes %>%
+    # subset(subject == 1)%>% 
+ # filter(bin_frame>40 & bin_frame<75)%>%
+ # filter(bin_frame>10 & bin_frame<60)%>%
+  group_by(filename)%>%
+  mutate(comp1_normmax = maxnormalize(comp1),
+         comp2_normmax = maxnormalize(comp2),
+         comp3_normmax = maxnormalize(comp3)
+         
+         )%>%
+  ungroup()%>%
+  mutate(cum_x_y_norm_abs_diff_mean_fill_norm =
+           if_else(is.na(cum_x_y_norm_abs_diff_mean_fill_norm) == TRUE, 0,
+                   cum_x_y_norm_abs_diff_mean_fill_norm)) %>%
+  group_by(expression, lanmark_id)%>% #consider grouping it by file too
+  mutate(cor_comp1_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp1_normmax,use = "complete.obs"),
+    cor_comp2_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp2_normmax,use = "complete.obs"), 
+    cor_comp3_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp3_normmax, use = "complete.obs"))
+
+
+
+```
 try del amnd vor plots
 
 ```{r}
@@ -327,26 +365,28 @@ require(ggforce)
 # one colour per triangle
 
 df_OF_output_land_posed_binned_select_alligned_eyes
-df_OF_output_land_posed_binned_select_alligned_eyes_agg<- df_OF_output_land_posed_binned_select_alligned_eyes%>%
+df_OF_output_land_posed_binned_select_alligned_eyes_agg
+
+df_OF_output_land_posed_binned_select_alligned_eyes%>%
   group_by(filename)%>%
-   mutate(comp1_normmax = maxnormalize(comp1),
-         comp2_normmax = maxnormalize(comp2),
-         comp3_normmax = maxnormalize(comp3)
-         
-         )%>%
+   # mutate(comp1_normmax = maxnormalize(comp1),
+   #       comp2_normmax = maxnormalize(comp2),
+   #       comp3_normmax = maxnormalize(comp3)
+   #       
+   #       )%>%
   
-    mutate(comp1_NMFLand_maxnorm = maxnormalize(comp1_NMFLand),
-         comp2_NMFLand_maxnorm = maxnormalize(comp2_NMFLand),
-         comp3_NMFLand_maxnorm = maxnormalize(comp3_NMFLand)
+    # mutate(comp1_NMFLand_maxnorm = maxnormalize(comp1_NMFLand),
+    #      comp2_NMFLand_maxnorm = maxnormalize(comp2_NMFLand),
+    #      comp3_NMFLand_maxnorm = maxnormalize(comp3_NMFLand)
          
-         )%>%
-  mutate(coef_fill_AUcomp_nmf = ((comp1_normmax+comp2_normmax+comp3_normmax)/3) * ((abs_corcomp1_max_norm +
-  abs_corcomp2_max_norm+abs_corcomp3_max_norm)/3))%>%
-       mutate(coef_fill_land_comp_nmf = ((comp1_NMFLand_maxnorm+comp2_NMFLand_maxnorm+comp3_NMFLand_maxnorm)/3) * ((nmf_land_value_norm1 +
-  nmf_land_value_norm2+nmf_land_value_norm3)/3))%>%
+         # )%>%
+  mutate(coef_fill_AUcomp_nmf = cum_x_y_norm_abs_diff_mean_fill_norm * 
+           ((cor_comp1_land_cum_diff_fill_sq_max_norm+cor_comp2_land_cum_diff_fill_sq_max_norm+cor_comp3_land_cum_diff_fill_sq_max_norm)/3))%>%
+  #      mutate(coef_fill_land_comp_nmf = ((comp1_NMFLand_maxnorm+comp2_NMFLand_maxnorm+comp3_NMFLand_maxnorm)/3) * ((nmf_land_value_norm1 +
+  # nmf_land_value_norm2+nmf_land_value_norm3)/3))%>%
   
   mutate(coef_fill_AUcomp_nmf_max_norm = maxnormalize(coef_fill_AUcomp_nmf))%>%
-   mutate(coef_fill_land_comp_nmf_max_norm = maxnormalize(coef_fill_land_comp_nmf))%>%
+   # mutate(coef_fill_land_comp_nmf_max_norm = maxnormalize(coef_fill_land_comp_nmf))%>%
   
   
   
@@ -388,6 +428,9 @@ delaunay_tri_all<- do.call(rbind, lapply(seq_along(tri),
 delaunay_tri_all
 
 View(delaunay_tri_all)
+
+
+
 
 ```
 
