@@ -895,10 +895,6 @@ rf_confusion%>%
 
 r.forest_mts$finalModel$confusion
 
-
-
-
-
 # p value will be the number of time acc in shuffled dataset is greater than observed accuracy
 ```
 
@@ -3633,13 +3629,7 @@ colnames(df_OF_output_AUsW_unblind_spoken1_binned_ma)
    scale_color_viridis_d(option = "magma")
 
 
-```
-
-
-
 ```{r}
-
-
 # drug vs placebo by expression
  df_OF_output_AUsW_unblind_spoken1_binned_ma[,c(1,2:3,9:10,34:36)]%>%
   gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
@@ -3684,20 +3674,14 @@ df_OF_output_AUsW_unblind_spoken1_binned_ma[,c(1,2:3,9:10,34:36)]%>%
    xlab("time bin")+
   p$graphstyle_int+
    scale_color_viridis_d(option = "magma")
- 
 ```
-
-
 
 JASP findings
 - emotion classification is good
 - but drug is not good not even within emotion
 
-
 State-space for spoken stim
 ```{r}
-
-
 df_OF_output_AUsW_unblind_spoken1_binned_ma
 
 df_OF_output_AUsW_unblind_posed_binned3_nona_clust_agg4.1_main_seq_sum
@@ -3805,11 +3789,6 @@ df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
         strip.text = element_text(size = 5))+
     scale_fill_brewer(palette = "Dark2")
 
-
-
-
-
-
 ```
 
 
@@ -3875,11 +3854,7 @@ df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
         strip.text = element_text(size = 5))+
     scale_fill_brewer(palette = "Dark2")
 
-
-
-
-
-
+  
 df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
   
   group_by(filename)%>%
@@ -3929,11 +3904,10 @@ df_OF_output_AUsW_unblind_spoken1_binned_ma1 %>%
   xlab("time bin")+
   ylab("expression")
 
-  
 
 ```
 
-susbatate plots
+susbstate plots
 
 ```{r}
 chool_talk$speed_disp_fucntionk1_spoken <-
@@ -4068,9 +4042,6 @@ ggsave("speed_displace_fucn_patch2_spoken.tiff", chool_talk$speed_displace_fucn_
 
 
 ```
-
-
-
 
 
 ```{r}
