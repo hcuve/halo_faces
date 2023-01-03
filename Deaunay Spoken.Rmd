@@ -323,7 +323,136 @@ df_OF_output_land_spoken_binned_select_alligned_eyes%>%
   group_by(expression, lanmark_id)%>% #consider grouping it by file too
   mutate(cor_comp1_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp1_normmax,use = "complete.obs"),
     cor_comp2_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp2_normmax,use = "complete.obs"), 
-    cor_comp3_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp3_normmax, use = "complete.obs"))
+    cor_comp3_land_cum_diff_fill = cor(cum_x_y_norm_abs_diff_mean_fill_norm,comp3_normmax, use = "complete.obs"))%>%
+  
+  # timeseries correlation accounting rom timedependance
+  # fill_x_y_sum_norm
+  mutate(cor_comp1_land_diff_fill =
+  cor(fill_x_y_sum_norm,comp1_normmax,use = "complete.obs"),
+    cor_comp2_land_diff_fill = cor(fill_x_y_sum_norm,comp2_normmax,use = "complete.obs"), 
+    cor_comp3_land_diff_fill = cor(fill_x_y_sum_norm,comp3_normmax, use = "complete.obs"))
+  
+
+
+```
+
+
+```{r}
+# install.packages("dtw")
+library(dtw)
+# Next, create two time series
+time1 <- seq(1, 10, by = 0.1)
+time2 <- seq(1, 10, by = 0.1)
+
+# Add some noise to the time series
+series1 <- sin(time1) + rnorm(length(time1), 0, 0.1)
+series2 <- sin(time2) + rnorm(length(time2), 0, 0.1)
+
+# Calculate the DTW distance between the two time series
+dtw_distance <- dtw(series1, series2, keep=TRUE)
+
+# Print the DTW distance
+print(dtw_distance)
+
+dtw_distance$distance
+
+
+library(stats)
+
+# Calculate the cross-correlation
+cross_correlation <- ccf(series1, series2)
+mean(cross_correlation)
+
+mean(cross_correlation$acf)
+
+
+# Copy code
+# Load the required libraries
+library(tidyverse)
+library(nlme)
+
+# Load the time series data
+timeseries1 <- read_csv("timeseries1.csv")
+timeseries2 <- read_csv("timeseries2.csv")
+
+# Fit a GLS model to the time series data
+time<- 1:91
+model <- gls(series2 ~ series1, correlation = corAR1(form = ~ time))
+
+# Extract the correlation coefficient from the model
+
+nlme::`coef<-`()
+
+model$modelStruct
+model$dims
+model$coefficients
+model$
+correlation <- corCoef(model)
+
+
+# Another option is to use the corARMA function from the tsDyn library, which can also account for within-dependence when calculating the correlation between two time series. Here is an example of how you can use it:
+
+# Copy code
+# Load the required libraries
+library(tidyverse)
+# install.packages("tsDyn")
+library(tsDyn)
+
+
+# Calculate the correlation between the two time series
+
+tsDyn::c
+correlation <- corARMA(series1, series2)
+
+ # tsDyn::(series1, series2)
+
+# Print the correlation
+print(correlation)
+
+
+# To calculate the correlation between two time series while accounting for within-series dependence in R, you can use a method called "autocorrelation-consistent covariance matrix estimation". This method estimates the covariance matrix of the two time series, taking into account the within-series dependence in each time series. The sample covariance matrix can then be used to calculate the correlation between the two time series.
+
+
+
+# Load the plm package
+# install.packages("plm")
+library(plm)
+
+# Create a panel data object with the time series data
+
+pdata.frame()
+time_series_data<- df_OF_output_land_spoken_binned_select_alligned_eyes%>%
+  subset(filename == "./cut_spoken_sad_day2_p7.csv")
+
+time_series_data1<- time_series_data%>%subset(lanmark_id == 1)
+df_OF_output_land_spoken_binned_select_alligned_eyes
+
+time_series_data1%>%
+  ggplot(aes(bin_frame, fill_x_y_sum_norm))+
+  geom_line()+
+  geom_line(aes(y = comp1_normmax))+
+  geom_line(aes(y = fill_x_y_sum_norm), colour = "blue")
+  
+
+
+```
+
+time_series_data1$cum_x_y_norm_abs_diff_mean_fill_norm
+colnames(time_series_data1)
+panel_data <- pdata.frame(time_series_data1, index = c("bin_frame", "comp1_normmax",'fill_x_y_sum_norm'))
+
+time_series_data1$fill_x_y_sum_norm
+time_series_data1$fi
+
+# Estimate the autocorrelation-consistent covariance matrix
+acov <- vcovHC(panel_data, type = "HC1")
+
+# Calculate the correlation between the two time series
+correlation <- cor(acov)
+
+# Print the correlation
+print(correlation)
+```{r}
 
 
 
@@ -404,8 +533,20 @@ df_OF_output_land_spoken_binned_select_alligned_eyes<- df_OF_output_land_spoken_
   mutate(cor_comp1_land_cum_diff_fill_sq = cor_comp1_land_cum_diff_fill^2,
          cor_comp2_land_cum_diff_fill_sq = cor_comp2_land_cum_diff_fill^2,
          cor_comp3_land_cum_diff_fill_sq = cor_comp3_land_cum_diff_fill^2
+         )%>%
+  
+  
+  # cor_comp1_land_diff_fill no cummulative
+    mutate(cor_comp1_land_diff_fill_sq = cor_comp1_land_diff_fill^2,
+         cor_comp2_land_diff_fill_sq = cor_comp2_land_diff_fill^2,
+         cor_comp3_land_diff_fill_sq = cor_comp3_land_diff_fill^2
          )
 
+
+```
+
+
+```{r eval=FALSE, include=FALSE}
 df_OF_output_land_spoken_binned_select_alligned_eyes%>%
   ungroup()%>%
   group_by(filename)%>%
@@ -427,14 +568,32 @@ df_OF_output_land_spoken_binned_select_alligned_eyes%>%
     facet_grid(~expression)+
   geom_hline(yintercept = 1)
 
+```
+
 # maxnorm squared
+
+
+```{r}
+require(tidyverse)
+fill_x_y_sum_norm
 df_OF_output_land_spoken_binned_select_alligned_eyes<-
 df_OF_output_land_spoken_binned_select_alligned_eyes%>%
   ungroup()%>%
   group_by(filename)%>%
-  mutate(cor_comp1_land_cum_diff_fill_sq_max_norm = maxnormalize(cor_comp1_land_cum_diff_fill_sq),
-         cor_comp2_land_cum_diff_fill_sq_max_norm = maxnormalize(cor_comp2_land_cum_diff_fill_sq),
-         cor_comp3_land_cum_diff_fill_sq_max_norm = maxnormalize(cor_comp3_land_cum_diff_fill_sq))
+   mutate(cor_comp1_land_cum_diff_fill_max = maxnormalize(cor_comp1_land_cum_diff_fill),
+         cor_comp2_land_cum_diff_fill_max = maxnormalize(cor_comp2_land_cum_diff_fill),
+         cor_comp3_land_cum_diff_fill_max = maxnormalize(cor_comp3_land_cum_diff_fill))%>%
+   # cor_comp1_land_diff_fill
+     mutate(cor_comp1_land_diff_fill_max = maxnormalize(cor_comp1_land_diff_fill),
+         cor_comp2_land_diff_fill_max = maxnormalize(cor_comp2_land_diff_fill),
+         cor_comp3_land_diff_fill_max = maxnormalize(cor_comp3_land_diff_fill))%>%
+  
+  
+  # cor_comp1_land_diff_fill_sq
+  
+  mutate(cor_comp1_land_diff_fill_sq_max_norm = maxnormalize(cor_comp1_land_diff_fill_sq),
+         cor_comp2_land_diff_fill_sq_max_norm = maxnormalize(cor_comp2_land_diff_fill_sq),
+         cor_comp3_land_diff_fill_sq_max_norm = maxnormalize(cor_comp3_land_diff_fill_sq))
 
 ```
 
@@ -444,12 +603,34 @@ delaunay plots
 ```{r}
 -
 # colnames(df_OF_output_land_spoken_binned_select_alligned_eyes)
+  options(scipen = 999)
+ unique( df_OF_output_land_spoken_binned_select_alligned_eyes$cor_comp1_land_diff_fill_sq_max_norm)
+
+df_OF_output_land_spoken_binned_select_alligned_eyes_agg<-
 df_OF_output_land_spoken_binned_select_alligned_eyes%>%
   
-  mutate(coef_fill =cum_x_y_norm_abs_diff_mean_fill_norm* ((cor_comp1_land_cum_diff_fill_sq_max_norm+cor_comp2_land_cum_diff_fill_sq_max_norm+cor_comp3_land_cum_diff_fill_sq_max_norm)/3))%>%
+  # cor_comp1_land_cum_diff_fill_sq_max_norm
+  mutate(coef_fill =
+           cum_x_y_norm_abs_diff_mean_fill_norm* ((cor_comp1_land_cum_diff_fill_sq_max_norm+cor_comp2_land_cum_diff_fill_sq_max_norm+cor_comp3_land_cum_diff_fill_sq_max_norm)/3))%>%
+  
+  # cor_comp1_land_diff_fill_sq_max_norm
+  # we don't need to include diff because it is inclued in the correlation already?
+  mutate(coef_fill_nocmm = fill_x_y_sum_norm*((cor_comp1_land_diff_fill_sq_max_norm+ +cor_comp2_land_diff_fill_sq_max_norm+cor_comp3_land_diff_fill_sq_max_norm)/3))%>%
+  
+  
+  
+  # cor_comp1_land_cum_diff_fill_max
+   mutate(coef_fill_nosq =cum_x_y_norm_abs_diff_mean_fill_norm* ((cor_comp1_land_cum_diff_fill_max+cor_comp2_land_cum_diff_fill_max+cor_comp3_land_cum_diff_fill_max)/3))%>%
+  
+   mutate(coef_fill_nosq_no_cmm = fill_x_y_sum_norm*((cor_comp1_land_diff_fill_max +cor_comp2_land_diff_fill_max+cor_comp3_land_diff_fill_max)/3))%>%
+  
   group_by(filename)%>%
   
   mutate(coef_fill_max_norm = maxnormalize(coef_fill))%>%
+  mutate(coef_fill_max_norm_nosq = maxnormalize(coef_fill_nosq))%>%
+
+  mutate(coef_fill_nocmm_max_norm = maxnormalize(coef_fill_nocmm))%>%
+      mutate(coef_fill_nosq_no_cmm_max_norm = maxnormalize(coef_fill_nosq_no_cmm))%>%
   
   group_by(expression, lanmark_id)%>% #posed.spoken
   summarise_if(is.numeric, mean, na.rm = T)
@@ -580,10 +761,56 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang),
     theme(
                                        legend.position = "none")
 
+
+
+
+
 delaunay_spoken_plots$spoken_triang_ang
 
 
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
+             y_new_norm_rot2 = tri_angtest[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$anger_del$coef_fill_nocmm_max_norm[tri_angtest[[x]]$ptNum]),
+             tri_angtest = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_angtest)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
+             y_new_norm_rot2 = tri_angtest[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$anger_del$coef_fill_nosq_no_cmm_max_norm[tri_angtest[[x]]$ptNum]),
+             tri_angtest = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_angtest)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+```
+
+
 # cum_x_y_norm_abs_diff_mean_fill_norm
+
+```{r}
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
                       function(x) {
   data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
@@ -648,9 +875,53 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang),
     theme(
                                        legend.position = "none")
 
+
 delaunay_spoken_plots$spoken_triang_ang_comp1
 
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
+             y_new_norm_rot2 = tri_angtest[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$anger_del$cor_comp1_land_diff_fill_sq_max_norm[tri_angtest[[x]]$ptNum]),
+             tri_angtest = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_angtest)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
+             y_new_norm_rot2 = tri_angtest[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$anger_del$cor_comp1_land_diff_fill_max[tri_angtest[[x]]$ptNum]),
+             tri_angtest = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_angtest)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+
+```
+
 # comp 2
+
+```{r}
 delaunay_spoken_plots$spoken_triang_ang_comp2 <-
 
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
@@ -673,7 +944,51 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang),
 
 delaunay_spoken_plots$spoken_triang_ang_comp2
 
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
+             y_new_norm_rot2 = tri_angtest[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$anger_del$cor_comp2_land_diff_fill_sq_max_norm[tri_angtest[[x]]$ptNum]),
+             tri_angtest = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_angtest)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
+             y_new_norm_rot2 = tri_angtest[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$anger_del$cor_comp2_land_diff_fill_max[tri_angtest[[x]]$ptNum]),
+             tri_angtest = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_angtest)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+```
+
+
 # comp 3
+
+
+```{r}
 delaunay_spoken_plots$spoken_triang_ang_comp3 <-
 
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
@@ -695,6 +1010,47 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang),
                                        legend.position = "none")
 
 delaunay_spoken_plots$spoken_triang_ang_comp3
+
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
+             y_new_norm_rot2 = tri_angtest[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$anger_del$cor_comp3_land_diff_fill_sq_max_norm[tri_angtest[[x]]$ptNum]),
+             tri_angtest = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_angtest)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = tri_angtest[[x]]$x, 
+             y_new_norm_rot2 = tri_angtest[[x]]$y, 
+ coef_fill = mean(delaunay_spoken_data$anger_del$cor_comp3_land_diff_fill_max[tri_angtest[[x]]$ptNum]),
+             tri_angtest = x)
+  })) |>
+  ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = tri_angtest)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+
+```
 
 require(patchwork)
   delaunay_spoken_plots$spoken_triang_ang/
@@ -1241,8 +1597,34 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1),
     theme(
                                        legend.position = "none")
 
+
+
+
+library(deldir)
 delaunay_spoken_plots$spoken_tri_comp1
+
+# delaunay_spoken_plots$spoken_tri_comp1<-
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_comp1test[[x]]$x, y_new_norm_rot2 = spoken_tri_comp1test[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$cor_comp1_land_cum_diff_fill_max[spoken_tri_comp1test[[x]]$ptNum]),
+             spoken_tri_comp1test = x)
+  })) |>
+  
+   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_comp1test)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")
+  theme_void()+
+    theme(legend.position = "none")
+
+```
 # comp2
+
+```{r}
 
 delaunay_spoken_plots$spoken_tri_comp2<-
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1), 
@@ -1265,9 +1647,29 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1),
 
 delaunay_spoken_plots$spoken_tri_comp2
 
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_comp1test[[x]]$x, y_new_norm_rot2 = spoken_tri_comp1test[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$cor_comp2_land_cum_diff_fill_max[spoken_tri_comp1test[[x]]$ptNum]),
+             spoken_tri_comp1test = x)
+  })) |>
+  
+   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_comp1test)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")+
+  theme_void()+
+    theme(
+                                       legend.position = "none")
+
+```
+
 
 # comp 3
-
+```{r}
 delaunay_spoken_plots$spoken_tri_comp3<-
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1), 
                       function(x) {
@@ -1290,7 +1692,27 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1),
 delaunay_spoken_plots$spoken_tri_comp1
 
 delaunay_spoken_plots$spoken_tri_comp2
+
 delaunay_spoken_plots$spoken_tri_comp3
+
+
+do.call(rbind, lapply(seq_along(delaunay_spoken_data$spoken_tri_comp1), 
+                      function(x) {
+  data.frame(x_new_norm_rot2 = spoken_tri_comp1test[[x]]$x, y_new_norm_rot2 = spoken_tri_comp1test[[x]]$y, 
+             coef_fill = mean(df_OF_output_land_spoken_binned_select_alligned_eyes_agg2$cor_comp3_land_cum_diff_fill[spoken_tri_comp1test[[x]]$ptNum]),
+             spoken_tri_comp1test = x)
+  })) |>
+  
+   ggplot(aes(x_new_norm_rot2, 1-y_new_norm_rot2)) +
+  # tri
+  geom_polygon(aes(fill = coef_fill, group = spoken_tri_comp1test)) +
+
+  geom_point(colour = "white", alpha = .5, size = .4)+
+    scale_fill_viridis_c(option = "magma")+
+    scale_colour_viridis_c(option = "magma")
+  theme_void()+
+    theme(
+                                       legend.position = "none")
 
 ```
 
