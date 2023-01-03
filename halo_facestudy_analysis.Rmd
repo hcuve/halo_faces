@@ -554,10 +554,11 @@ chool_talk$AU_NM<-  chool_talk$AU_NM +
   theme(
      axis.text.x.top = element_markdown(color = "black", size = 16*(sf+.5)),
      axis.title.x = element_text(size = 16*(sf+.5)),#update this,
+     axis.title.y = element_text(size = 16*(sf+.5)),#update this,
      axis.text.x = element_text(size = 15*(sf+.5), colour = "black"),
   axis.text.y = element_text(size = 15*(sf+.5), colour = "black"),
   legend.key.height = unit(1, "cm"),
-  legend.key.width = unit(.5, "cm"),
+  legend.key.width = unit(.7, "cm"),
   legend.text = element_text(size = 16*(sf+.5)),
   legend.title= element_text(size = 16*(sf+.5))
     # axis.text.x = element_markdown(color = "black", size = 15),
@@ -1200,9 +1201,10 @@ paper_plots$NMF_panel_posed
 test
 library(patchwork)
 # make sure to flip 1 to 3
+
  triangle_plots$delaunay_tri_comp1.1<- triangle_plots$delaunay_tri_comp1+
 theme_void()+theme(legend.position = "none",
-                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp3")
+                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp1")
 
   triangle_plots$delaunay_tri_comp2.1<- triangle_plots$delaunay_tri_comp2+
 theme_void()+theme(legend.position = "none",
@@ -1210,12 +1212,12 @@ theme_void()+theme(legend.position = "none",
  
  triangle_plots$delaunay_tri_comp3.1<- triangle_plots$delaunay_tri_comp3+
 theme_void()+theme(legend.position = "none",
-                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp1")
+                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp3")
 
 
-comp1_2_3<- triangle_plots$delaunay_tri_comp3.1 /
+comp1_2_3<- triangle_plots$delaunay_tri_comp1.1 /
         triangle_plots$delaunay_tri_comp2.1/
-       triangle_plots$delaunay_tri_comp1.1
+       triangle_plots$delaunay_tri_comp3.1
 
 paper_plots$posed_comp_ts
 paper_plots$posed_comp_ts_hm
@@ -1232,7 +1234,7 @@ START COMBINING
  
 test1 <- (wrap_elements(full =chool_talk$AU_NM)+ wrap_elements(full = comp1_2_3)+wrap_elements(ts_ts_hm_compns))+
     plot_layout(ncol = 3, widths = c(1.2,.5,1))+ plot_annotation(tag_levels = 'A')+
-  theme(plot.tag = element_text(size = 16*(sf+.5)))
+  theme(plot.tag = element_text(size = 20*(sf+.5)))
  
  test1
  
@@ -1266,8 +1268,8 @@ triangle_plots$delaunay_tri_sad<-triangle_plots$delaunay_tri_sad+scale_x_continu
 patchwork::wrap_elements(test3)/test2
 
 
-triangle_plots$delaunay_tri_ang+
-  xlim(-10,110)
+# triangle_plots$delaunay_tri_ang+
+#   xlim(-10,110)
 triang_patch<- (triangle_plots$delaunay_tri_ang +
                          triangle_plots$delaunay_tri_happy+
                          triangle_plots$delaunay_tri_sad)
@@ -1277,7 +1279,7 @@ test2 <-(chool_talk$ts_smooth/
     chool_talk$ts_hm)+
   plot_layout(nrow = 3, heights = c(1,1.5,1))+
   plot_annotation(tag_levels = list(c('D', 'E','F')))+
-  theme(plot.tag = element_text(size = 16*(sf+.5)))
+  theme(plot.tag = element_text(size =20*(sf+.5)))
   
 
 test2
@@ -1297,7 +1299,7 @@ require(tidyverse)
 require(patchwork)
 
 paper_plots$panel_NMF_posed<-
-wrap_elements(full = test1) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))+
+wrap_elements(full = test1) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))
    plot_annotation(tag_levels = 'A')
 
 

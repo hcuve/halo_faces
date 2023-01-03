@@ -671,35 +671,43 @@ require(patchwork)
 
 make legend bar size of plot
 ```{r}
+install.packages("ggplot2")
 library(ggplot2)
 library(reshape2)
+
 dat <- iris[,1:4]
 cor <- melt(cor(dat, use="p"))
 head(cor)
 heat <- ggplot(data=cor, aes(x=Var1, y=Var2, fill=value)) 
-heat + geom_tile() + labs(x = "", y = "") + scale_fill_gradient2(limits=c(-1, 1))+
-  make_fullsize
-
+detach("package:ggforce", unload = TRUE)
+detach("package:ggplot2", unload = TRUE)
+detach("package:patchwork", unload = TRUE)
+# ?remove.packages()
 library(ggplot2)
+
 
 make_fullsize <- function() structure("", class = "fullsizebar")
 
-ggplot_add.fullsizebar <- function(obj, gtes, name = "fullsizebar") {
-  h <- ggplotGrob(gtes)$heights
+ggplot_add.fullsizebar <- function(obj, g, name = "fullsizebar") {
+  h <- ggplotGrob(g)$heights
   panel <- which(grid::unitType(h) == "null")
   panel_height <- unit(1, "npc") - sum(h[-panel])
   
-  gtes + 
+  g + 
     guides(fill = guide_colorbar(barheight = panel_height,
                                  title.position = "right")) +
     theme(legend.title = element_text(angle = -90, hjust = 0.5))
 }
 
 ggplot(data=cor, aes(x=Var1, y=Var2, fill=value)) +
-  geom_tile() + 
-  # labs(x = "", y = "") + 
-  # scale_fill_gradient2(limits=c(-1, 1)) +
-  # coord_cartesian(expand = FALSE) +
+  geom_tile() +
+  labs(x = "", y = "") +
+  scale_fill_gradient2(limits=c(-1, 1)) +
+  coord_cartesian(expand = FALSE) +
+  # ggplot_add.fullsizebar()
+      make_fullsize()
+  
+  heat+
   make_fullsize()
 ```
   
@@ -1968,10 +1976,14 @@ data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$
 # 
 # triangle_plots$delaunay_tri_comp1+theme(legend.position = "none")
 
-triangle_plots$delaunay_tri_comp1<-triangle_plots$delaunay_tri_comp1+  theme(plot.background = element_rect(fill = "black"))
-triangle_plots$delaunay_tri_comp2<-triangle_plots$delaunay_tri_comp2+  theme(plot.background = element_rect(fill = "black"))
+triangle_plots$delaunay_tri_comp1<-delaunay_posed_plots$posed_tri_comp1+  theme(plot.background = element_rect(fill = "black"))
+triangle_plots$delaunay_tri_comp2<-delaunay_posed_plots$posed_tri_comp2+  theme(plot.background = element_rect(fill = "black"))
 
-triangle_plots$delaunay_tri_comp3<- triangle_plots$delaunay_tri_comp3+ theme(plot.background = element_rect(fill = "black"))
+triangle_plots$delaunay_tri_comp3 <- delaunay_posed_plots$posed_tri_comp3+ theme(plot.background = element_rect(fill = "black"))
+
+triangle_plots$delaunay_tri_comp1
+triangle_plots$delaunay_tri_comp2
+triangle_plots$delaunay_tri_comp3
 
 ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1,
        width = 700,
