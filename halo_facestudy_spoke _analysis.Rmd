@@ -701,15 +701,26 @@ spoken_dcast_formts_maxnorm<-
 
 df_OF_output_AUsW_unblind_spoken1_binned_gather%>%
   arrange(filename,nm_comp,bin_frame)%>%
-   group_by(subject)%>%
-  mutate(nmf_comp_value = maxnorm(nmf_comp_value))%>%
+  group_by(filename,nm_comp)%>%
+  mutate(nmf_comp_value = zoo::na.approx(nmf_comp_value))%>%
+  
+  # potentially made a mistake here in spoken, max should be by subject and component
+   group_by(filename,nm_comp)%>%
+  # don't use maxnorm
+  mutate(nmf_comp_value = maxnormalize(nmf_comp_value))%>%
   mutate(bin_frame = paste0("t_", paste0(bin_frame)))%>%
   arrange(filename,nm_comp,bin_frame)%>%
  data.table::dcast(timersies_unique+filename+subject+expression+drug.placebo+subject+nm_comp~bin_frame, value.var = "nmf_comp_value")
 
 # spoken_dcast_formts_maxnorm
 
+
+
+```
+
 colnames(spoken_dcast_formts_maxnorm)
+
+```{r}
 ts_order
 # colnames(train_gather_dcast)
 
@@ -733,34 +744,353 @@ ts_order
   
 
   # reorder timeseries columns
-  colnames(spoken_dcast_formts_maxnorm)
+  colnames(spoken_dcast_formts_maxnorm1)
   spoken_dcast_formts_maxnorm<- bind_cols(spoken_dcast_formts_maxnorm[,1:7], spoken_dcast_formts_maxnorm[,c(ts_order)])
+  
+  spoken_dcast_formts_maxnorm1<-bind_cols(spoken_dcast_formts_maxnorm[,1:7],
+zoo::na.approx(spoken_dcast_formts_maxnorm[,8:107]))
 
-colnames(spoken_dcast_formts_maxnorm)
+  
+  
+  spoken_dcast_formts_maxnorm1
+
+colnames(spoken_dcast_formts_maxnorm1)
 # multivariate timeseries feature extraction
-spoken_mts <- CMFMTS::cmfmts(dataset = spoken_dcast_formts_maxnorm[,8:107],
+
+?CMFMTS::cmfmts
+spoken_mts <- CMFMTS::cmfmts(dataset = spoken_dcast_formts_maxnorm1[,8:107],
                 na = TRUE)
 
-View(test_ts)
+
+ table(is.na(spoken_dcast_formts_maxnorm1))
+ table(is.na(spoken_mts))
+
+View(spoken_mts)
 colnames(train_gather_dcast_maxnorm_dcast)
 
 library(CMFMTS)
 
-# now derive time-series features for the normed timeseries
-mts_maxnorm<-  CMFMTS::cmfmts(dataset = train_gather_dcast_maxnorm_dcast[,8:107],
-                na = TRUE)
+# store essential columns
 
-View(test_ts)
+spoken_mts$filename<- spoken_dcast_formts_maxnorm$filename
+spoken_mts$subject<- spoken_dcast_formts_maxnorm$subject
+spoken_mts$expression<- spoken_dcast_formts_maxnorm$expression
+spoken_mts$drug.placebo<- spoken_dcast_formts_maxnorm$drug.placebo
+spoken_mts$nm_comp<- spoken_dcast_formts_maxnorm$nm_comp
+spoken_mts$nm_comp<- spoken_dcast_formts_maxnorm$nm_comp
 
-View(mts_maxnorm)
+# drop columns with zero SD
 
-cor(test_ts,mts_maxnorm, use="complete.obs")
+# Calculate the sd for the selected columns
+# Identify the numerical columns
+num_cols <- sapply(spoken_mts, is.numeric)
 
-cor(test_ts$lempel_ziv,mts_maxnorm$lempel_ziv, use="complete.obs")
+num_col_names <- names(spoken_mts[,num_cols])
 
-cor(test_ts$aproximation_entropy, test_ts$sample_entropy, use="complete.obs")
-cor(mts_maxnorm$aproximation_entropy, mts_maxnorm$sample_entropy, use="complete.obs")
+sd_values <- apply(spoken_mts[, num_col_names], 2, sd, na.rm = T)
 
 
+# Identify the columns with a standard deviation of zero
+zero_sd_cols <- names(which(sd_values == 0))
+
+# Drop the columns with a standard deviation of zero
+spoken_mts_no0Sd <- spoken_mts%>%select(-zero_sd_cols)
+View(spoken_mts_no0Sd)
+
+spoken_mts_no0Sd_no0Sd <- spoken_mts%>%select(-zero_sd_cols)
+
+# Replace NA values with the column average
+spoken_mts_no0Sd_no0Sd<- spoken_mts_no0Sd_no0Sd %>%
+  mutate_if(is.numeric,funs(ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+
+# dcast
+colnames(spoken_mts_no0Sd_no0Sd)
+library(data.table)
+ 
+
+spoken_mts_no0Sd_no0Sd_dcast<-
+setDT(spoken_mts_no0Sd_no0Sd)%>%
+   gather(ts_features, values, -filename,- subject, -expression,-drug.placebo, -nm_comp)%>%
+  mutate(ts_features_k =  paste0(ts_features, nm_comp))%>%
+  # mutate(bin_frame = paste0("t_", paste0(bin_frame)))%>%
+ data.table::dcast(filename + subject+expression+drug.placebo ~ ts_features_k, value.var = "values", sep = "")
+
+write_csv(spoken_mts_no0Sd_no0Sd, "spoken_mts_no0Sd_no0Sd.csv")
+write_csv(spoken_mts_no0Sd_no0Sd_dcast, "spoken_mts_no0Sd_no0Sd_dcast.csv")
 
 ```
+
+principal components
+
+```{r}
+colnames(spoken_mts_no0Sd_no0Sd_dcast)
+spoken_PCA_maxnormpsych <-psych::principal(spoken_mts_no0Sd_no0Sd_dcast[,c(5:118)],3, scores = TRUE)
+
+spoken_PCA_maxnormpsych
+
+# need to have a threshold
+
+
+# library(readxl)
+
+library(readxl)
+spoken_PCA_remove <- read_excel("spoken_PCA_remove.xlsx")
+spoken_PCA_remove$remove
+
+# 
+spoken_mts_no0Sd_no0Sd_dcast_2<- spoken_mts_no0Sd_no0Sd_dcast%>%
+select(-c(spoken_PCA_remove$remove))
+
+spoken_mts_no0Sd_no0Sd_dcast_2
+spoken_mts_no0Sd_no0Sd_dcast$PC1<-   spoken_PCA_maxnormpsych$scores[,1]
+spoken_mts_no0Sd_no0Sd_dcast$PC2<-   spoken_PCA_maxnormpsych$scores[,2]
+spoken_mts_no0Sd_no0Sd_dcast$PC3<-   spoken_PCA_maxnormpsych$scores[,3]
+
+
+# nw pca
+colnames(spoken_mts_no0Sd_no0Sd_dcast_2)
+spoken_PCA_maxnormpsych2 <-psych::principal(spoken_mts_no0Sd_no0Sd_dcast_2[,c(5:61)],3, scores = TRUE)
+
+
+spoken_mts_no0Sd_no0Sd_dcast_2$PC1<-   spoken_PCA_maxnormpsych2$scores[,1]
+spoken_mts_no0Sd_no0Sd_dcast_2$PC2<-   spoken_PCA_maxnormpsych2$scores[,2]
+spoken_mts_no0Sd_no0Sd_dcast_2$PC3<-   spoken_PCA_maxnormpsych2$scores[,3]
+
+spoken_PCA_maxnormpsych
+
+write_csv(spoken_mts_no0Sd_no0Sd, "spoken_mts_no0Sd_no0Sd.csv")
+write_csv(spoken_mts_no0Sd_no0Sd_dcast, "spoken_mts_no0Sd_no0Sd_dcast.csv")
+write_csv(spoken_mts_no0Sd_no0Sd_dcast_2, "spoken_mts_no0Sd_no0Sd_dcast2.csv")
+
+```
+
+
+random forest analysys and plots
+
+```{r}
+library(caret)
+ trainIndex_spoken <- createDataPartition(spoken_mts_no0Sd_no0Sd_dcast_2$expression, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+  
+ trainIndex_spoken
+  
+ 
+ spoken_train_set <- spoken_mts_no0Sd_no0Sd_dcast_2[ trainIndex_spoken,]
+  spoken_test_set  <- spoken_mts_no0Sd_no0Sd_dcast_2[-trainIndex_spoken,]
+  
+# train
+  
+   spoken_r.forest_mts <- train(expression ~ PC1 + PC2 + PC3, 
+                data = spoken_train_set, 
+                method = "rf",
+                trControl = trainControl(method = "oob"),
+                ntree = 73)
+   
+   
+   # test
+   # spoken_r.forest_mts$finalModel$mtry 
+   
+   
+spoken_test_set$prediction <- predict(spoken_r.forest_mts, spoken_test_set)
+   
+spoken_test_set_res<- confusionMatrix(spoken_test_set$prediction , as.factor(spoken_test_set$expression), mode = "everything", positive="1")
+   
+   
+
+```
+
+
+boundary plots
+
+```{r}
+
+
+spoken_rf <-randomForest::randomForest(as.factor(expression) ~ PC1 + PC2 + PC3, 
+                                       data = spoken_mts_no0Sd_no0Sd_dcast_2,
+                   proximity = TRUE,
+                   ntree = 73
+                   # mtry = 2
+                   )
+
+
+  
+  spoken_rf <- train(expression ~ PC1 + PC2 + PC3, 
+                data = spoken_mts_no0Sd_no0Sd_dcast_2, 
+                method = "rf",
+                ntree = 73,
+               proximity = TRUE)
+  
+# 
+# Now we just create a grid of all x, y values in the range of the data using expand.grid, and get the predicted species at each pair:
+bind_train_test
+
+# breask
+getPrettyAxisBreaks(spoken_mts_no0Sd_no0Sd_dcast_2$PC1)
+# min max
+x_min_sp <- min(spoken_mts_no0Sd_no0Sd_dcast_2$PC1 + 0.5)
+x_max_sp <- max(spoken_mts_no0Sd_no0Sd_dcast_2$PC1 + 0.5)
+
+y_min_sp <- min(spoken_mts_no0Sd_no0Sd_dcast_2$PC2 + 0.5)
+y_max_sp <- max(spoken_mts_no0Sd_no0Sd_dcast_2$PC2 + 0.5)
+
+z_min_sp <- min(spoken_mts_no0Sd_no0Sd_dcast_2$PC3 + 0.5)
+z_max_sp <- max(spoken_mts_no0Sd_no0Sd_dcast_2$PC3 + 0.5)
+
+  # breaks
+xBreaks_sp <- getPrettyAxisBreaks(spoken_mts_no0Sd_no0Sd_dcast_2$PC1, min.n = 4)
+  
+yBreaks_sp <- getPrettyAxisBreaks(spoken_mts_no0Sd_no0Sd_dcast_2$PC2, min.n = 4)
+zBreaks_sp <- getPrettyAxisBreaks(spoken_mts_no0Sd_no0Sd_dcast_2$PC3, min.n = 4)
+  
+  x_min_sp <- xBreaks_sp[1]
+  x_max_sp <- xBreaks_sp[length(xBreaks_sp)]
+  y_min_sp <- yBreaks_sp[1]
+  y_max_sp <- yBreaks_sp[length(yBreaks_sp)]
+  
+   z_min_sp <- zBreaks_sp[1]
+  z_max_sp <- zBreaks_sp[length(zBreaks_sp)]
+  # Adjust the graining
+  hs_sp <- min(c(diff(range(xBreaks_sp)), diff(range(yBreaks_sp)))) / 50
+  hs_z_sp <- min(c(diff(range(yBreaks_sp)), diff(range(zBreaks_sp)))) / 50
+  
+  # grid_sp <- as.data.frame(expand.grid(seq(x_min_sp, x_max_sp, by = hs_sp), 
+  #                                   seq(y_min_sp, y_max_sp, by = hs_sp),
+  #                                   seq(z_min_sp, z_max_sp, by = hs_z_sp),
+  #                                   ))
+  
+
+df_sp <- expand.grid(PC1 = seq(x_min_sp, x_max_sp, 
+                                            by = hs_sp
+                            # length.out = 100
+                            ),
+                  PC2 = seq(y_min_sp, y_max_sp,
+                                              by = hs_sp
+                           # length.out = 100 
+                           ),
+                  
+                  PC3 = seq(z_min_sp, z_max_sp ,
+                                             by = hs_z_sp
+                            # length.out = 100
+                            )
+                  )
+
+df_sp
+
+
+
+df_sp$expression <- predict(spoken_rf, df)
+
+  
+ggplot(df_sp, aes(PC1, PC2,fill = expression)) +
+
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+  # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
+   geom_point(data =spoken_mts_no0Sd_no0Sd_dcast_2,aes( colour =expression,fill = expression),size = 3) +
+  geom_point(data = spoken_mts_no0Sd_no0Sd_dcast_2, shape = 21, size = 3) +
+  # theme_minimal()
+  # theme_void()+
+
+  theme_bw() +
+      plot_style+
+  scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
+    # scale_color_viridis_d()+
+    # scale_fill_viridis_d()+
+  # theme(panel.border = element_blank(),
+  #      panel.grid.major = element_blank(),
+  #      panel.grid.minor = element_blank())+
+  base_breaks_x(df$PC1) +
+  base_breaks_y(df$PC2)+
+  ylab("comp2")+
+  xlab("comp1")
+
+
+
+boundaryplots$pc1_2_ggside_sp
+library(ggside)
+
+
+df_sp$expression<- factor(df_sp$expression, levels = c('angry', 'happy', 'sad', 'neutral'))
+spoken_mts_no0Sd_no0Sd_dcast_2$expression<- factor(spoken_mts_no0Sd_no0Sd_dcast_2$expression, levels = c('angry', 'happy', 'sad', 'neutral'))
+
+
+ggplot(df_sp, aes(PC1, PC2,fill = expression)) +
+
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+   geom_point(data =spoken_mts_no0Sd_no0Sd_dcast_2,aes( colour =expression,fill = expression),size = 3) +
+  geom_point(data = spoken_mts_no0Sd_no0Sd_dcast_2, shape = 21, size = 3) +
+  
+  geom_ysideboxplot(data = spoken_mts_no0Sd_no0Sd_dcast_2,aes(x = expression,colour =expression), orientation = "x",alpha = .5)+
+  scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+  geom_xsidedensity(data = spoken_mts_no0Sd_no0Sd_dcast_2,aes(fill = expression,colour =expression), alpha = .5,show.legend =FALSE)+
+   scale_xsidey_continuous(breaks = NULL)+
+  # theme(axis.text.x = element_text(size = 10))+
+  theme_bw() +
+      plot_style+
+     # scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+     theme(ggside.panel.scale = .2)+
+  scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
+
+  base_breaks_x(df$PC1) +
+  base_breaks_y(df$PC2)+
+  xlab("comp1")+
+  ylab("comp2")
+
+
+ggplot(df_sp, aes(PC2, PC3,fill = expression)) +
+
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+   geom_point(data =spoken_mts_no0Sd_no0Sd_dcast_2,aes( colour =expression,fill = expression),size = 3) +
+  geom_point(data = spoken_mts_no0Sd_no0Sd_dcast_2, shape = 21, size = 3) +
+  
+  geom_ysideboxplot(data = spoken_mts_no0Sd_no0Sd_dcast_2,aes(x = expression,colour =expression), orientation = "x",alpha = .5)+
+  scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+  geom_xsidedensity(data = spoken_mts_no0Sd_no0Sd_dcast_2,aes(fill = expression,colour =expression), alpha = .5,show.legend =FALSE)+
+   scale_xsidey_continuous(breaks = NULL)+
+  # theme(axis.text.x = element_text(size = 10))+
+  theme_bw() +
+      plot_style+
+     # scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+     theme(ggside.panel.scale = .2)+
+  scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
+
+  base_breaks_x(df$PC2) +
+  base_breaks_y(df$PC3)+
+  xlab("comp2")+
+  ylab("comp3")
+
+
+ggplot(df_sp, aes(PC3, PC1,fill = expression)) +
+
+  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+   geom_point(data =spoken_mts_no0Sd_no0Sd_dcast_2,aes( colour =expression,fill = expression),size = 3) +
+  geom_point(data = spoken_mts_no0Sd_no0Sd_dcast_2, shape = 21, size = 3) +
+  
+  geom_ysideboxplot(data = spoken_mts_no0Sd_no0Sd_dcast_2,aes(x = expression,colour =expression), orientation = "x",alpha = .5)+
+  scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+  geom_xsidedensity(data = spoken_mts_no0Sd_no0Sd_dcast_2,aes(fill = expression,colour =expression), alpha = .5,show.legend =FALSE)+
+   scale_xsidey_continuous(breaks = NULL)+
+  # theme(axis.text.x = element_text(size = 10))+
+  theme_bw() +
+      plot_style+
+     # scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+     theme(ggside.panel.scale = .2)+
+  scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
+
+  base_breaks_x(df$PC3) +
+  base_breaks_y(df$PC1)+
+  xlab("comp3")+
+  ylab("comp1")
+
+```
+
+
+Heat map
+
+ROCR
+
