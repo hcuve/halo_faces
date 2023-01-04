@@ -389,6 +389,7 @@ library(psych)
 ?principal
 
 ?psych::principal
+
 PCA_maxnormpsych <-psych::principal(mts_maxnorm_dcast_no0Sd[,c(5:118)],3, scores = TRUE)
 PCA_maxnormpsych
 
@@ -1252,6 +1253,8 @@ unique(bind_train_test$expression)
 ?randomForest::randomForest
 
 set.seed(1)
+
+
 rf <-randomForest::randomForest(as.factor(expression) ~ PC1 + PC2 + PC3, data = bind_train_test,
                    proximity = TRUE,
                    ntree = 35,
