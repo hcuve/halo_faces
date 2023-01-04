@@ -716,7 +716,7 @@ df_OF_output_AUsW_unblind_spoken1_binned_gather%>%
 
 
 df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts<- df_OF_output_AUsW_unblind_spoken1_binned%>%
-  group_by(subject)%>%
+  group_by(filename)%>%
   mutate(comp1_maxnorm = maxnormalize(k3_comp1),
          comp2_maxnorm = maxnormalize(k3_comp2),
          comp3_maxnorm = maxnormalize(k3_comp3)
@@ -726,6 +726,10 @@ df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts<- df_OF_output_AUsW_unblind_s
 
 write_csv(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts,
           "df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts.csv")
+
+range(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp1_maxnorm)
+range(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp2_maxnorm)
+range(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp3_maxnorm, na.rm = T)
 ```
 
 colnames(spoken_dcast_formts_maxnorm)
@@ -943,13 +947,13 @@ spoken_rf <-randomForest::randomForest(as.factor(expression) ~ PC1 + PC2 + PC3,
 
 
   
-  # spoken_rf <- train(expression ~ PC1 + PC2 + PC3, 
+  # spoken_rf_2 <- train(expression ~ PC1 + PC2 + PC3, 
   #               data = spoken_mts_no0Sd_no0Sd_dcast_2, 
   #               method = "rf",
   #               ntree = 73,
   #              proximity = TRUE)
   
-    spoken_rf <- train(expression ~ comp1_maxnorm + comp2_maxnorm + 
+    spoken_rf_nomts <- train(expression ~ comp1_maxnorm + comp2_maxnorm + 
                          comp3_maxnorm, 
                 data = df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts, 
                 method = "rf",
@@ -964,7 +968,7 @@ spoken_rf <-randomForest::randomForest(as.factor(expression) ~ PC1 + PC2 + PC3,
 getPrettyAxisBreaks(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp1_maxnorm)
 # min max
 x_min_sp <- min(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp1_maxnorm + 0.5)
-x_max_sp <- max(spoken_mts_no0Sd_no0Sd_dcast_2$comp1_maxnorm + 0.5)
+x_max_sp <- max(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp1_maxnorm + 0.5)
 
 y_min_sp <- min(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp2_maxnorm + 0.5)
 y_max_sp <- max(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp2_maxnorm + 0.5)
@@ -1014,8 +1018,6 @@ df_sp <- expand.grid(comp1_maxnorm = seq(x_min_sp, x_max_sp,
 df_sp
 
 
-
-df_sp$expression <- predict(spoken_rf, df_sp)
 
   
 ggplot(df_sp, aes(PC1, PC2,fill = expression)) +
@@ -1130,16 +1132,16 @@ df <- expand.grid(PC1 = seq(x_min_sp, x_max_sp,
 df
 
 
-spoken_mts_no0Sd_no0Sd_dcast_2agg<-spoken_mts_no0Sd_no0Sd_dcast_2%>%
+df_agg<-df%>%
   group_by(expression)%>%
   summarise_if(is.numeric,mean, na.rm=T)
 
 df$expression <- predict(spoken_rf, df)
 
   
-ggplot(df, aes(PC1, PC2,fill = expression)) +
-
-  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+ggplot(df_agg, aes(PC1, PC2,fill = expression)) +
+  geom_raster(aes(fill = expression),alpha = 0.01, size = 0) +
+  # geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
   # stat_contour(data = df,aes(x =PC1, y =PC2, z = expression))
    geom_point(data =spoken_mts_no0Sd_no0Sd_dcast_2,aes( colour =expression,fill = expression),size = 3) +
   geom_point(data = spoken_mts_no0Sd_no0Sd_dcast_2, shape = 21, size = 3) +
@@ -1177,11 +1179,18 @@ df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts
 df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$expression<- factor(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$expression, levels = c('angry', 'happy', 'sad', 'neutral'))
 
 
+boundaryplots$SPOKEN_PC1_2
+
+spoken_r.forest
+spoken_rf_nomts
+df_sp$expression <- predict(spoken_r.forest, df_sp)
+
+
 boundaryplots$SPOKEN_PC1_2<-
 ggplot(df_sp, aes(comp1_maxnorm, comp2_maxnorm,fill = expression)) +
-  # geom_raster(aes(fill = expression),alpha = .5, size = 0)+
+  geom_raster(aes(fill = expression),alpha = .5, size = 0)+
 
- geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+ # geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
    geom_point(data =df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts,aes( colour =expression,fill = expression),size = 3) +
   geom_point(data = df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts, shape = 21, size = 3) +
   
@@ -1196,6 +1205,7 @@ ggplot(df_sp, aes(comp1_maxnorm, comp2_maxnorm,fill = expression)) +
      theme(ggside.panel.scale = .2)+
   scale_color_brewer(palette = "Dark2")+
     scale_fill_brewer(palette = "Dark2")+
+  # facet_grid(~expression)
 
   base_breaks_x(df_sp$comp1_maxnorm) +
   base_breaks_y(df_sp$comp2_maxnorm)+
@@ -1203,6 +1213,10 @@ ggplot(df_sp, aes(comp1_maxnorm, comp2_maxnorm,fill = expression)) +
   ylab("comp2")
 
 boundaryplots$SPOKEN_PC1_2
+
+boundaryplots$SPOKEN_PC1_2
+
+getleg2 <-cowplot::get_legend(boundaryplots$SPOKEN_PC1_2_getleg) 
 
 boundaryplots$SPOKEN_PC1_2_getleg<-boundaryplots$SPOKEN_PC1_2
 
@@ -1213,7 +1227,12 @@ boundaryplots$SPOKEN_PC1_2<- boundaryplots$SPOKEN_PC1_2+
        legend.position = "none"
        )
 
+```
+
+
 boundaryplots$SPOKEN_PC1_2
+
+```{r}
 
 
 
@@ -1229,6 +1248,7 @@ df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$expression<- factor(df_OF_out
 # mts
 boundaryplots$SPOKEN_PC1_2_mts<-
 ggplot(df, aes(PC1, PC2,fill = expression)) +
+  
   # geom_raster(aes(fill = expression),alpha = .5, size = 0)+
 
  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
@@ -1269,12 +1289,15 @@ boundaryplots$SPOKEN_PC1_2_mts
 
 
 ```{r}
+unique()
 
+range(df_sp$comp2_maxnorm)
 boundaryplots$SPOKEN_PC2_3<-
 ggplot(df_sp, aes(comp2_maxnorm, comp3_maxnorm,fill = expression)) +
   # geom_raster(aes(fill = expression),alpha = .2, size = 0)+
+   geom_raster(aes(fill = expression),alpha = .5, size = 0)+
 
-  geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+  # geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
    geom_point(data =df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts,aes( colour =expression,fill = expression),size = 3) +
   geom_point(data = df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts, shape = 21, size = 3) +
   
@@ -1295,14 +1318,52 @@ ggplot(df_sp, aes(comp2_maxnorm, comp3_maxnorm,fill = expression)) +
   xlab("comp2")+
   ylab("comp3")
 
-boundaryplots$SPOKEN_PC2_3
-
 
 boundaryplots$SPOKEN_PC2_3<- boundaryplots$SPOKEN_PC2_3+
   theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5),
         # axis.title.x = element_blank(),
        legend.position = "none"
        )
+boundaryplots$SPOKEN_PC2_3
+```
+
+
+
+```{r}
+boundaryplots$SPOKEN_PC3_1 <-
+ggplot(df_sp, aes(comp3_maxnorm, comp1_maxnorm,fill = expression)) +
+
+  geom_raster(aes(fill = expression),alpha = .5, size = 0) +
+  ##geom_tile(aes(fill = expression),alpha = 0.01, size = 0) +
+   geom_point(data =df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts,aes( colour =expression,fill = expression),size = 3) +
+  geom_point(data = df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts, shape = 21, size = 3) +
+  
+  geom_ysideboxplot(data = df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts,aes(x = expression,colour =expression), orientation = "x",alpha = .5)+
+  scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+  geom_xsidedensity(data = df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts,aes(fill = expression,colour =expression), alpha = .5,show.legend =FALSE)+
+   scale_xsidey_continuous(breaks = NULL)+
+  # theme(axis.text.x = element_text(size = 10))+
+  theme_bw() +
+      plot_style+
+     # scale_ysidex_discrete(guide = guide_axis(angle = 90))+
+     theme(ggside.panel.scale = .2)+
+  scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
+
+  base_breaks_x(df_sp$comp3_maxnorm) +
+  base_breaks_y(df_sp$comp1_maxnorm)+
+  xlab("comp3")+
+  ylab("comp1")
+
+
+boundaryplots$SPOKEN_PC3_1<- boundaryplots$SPOKEN_PC3_1+
+  theme(plot.title = element_text(size = 16*(sf+.5), hjust = 0.5),
+        # axis.title.x = element_blank(),
+       legend.position = "none"
+       )
+
+
+boundaryplots$SPOKEN_PC3_1
 
 ```
 
@@ -1347,9 +1408,16 @@ boundaryplots$SPOKEN_PC3_1
 
 Heat map
 
-paper_plots$conf_mat_posed <-
-as.data.frame(confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "everything", positive="1")[["table"]])%>%
+```{r}
+
+paper_plots$conf_mat_posed 
+
+# spoken_test_set_res<- confusionMatrix(spoken_test_set$prediction , as.factor(spoken_test_set$expression), mode = "everything", positive="1")
+paper_plots$conf_mat_spoken <-
+as.data.frame(confusionMatrix(spoken_test_set$prediction , as.factor(spoken_test_set$expression), mode = "everything", positive="1")[["table"]])%>%
   mutate(prop = Freq/15)%>%
+  mutate(Reference = factor(Reference, levels = c('angry', 'happy', 'sad', 'neutral')),
+          Prediction = factor(Prediction, levels = c('angry', 'happy', 'sad', 'neutral')))%>%
       ggplot(aes(Reference,Prediction, fill = prop))+
     geom_tile()+
        # scale_fill_viridis_c(option = "magma")
@@ -1366,7 +1434,29 @@ as.data.frame(confusionMatrix(test_set$prediction , as.factor(test_set$expressio
         axis.text.y = element_text(angle = 45, hjust = 1), 
         legend.position = "top"
         )
-  
+
+paper_plots$conf_mat_spoken
+
+
+paper_plots$spoken_classif_panel<-
+(boundaryplots$SPOKEN_PC1_2 + 
+  patchwork::wrap_elements(getleg2)+
+
+  plot_spacer() +
+  boundaryplots$SPOKEN_PC2_3+
+    boundaryplots$SPOKEN_PC3_1+ 
+  paper_plots$conf_mat_spoken)
+
+
+ggsave("spoken_classif_pane.tiff",  paper_plots$spoken_classif_pane,
+       device = "tiff",
+       width = 20,
+       # 
+       height = 10,
+       dpi = 800
+       )
+
+```
   
   
 
@@ -1384,26 +1474,23 @@ install.packages("plotROC")
 result.predicted.prob <- predict(forest.model, data.test, type="prob") # Prediction
 
  # Generate predictions for each class
+colnames(spoken_test_set)
  test_set$prediction <- predict(r.forest_mts, test_set)
  
+ spoken_test_set$prediction
+ 
  # one vs all
- test_set$D_ha <- if_else( test_set$prediction == "happy",1,0 )
- test_set$D_an <- if_else( test_set$prediction == "angry",1,0 ) 
- test_set$D_sa <- if_else( test_set$prediction == "sad",1,0 )  
+ spoken_test_set$D_ha <- if_else( spoken_test_set$prediction == "happy",1,0 )
+ spoken_test_set$D_an <- if_else( spoken_test_set$prediction == "angry",1,0 ) 
+ spoken_test_set$D_sa <- if_else( spoken_test_set$prediction == "sad",1,0 )  
+  spoken_test_set$D_ne <- if_else( spoken_test_set$prediction == "neutral",1,0 )  
  
- colnames(test_set[,c(69:71, 73:75)])
+  colnames(spoken_test_set)
+ colnames(spoken_test_set[,c(69:71, 73:75)])
  
- melt_roc(test_set[,c(69:71, 73:75)], c('D_ha', 'D_sa', 'D_an'), c("PC1", "PC2","PC3"))[,c(1:3,10:11)]%>%
+ melt_roc(spoken_test_set[,c(69:71, 73:75)], c('D_ha', 'D_sa', 'D_an'), c("PC1", "PC2","PC3"))[,c(1:3,10:11)]%>%
  
- ggplot(aes(d = D.D_ha, m = M, color = name)) + 
-   geom_roc() +
-   style_roc()
- 
- lvls = levels(as.factor(train_set$expression))
- 
- train_set$expression<- as.factor(train_set$expression)
- 
- type.id = 1
+
  
  library(ROCR)
  
@@ -1427,21 +1514,21 @@ library(klaR)
 
    
    rocmod
-test_set$type<- as.factor(test_set$expression == lvls[type.id])
+spoken_test_set$type<- as.factor(spoken_test_set$expression == lvls[type.id])
   
-  # test_set$expression
+  # spoken_test_set$expression
 
 
 
 
   
-nbprediction = predict(rocmod, test_set)
+nbprediction = predict(rocmod, spoken_test_set)
 # klaR::
-score=   predict(rocmod, test_set, type = 'prob')
+score=   predict(rocmod, spoken_test_set, type = 'prob')
 
 
   # score$dots
-    actual.class = test_set$expression == lvls[type.id]
+    actual.class = spoken_test_set$expression == lvls[type.id]
   # actual.class = iris.test$Species == lvls[type.id]
 ?prediction
   pred <- prediction(as.numeric(nbprediction), as.numeric(actual.class))
@@ -1458,11 +1545,11 @@ score=   predict(rocmod, test_set, type = 'prob')
  
  
  # predict test set, get probs instead of response
-predictions <- as.data.frame(predict(r.forest_mts, test_set, type = "prob"))
+predictions <- as.data.frame(predict(r.forest_mts, spoken_test_set, type = "prob"))
 
 # predict class and then attach test class
 predictions$predict <- names(predictions)[1:3][apply(predictions[,1:3], 1, which.max)]
-predictions$observed <- test_set$expression
+predictions$observed <- spoken_test_set$expression
 head(predictions)
 
 # 1 ROC curve, mock vs non mock
@@ -1546,3 +1633,6 @@ ggplot(aes(x =  specificities, y = sensitivities, group = expression, colour = e
   theme_bw()+
   plot_style+
   theme(legend.position = c(.75,.2))
+
+
+```

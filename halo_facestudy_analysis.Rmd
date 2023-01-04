@@ -1202,7 +1202,7 @@ test
 library(patchwork)
 # make sure to flip 1 to 3
 
- triangle_plots$delaunay_tri_comp1.1<- triangle_plots$delaunay_tri_comp1+
+ triangle_plots$delaunay_tri_comp1.1 <- triangle_plots$delaunay_tri_comp1+
 theme_void()+theme(legend.position = "none",
                      axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp1")
 

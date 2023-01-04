@@ -1985,7 +1985,7 @@ triangle_plots$delaunay_tri_comp1
 triangle_plots$delaunay_tri_comp2
 triangle_plots$delaunay_tri_comp3
 
-ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1,
+ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1.1,
        width = 700,
        height = 700,
               units = 'px',
@@ -2022,6 +2022,26 @@ ggsave("sad.png", device = "png", triangle_plots$delaunay_tri_sad,
                      units = 'px',
        dpi = 500)
 
+
+
+
+ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1.1,
+       width = 10,
+       height = 12,
+              # units = 'px',
+       dpi = 500)
+
+ggsave("comp2n.png", device = "png", triangle_plots$delaunay_tri_comp2.1,
+       width = 10,
+       height = 12,
+              # units = 'px',
+       dpi = 500)
+
+ggsave("comp3n.png", device = "png", triangle_plots$delaunay_tri_comp3.1,
+       width = 10,
+       height = 12,
+              # units = 'px',
+       dpi = 500)
 ```
 conclusion = use raw displacement? or au
 

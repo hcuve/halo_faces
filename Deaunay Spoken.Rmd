@@ -91,6 +91,8 @@ df_OF_output_andLand_unblind_spoken_binned_dcast<-df_OF_output_andLand_unblind_s
 
 
 df_OF_output_AU_andLand_unblind_spoken_binned
+
+df_OF_output_andLand_unblind_spoken_binned_dcast
 ```
 
 rotate landmarks to align eyes and normalise position to remove gross movement
@@ -211,6 +213,8 @@ colnames(df_OF_output_land_spoken_binned_select_alligned_eyes)
 df_OF_output_land_spoken_binned_select_alligned_eyes
 colnames(df_OF_output_AUsW_unblind_spoken1_binned)
 
+df_OF_output_AUsW_unblind_spoken1_binned
+
 df_OF_output_land_spoken_binned_select_alligned_eyes<- left_join(df_OF_output_land_spoken_binned_select_alligned_eyes,
 df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,10,34:36)])
 
@@ -295,6 +299,8 @@ df_OF_output_land_spoken_binned_select_alligned_eyes %>%
     facet_grid(~expression)+
   geom_hline(yintercept = 1)
 
+
+df_OF_output_land_spoken_binned_select_alligned_eyes
 ```
 
 map component to landmark weights
@@ -1098,7 +1104,24 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_happy),
 # cum_x_y_norm_abs_diff_mean_fill_norm
 
 delaunay_spoken_plots$spoken_triang_ang
+
+```
+
+```
+```{r}
 delaunay_spoken_plots$spoken_triang_happy
+
+triangle_plots$delaunay_tri_happy
+
+delaunay_spoken_plots$spoken_triang_ang
+
+triangle_plots$delaunay_tri_ang
+
+delaunay_spoken_plots$spoken_triang_sad
+
+triangle_plots$delaunay_tri_sad
+
+```
 
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_happy), 
                       function(x) {
@@ -1550,6 +1573,7 @@ require(patchwork)
 
 ```
 
+```
 components across emotions
 ```{r}
 # COMP1
