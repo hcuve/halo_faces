@@ -1,2326 +1,20 @@
 ---
-title: "analysys_halofacestudy"
-author: "Helio"
-date: "06/06/2022"
+title: "substate analysis"
+author: "Helio Cuve"
+date: "2023-04-27"
 output: html_document
 ---
 
 
-dependencies: preprocss_halofaces.Rmd
-df_OF_output_AUsW_unblind_posed
 
-
-
-for the actual analyses we want
-1- learn spatiotemporal structure suing NMF
-2 - does drug vs no drug differ in NMF metrics?
-3- can we separate groups based on NMF components using BADIA
-
-spatiotemporal dynamics
-- movement substates (initiation, sustainement, etc)
-- if we use kmean clustering, do we have differences into how many substaes are there
-- or if we use a fixed number of substaes, are there significant temporal differences (e.g. duration, reccurence)
-
-preferences
+libraries
+if you don't have those install them
 ```{r}
 library(tidyverse)
-library(data.table)
-
-library(NMF)
-
-```
-
-
-Steps and decision
-initialisation = random seed
-find k
-set iterations
-fit final
-
-
-fit drug and placebo separatelly?
-```{r}
-# Initialise and find k
-
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-
-
-df_OF_output_AUsW_unblind_posed_binned
-
-# single run and single numeric seed for reproducibility
-res_find_k <- nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], 2:6, 
-                      seed=123456,
-                      nrun = 100,
-                       .options = 'v')
-
-summary(res_find_k)
-
-# plot quality measures by rank (k)
-NMF::plot(res_find_k)+
-  geom_vline(xintercept = 3)
-
-# ?NMF::consensusmap
-NMF::consensusmap(res_find_k)
-
-
-```
-
-We select values of k where the magnitude of the cophenetic correlation coefficient begins to fall (see below).
-so now we can fit the final model
-
-between 3 and 4
-
-Check for overfiting by reshufling the ata and refitting the NMF on simulated data
-SHUFFLING to avoid overfiting to noise
-
-```{r}
-# shuffle original data 
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-
-V.random <- randomize(df_OF_output_AUsW_unblind_posed_binned[,16:32]) 
-
-# estimate quality measures from the shuffled data (use default NMF algorithm) 
-estim.k.random <- nmf(V.random, 2:6, nrun=100, seed=123456,
-                      .option = 'v') 
-
-# then we can assess the quality of random estimation to our estimation
-
-# plot measures on same graph (x, y) 
-plot(res_k3, estim.k.random) + 
-  geom_vline(xintercept = 3)
-
-
-```
-
-We select values of k where the magnitude of the cophenetic correlation coefficient begins to fall (see below).
-so now we can fit the final model
-
-```{r}
-
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-res_k3 <- NMF::nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], r = 3, 
-                  nrun = 200, 
-                  seed=123456,
-                 .options = list( 'v')) #
-
-
-# normalised by max
-
-colnames(df_OF_output_AUsW_unblind_posed_binned[,16:32])
-
-# dcast time to columns
-colnames(df_OF_output_AUsW_unblind_posed_binned[,c(1:3,9:10,16:32)])
-
-# funtion to normalise bmax
-maxnorm<-function(m){
-   (m/max(m, na.rm = T))}
-
-maxnorm(c(1,2,4,44))
-
-
-df_OF_output_AUsW_unblind_posed_binned$filename<- as.factor(df_OF_output_AUsW_unblind_posed_binned$filename)
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-
-
-for_norm<- df_OF_output_AUsW_unblind_posed_binned[,c(16:32)]+.001
-
-for_norm$filename<-df_OF_output_AUsW_unblind_posed_binned$face_id
-
-df_OF_output_AUsW_unblind_posed_binned_max_norm<- for_norm%>%
-  ungroup()%>%
-  group_by(filename)%>%
-  mutate_if(is.numeric, maxnorm)
-  # mutate_at(AU01_r_Inner_brow_raiser:AU45_r_Blink, maxnorm)
-
-table(is.na(df_OF_output_AUsW_unblind_posed_binned[,c(1,16:32)]))
-table(is.na(df_OF_output_AUsW_unblind_posed_binned_max_norm))
-# new NMF
-df_OF_output_AUsW_unblind_posed_binned_max_norm
-
-
-res_k3_max_norm <- NMF::nmf(df_OF_output_AUsW_unblind_posed_binned_max_norm[,1:17], r = 3, 
-                  nrun = 150, 
-                  seed=123456,
-                 .options = list( 'v')) #
-
-
-
-
-# PCA version
-   library(prettyGraphs)
-   library(InPosition)
-   
-table(is.na(df_OF_output_AUsW_unblind_posed_binned_max_norm[,2:18]))
-   var.pca<- InPosition::epPCA.inference.battery(df_OF_output_AUsW_unblind_posed_binned_max_norm[,2:18], 
-                                       scale = FALSE, 
-                                       center = FALSE, 
-                                       # DESIGN = var.design1,
-                                       # make_design_nominal = TRUE, 
-                                       graphs = TRUE, 
-                                       k = 3, 
-                                       test.iters = 100, 
-                                       constrained = FALSE, 
-                                       critical.value = 2)
-
-
-   df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  
-      group_by(filename,component,subject,expression)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max) %>%
-  
-  group_by(expression, component, bin_frame,subject)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  # geom_smooth(aes(group = subject), se = F)+
-  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
-  facet_grid(~expression )+
-  theme_classic()
-   scale_color_viridis_d(option = "magma")
-   
-   
-   
-  df_OF_output_AUsW_unblind_posed_binned$PCA_comp1<- var.pca$Fixed.Data$ExPosition.Data$fi[,1] 
-  
-    df_OF_output_AUsW_unblind_posed_binned$PCA_comp2<- var.pca$Fixed.Data$ExPosition.Data$fi[,2] 
-    
-      df_OF_output_AUsW_unblind_posed_binned$PCA_comp3<- var.pca$Fixed.Data$ExPosition.Data$fi[,3] 
-      
-      
-      colnames(df_OF_output_AUsW_unblind_posed_binned)
-      
-      
-     
-      
-      
-      
-      
-pca_AUs<- as.data.frame(var.pca$Fixed.Data$ExPosition.Data$fj)
-
-pca_AUs$AU<- rownames(pca_AUs)
-# as.data.frame(res_k3@fit@H)
-
-
-normalize <- function(x, na.rm = TRUE) {
-    return((x- min(x)) /(max(x)-min(x)))
-}
-
-chool_talk$pca_AU <- pca_AUs%>%
-  # mutate(component = rownames()) %>%
-  gather(component, coef, -AU)%>%
-  group_by(component)%>%
-  mutate_at(c("coef"), normalize)%>%
-  # mutate(max_comp = max(coef),
-         # coef = coef/max_comp)%>%
-  #        # AU = substring(AU,8,40),
-  #        AU_code = substring(AU,4,5)
-  #        )%>%
-  # arrange(AU_code)%>%
-  ggplot(aes(component,AU, fill = coef))+
-  geom_tile()+
-  theme_classic()+
-  # scale_fill_viridis_()
-  scale_fill_viridis_c(option = "inferno")+
-  xlab("K")+
-  p$graphstyle_int+
-guides(fill=guide_colorbar(ticks.colour = NA))
-
-
-```
-
-
-
-
-```{r}
-res_k3_max_norm@fit@W
-
-
-
-    bind_cols( df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10)],
-              as.data.frame(res_k3_max_norm@fit@W)) %>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  
-      group_by(filename,component,subject,expression)%>%
-  # mutate(coef_max = max(coef),
-  #        coef = coef/coef_max) %>%
-  
-  group_by(expression, component, bin_frame,subject)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  # geom_smooth(aes(group = subject), se = F)+
-  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
-  facet_grid(~expression )+
-  theme_classic()+
-   # scale_color_viridis_d(option = "magma")+
-     ggtitle("PCA")
-      
-      
-      
-      
-pca_AUs<- as.data.frame(var.pca$Fixed.Data$ExPosition.Data$fj)
-
-pca_AUs$AU <- rownames(pca_AUs)
-# as.data.frame(res_k3@fit@H)
-as.data.frame(res_k3_max_norm@fit@H)%>%
-  mutate(component = row_number()) %>%
-  gather(AU, coef, -component)%>%
-  group_by(component)%>%
-  # mutate(max_comp = max(coef),
-         # coef = coef/max_comp)%>%
-  #        # AU = substring(AU,8,40),
-  #        AU_code = substring(AU,4,5)
-  #        )%>%
-  # arrange(AU_code)%>%
-  ggplot(aes(component,AU, fill = coef))+
-  geom_tile()+
-  theme_classic()+
-  # scale_fill_viridis_()
-  scale_fill_viridis_c(option = "inferno")+
-  xlab("K")+
-  p$graphstyle_int+
-guides(fill=guide_colorbar(ticks.colour = NA))
-
-```
-
-
-```{r}
-# dcast_time<-df_OF_output_AUsW_unblind_posed_binned[,c(1:3,9:10,16:32)]]
-
-unique(dcast_time$bin_frame)
-dcast_time$bin_frame
-
-colnames(dcast_time)
-
-dcast_time2<- dcast_time%>%
-  gather(AUS, coef, -filename, -bin_frame, -subject,  -expression, -drug.placebo)%>%
-    dcast(filename+subject+expression+drug.placebo+AUS~bin_frame, value.var = "coef")
-
-
-
-res_k2 <-NMF::nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], r =2, 
-                  nrun = 200, 
-                  seed=123456,
-                 .options = list( 'v')) #
-
-
-plot(res_k3)
-summary(res_k3)
-
-# basis components 
-NMF::basismap(res_k3) # weights/ amplitudes
-
-# mixture coefficients 
-coefmap(res_k3) #hidden variables
-
-# access more info
-# res_k3_em
-
-res_k4 <-NMF::nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], r = 4, 
-                  nrun = 200, 
-                   seed=123456,
-                   .options = list( 'v'))
-
-
-NMF::basismap(res_k4) 
-coefmap(res_k4) 
-
-
-```
-
-
-
-# NMF on time
-```{r}
-
-
-colnames(dcast_time2)
-# add a very tiny number
-dcast_time3<- dcast_time2[,6:105]+.001
-?rowMax
-colnames(dcast_time3)
-pmax(dcast_time3)
-install.packages("matrixStats")
-library(matrixStats)
-
-dcast_time3$max<- rowMaxs(as.matrix(         dcast_time3))
-
-
-max(dcast_time3)
-table(is.na(dcast_time3))
-
-dcast_time4<- dcast_time3[,1:100]/dcast_time3$max
-
-res_k3_time <- NMF::nmf(dcast_time4, r = 3, 
-                  nrun = 100, 
-                  seed=123456,
-                 .options = list( 'v')) #
-
-NMF::basismap(res_k3_time) 
-coefmap(res_k3_time) 
-
-res_k3_time@fit@H
-
-library(NMF)
-res_k4_time <- NMF::nmf(dcast_time4, r = 4, 
-                  nrun = 100, 
-                  seed=123456,
-                 .options = list( 'v')) #
-
-NMF::basismap(res_k4_time) 
-coefmap(res_k4_time) 
-
-
-res_k5_time <- NMF::nmf(dcast_time4, r = 5, 
-                  nrun = 100, 
-                  seed=123456,
-                 .options = list( 'v')) #
-
-NMF::basismap(res_k5_time) 
-coefmap(res_k5_time) 
-
-
-dcast_time2$comp1
-res_k3_time@fit@W
-```
-
-
-
-
-Combine the data and visualise
-```{r}
-
-sf = 1 # scaling factor to make it easier to change sizes of everything, in which case change here
-
-p<- list()
-
-p$graphstyle_int <-  theme(#base plot theme
-  
-  # axis lines
-  axis.line.y = element_line(color="black", size = 1.5),
-  axis.line.x = element_line(color="black", size = 1,5),
-  
-  axis.title.y=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)),
-  axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)),
-  
-  # text
-  strip.text.x = element_text(size = 16*(sf+.5),  colour = "black"),
-  strip.text.y = element_text(size = 16*(sf+.5),  colour = "black"),
-  
-  text=element_text(size = 14),
-  axis.text.x = element_text(size = 15*(sf+.5), colour = "black",),
-  axis.text.y = element_text(size = 15*(sf+.5), colour = "black"),
-  
-  
-  # panel
-  panel.grid.major = element_blank(),
-  panel.background = element_blank(),
-  # panel.background = element_rect(fill="transparent"),
-  # panel.border = element_rect(fill="transparent"),
-  # strip shades (reco rectagles)
-   # strip.background = element_blank(),
-  
-  # legend
-  # legend.position = "top",
-  legend.key = element_rect(colour = "transparent", fill="transparent"),
-  # axis.ticks = element_blank(),
-  # legend.k
-  #legend.direction = "horizontal",
-
-  legend.text = element_text(size = 16*(sf+.5)),
-  legend.title= element_text(size = 16*(sf+.5)),
-  # legend.title = element_text(size = 10*(sf+.3)),
-  # legend line tends to be really small in print so adjust here
-  # legend.key.height = unit(.5, "cm"),
-  # legend.key.width = unit(2, "cm"),
-  
-  #legend.text = element_text(size = 10*sf),
-  # legend.title=element_blank(),
-  #legend.text = element_blank(),
-  #axis.ticks = element_blank(),
-)
-
-# recreate heatmap AUS
-
-chool_talk$AU_NM <-
-as.data.frame(res_k3@fit@H)%>%
-  mutate(component = as.factor(1:n()))%>%
-  gather(AU, coef, -component)%>%
-  group_by(component)%>%
-  mutate(max_comp = max(coef),
-         coef = coef/max_comp,
-         # AU = substring(AU,8,40),
-         AU_code = substring(AU,4,5)
-         )%>%
-  arrange(AU_code)%>%
-  ggplot(aes(component,AU, fill = coef))+
-  geom_tile()+
-  coord_cartesian(expand = FALSE)+
-  make_fullsize()
-  
-  theme_classic()+
-  # scale_fill_viridis_()
-    scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
-                       limits =c(0,1))+#)+
-  xlab("Component (K)")+
-
-  scale_x_discrete(position = "top")+
-guides(fill=guide_colorbar(ticks.colour = NA))
-  
-
-
-
-# chool_talk$AU_NM<- chool_talk$AU_NM 
-  # guides(fill = guide_colourbar(barwidth = 1.5,ticks.colour = NA, barheight = 5))
-  #   p$graphstyle_int
-  # theme()
-
-
-library(ggplot2)
-
-library(ggplot2)
-
-# Create some sample data
-df <- data.frame(x = 1:10, y = 1:10, z = 1:10)
-
-# Create the plot
-p <- ggplot(df, aes(x, y, color = z)) +
-  geom_point()
-
-# Set the plot margins to match the height of the color bar
-p + theme(plot.margin = unit(c(1,1,1,5), "lines"))
-
-p + theme(plot.margin = unit(c(1,1,1,5), "lines"), legend.position = "bottom")
-
-p + theme(plot.margin = unit(c(1,1,1,5), "lines"), legend.position = "bottom")
-
-
-library(ggplot2)
-library(reshape2)
-dat <- iris[,1:4]
-cor <- melt(cor(dat, use="p"))
-head(cor)
-##           Var1         Var2      value
-## 1 Sepal.Length Sepal.Length  1.0000000
-## 2  Sepal.Width Sepal.Length -0.1175698
-## 3 Petal.Length Sepal.Length  0.8717538
-## 4  Petal.Width Sepal.Length  0.8179411
-## 5 Sepal.Length  Sepal.Width -0.1175698
-## 6  Sepal.Width  Sepal.Width  1.0000000
-heat <- ggplot(data=cor, aes(x=Var1, y=Var2, fill=value)) 
-heat + geom_tile() + labs(x = "", y = "") + scale_fill_gradient2(limits=c(-1, 1))
-
-```
-
-anotate with components
-```{r}
-
-triangle_plots$delaunay_tri_comp3
-# load images
-# install.packages('magick')
-library(magick)
-# install.packages('imager')
-# library(imager)
-
-# library(png)
-# library(grid)
-
-
-require(ggtext)
-# require()
-
-
-# I is for italic
-labels <- c(
-  `1` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1n.png'
-    width='100' /><br> 1",
-  `2` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2n.png'
-    width='100' /><br> 2",
-  `3` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3n.png'
-    width='100' /><br> 3"
-)
-# ggtext::
-chool_talk$AU_NM<-  chool_talk$AU_NM +
-  xlab("Component (K)")+
-    scale_x_discrete(
-      position = "top",
-    # name = NULL,
-    labels = labels
-  ) +
-  theme(
-     axis.text.x.top = element_markdown(color = "black", size = 16*(sf+.5)),
-     axis.title.x = element_text(size = 16*(sf+.5)),#update this,
-     axis.title.y = element_text(size = 16*(sf+.5)),#update this,
-     axis.text.x = element_text(size = 15*(sf+.5), colour = "black"),
-  axis.text.y = element_text(size = 15*(sf+.5), colour = "black"),
-  legend.key.height = unit(1, "cm"),
-  legend.key.width = unit(.7, "cm"),
-  legend.text = element_text(size = 16*(sf+.5)),
-  legend.title= element_text(size = 16*(sf+.5))
-    # axis.text.x = element_markdown(color = "black", size = 15),
-       # axis.text.x.top = element_markdown(size = 8, lineheight = 1.05)
-     # axis.title.x = element_markdown(color = "black", size = 20)
-  )
-
-
-chool_talk$AU_NM
-```
-
-# plot just timeseries for components
-
-
-Lanmarking
-```{r eval=FALSE, include=FALSE}
-
-library(readxl)
-LANDMARKNMF <- read_excel("Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/LANDMARKNMF.xlsx")
-View(LANDMARKNMF)
-LANDMARKNMF
-
-library(ggtext)
-install.packages("ggtext")
-NMFresk3test<- as.data.frame(res_k3@fit@H)%>%
-  mutate(component = 1:n())%>%
-  gather(AU, coef, -component)%>%
-  group_by(component)%>%
-  mutate(max_comp = max(coef),
-         coef = coef/max_comp,
-         # AU = substring(AU,8,40),
-         AU_code = substring(AU,4,5)
-         )%>%
-  arrange(AU_code)
-
-
-
-LANDMARKNMF
-
-
-NMFresk3test
-
-LANDMARKNMF<- LANDMARKNMF1
-colnames(LANDMARKNMF)
-colnames(LANDMARKNMF[,c(1,8:9,12:31)])
-
-LANDMARKNMF_dcast<- LANDMARKNMF[,c(1,8:9,12:31)]%>%
-gather(AU, land1_0,-c(1:3,21:23))%>%
-gather(comp, land1_0_nmf, -c(1:3,7:8))
-
-library(ggvoronoi)
-
-left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
-  mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
-         V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
-  group_by(lanmark_id, component, AU)%>%
-  summarise_if(is.numeric, mean, na.rm = T) %>%
-  mutate(coef2 = if_else(land1_0_nmf == 1, coef,0))%>%
-  ggplot(aes(V1_1, V2_2, color = coef2))+
-  geom_point(aes(size = coef2), alpha = .5)+
-  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
-  ggvoronoi::stat_voronoi(geom="path")+
-  geom_point(aes(x = V1, y = V2))+
-  # geom_point(aes(size = coef), alpha = .1)+
-  ylim(1,0)+
-  facet_grid(~component)+
-  scale_color_viridis_c(option = "magma")
-
-  
-LANDMARKNMF_dcast
-
-# 
-
-install.packages("ggforce")
-library(ggforce)
-left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
-  mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
-         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
-  # group_by(lanmark_id)%>%
-  # summarise_if(is.numeric, mean, na.rm = T) %>%
-  mutate(coef2 = if_else(land1_0 == 1, coef,0))%>%
-  ggplot(aes(V1_1, V2_2, color = coef2, fill=coef2 ))+
-  geom_point(aes(size = coef2), alpha = .5)+
-    # ggvoronoi::stat_voronoi(geom="path" )
-  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
-
-  geom_point(aes(x = V1, y = V2))+
-  # geom_point(aes(size = coef), alpha = .1)+
-  ylim(1,0)+
-  facet_grid(~component)+
-    geom_delaunay_tile(aes(x =V1, V2, fill = lanmark_id), alpha = 0.3, colour = 'black')+
-  # geom_delaunay_segment2()+
-  scale_color_viridis_c(option = "magma")
-
-NMFresk3test$component
-LANDMARKNMF_dcast$component<- as.numeric(substr(LANDMARKNMF_dcast$comp,4,4))
-
-left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
-  mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
-         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
-  # group_by(lanmark_id)%>%
-  # summarise_if(is.numeric, mean, na.rm = T) %>%
-  mutate(coef2 = if_else(land1_0 == 1, coef,0))%>%
-  ggplot(aes(V1_1, V2_2, color = coef2, fill=coef2 ))+
-  geom_point(aes(size = coef2), alpha = .5)+
-    # ggvoronoi::stat_voronoi(geom="path" )
-  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
-
-  geom_point(aes(x = V1, y = V2))+
-  # geom_point(aes(size = coef), alpha = .1)+
-  ylim(1,0)+
-  facet_grid(~component)+
-    geom_delaunay_tile(aes(x =V1, V2), alpha = 0.1, colour = 'black')+
-      geom_delaunay_segment2(aes(x =V1, V2, colour = coef2))+
-  # geom_delaunay_segment2()+
-  scale_color_viridis_c(option = "magma")
-
-
-```
-?geom_delaunay_tile
-
-
-```{r eval=FALSE, include=FALSE}
-test_del<- left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
-  mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
-         V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
-    mutate(coloring = if_else(V1_1 == 1, 1,0)) %>%
-  subset(!(V1 == 0 & V2 == 0))%>%
-   # mutate(coef_max = )%>%
-    group_by(lanmark_id) %>%
-  mutate(coef = coef/max(coef)) %>%
-
-  mutate(coef2 = if_else(land1_0_nmf == 1, coef,0))%>%
-   mutate(coef2 = if_else(is.na(coef2), 0, coef2))%>%
-  summarise_if(is.numeric, mean, na.rm = T)
-
-SO<- test_del%>%
-  mutate(coef2 = coef2/max(coef2, na.rm = T))
-SO<- SO[,c(1:3,14)]
-
-SO%>%
-  mutate(coef2 = coef2/max(coef2))%>%
-  ggplot(aes(V1, V2))+
-
-   geom_delaunay_tile(aes(colour = coef2, fill = coef2), alpha = .5)+
-      geom_delaunay_segment2(aes(colour = coef2, fill = coef2))+
-    geom_point(aes(colour = coef2))+
-  ylim(1,0)+
-      scale_color_viridis_c(option = "magma")+
- scale_fill_viridis_c(option = "magma")
-
-
-
-dput(SO)
-
-
-SO%>%
-  mutate(coef2 = coef2/max(coef2))%>%
-  ggplot(aes(V1, V2))+
-
-   geom_delaunay_tile(aes(colour = coef2, fill = coef2), alpha = .3)+
-      geom_delaunay_segment2(aes(colour = coef2, fill = coef2))+
-    geom_point(aes(colour = coef2))+
-  ylim(1,0)+
-      scale_color_viridis_c(option = "magma")+
- scale_fill_viridis_c(option = "magma")+
-  theme_minimal()
-
-
-left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
-  
-
-
-  mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
-         V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
-    mutate(coloring = if_else(V1_1 == 1, 1,0)) %>%
-  subset(!(V1 == 0 & V2 == 0))%>%
-
-  mutate(coef2 = if_else(land1_0_nmf == 1, coef,0))%>%
-    group_by(lanmark_id, component)%>%
-      mutate(coef2 = coef2/max(coef2))%>%
-  # summarise_if(is.numeric, mean, na.rm = T)%>%
-  
-    # mutate(coef2 = coef2/max(coef2))%>%
-  ggplot(aes(V1, V2))+
-
-   geom_delaunay_tile(aes(colour = coef2, fill = coef2), alpha = .3)+
-      geom_delaunay_segment2(aes(colour = coef2, fill = coef2))+
-    geom_point(aes(colour = coef2))+
-  # geom_text(aes(label = lanmark_id,colour = coef2), size = 3)+
-  ylim(1,0)+
-  facet_grid(~component)+
-      scale_color_viridis_c(option = "magma")+
- scale_fill_viridis_c(option = "magma")+
-  theme_minimal()
-
-
-
-SO%>%
-  ggplot(aes(V1, V2))+
-   geom_text(aes(label = lanmark_id,colour = coef2), size = 3)+
-  ylim(1,0)
-
-  
-
-```
-  
-  GPT
-```{r}
-# First, install and load the deldir library:
-# install.packages("deldir")
-library(deldir)
-
-# install.packages("deldir")
-install.packages("tricol")
-
-
-
-
-
-
-traing_fordeldir <- left_join(LANDMARKNMF_dcast,NMFresk3test)%>%
-  
-
-
-  mutate(V1_1 = if_else(land1_0_nmf == 1, V1, NULL),
-         V2_2 = if_else(land1_0_nmf == 1, V2, NULL)) %>%
-    mutate(coloring = if_else(V1_1 == 1, 1,0)) %>%
-  subset(!(V1 == 0 & V2 == 0))%>%
-
-  mutate(coef2 = if_else(land1_0_nmf == 1, coef,0))%>%
-    group_by(lanmark_id, component)%>%
-      mutate(coef2 = coef2/max(coef2))%>%
-  group_by(lanmark_id)%>%
-  summarise_if(is.numeric, mean, na.rm = T)
-
-
-traing_fordeldir
-
-tri<- deldir(traing_fordeldir$V1, traing_fordeldir$V2)
-
-
-
-
-# Generate some random colors for the vertices:
-
-colors <- rainbow(length(traing_fordeldir$component))
-colors <- rainbow(length(traing_fordeldir$V1))
-
-
 
 
 
 ```
-
-```{r eval=FALSE, include=FALSE}
-NMFresk3test
-
-df_OF_output_AUsW_unblind_posed_binned$NMFtable
-
-
-df_OF_output_AUsW_unblind_posed_binned
-
-
-
-# FOR THE TIMESERIES NOW
-colnames(LANDMARKNMF)
-LANDMARKNMF$comp1<- LANDMARKNMF$NMF1
- LANDMARKNMF$comp2<- LANDMARKNMF$NMF2
-LANDMARKNMF$comp3<- LANDMARKNMF$NMF3
-
-```
-
-
-```{r eval=FALSE, include=FALSE}
-  
-colnames(LANDMARKNMF[,c(1,7:8,31:33)])
-
-LANDMARKNMF_gatherts<-LANDMARKNMF[,c(1,7:8,31:33)]%>%
-  gather(component, land1_0,-c(1:3))
-
-df_OF_output%>%
-  subset(filename == "./cut_spoken2_sad_day2_p8.csv")%>%
-
-
-df_OF_output%>%
-  ggplot(aes())
-
-
-# gather(comp, land1_0_nmf, -c(1:3,7:8))
-colnames(df_OF_output_AUsW_unblind_posed_binned1_gather)
-df_OF_output_AUsW_unblind_posed_binned1_gather <-
-df_OF_output_AUsW_unblind_posed_binned1 [,c(1,2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-
-      group_by(filename,component,subject,expression)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max)
-  
-  group_by(expression, component, bin_frame,subject)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  # geom_smooth(aes(group = subject), se = F)+
-  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
-  facet_grid(~expression )+
-  theme_classic()+
-   xlab("time bin")+
-  p$graphstyle_int+
-   scale_color_viridis_d(option = "magma")
-  
-  
-  
-  left_join(LANDMARKNMF_gatherts,
-  df_OF_output_AUsW_unblind_posed_binned1_gather)%>%
-     mutate(V1_1 = if_else(land1_0 == 1, V1, NULL),
-         V2_2 = if_else(land1_0 == 1, V2, NULL)) %>%
-  group_by(lanmark_id,component, expression) %>%
-  summarise_if(is.numeric, mean, na.rm = T) %>%
-  mutate(coef2 = if_else(land1_0 == 1, coef,0)) %>%
-     ggplot(aes(V1_1, V2_2, color = coef2 ))+
-  geom_point(aes(size = coef2), alpha = .5)+
-    # ggvoronoi::stat_voronoi(geom="path" )
-  # geom_point( aes(x = V1_1, y = V2_2, color = coef2, fill = coef2))+
-
-  geom_point(aes(x = V1, y = V2), color = "black", alpha = .1)+
-  # geom_point(aes(size = coef), alpha = .1)+
-  ylim(1,0)+
-  facet_grid(~component)+
-  scale_color_viridis_c(option = "magma")
-  
-  
-  ggforce
-  geom_delaunay_tile(alpha = 0.3, colour = 'black')
-
-
-```
-
-
-
-Figure 2
-
-
-  
-```{r}
-# chool_talk$AU_NM2<- chool_talk$AU_NM+
-#   theme(axis.text.y = element_blank())+
-#   ylab("Motor Action Unit")
-
-chool_talk$AU_NM2
-chool_talk$ts_smooth
-
-ggsave("AU_NMF2.tiff",chool_talk$AU_NM2, device = "tiff", width = 5, height = 8, dpi = 800)
-
-chool_talk$ts_hm
-
-```
-
-
-store NMF components o dataset
-```{r}
-df_OF_output_AUsW_unblind_posed_binned$NMFtable<- as.data.frame(res_k3@fit@W)
-
-df_OF_output_AUsW_unblind_posed_binned$comp1 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V1
-table(is.na(df_OF_output_AUsW_unblind_posed_binned$comp1))
-df_OF_output_AUsW_unblind_posed_binned$comp2 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V2
-df_OF_output_AUsW_unblind_posed_binned$comp3 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V3
-
-# for k  = 4
-df_OF_output_AUsW_unblind_posed_binned$NMFtable_k4<- as.data.frame(res_k4@fit@W)
-df_OF_output_AUsW_unblind_posed_binned$k4_comp1 = df_OF_output_AUsW_unblind_posed_binned$NMFtable_k4$V1
-df_OF_output_AUsW_unblind_posed_binned$k4_comp2 = df_OF_output_AUsW_unblind_posed_binned$NMFtable_k4$V2
-df_OF_output_AUsW_unblind_posed_binned$k4_comp3 = df_OF_output_AUsW_unblind_posed_binned$NMFtable_k4$V3
-df_OF_output_AUsW_unblind_posed_binned$k4_comp4 = df_OF_output_AUsW_unblind_posed_binned$NMFtable_k4$V4
-
-# for k 2
-# for k  = 4
-df_OF_output_AUsW_unblind_posed_binned_k2<- df_OF_output_AUsW_unblind_posed_binned
-df_OF_output_AUsW_unblind_posed_binned_k2$NMFtable_k2<- as.data.frame(res_k2@fit@W)
-
-df_OF_output_AUsW_unblind_posed_binned_k2$k2_comp1 = df_OF_output_AUsW_unblind_posed_binned_k2$NMFtable_k2$V1
-df_OF_output_AUsW_unblind_posed_binned_k2$k2_comp2 = df_OF_output_AUsW_unblind_posed_binned_k2$NMFtable_k2$V2
-
-# visualization by emotion
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-
-# bind_rows(db_of_natural1, db_of_morph)
-colnames(df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,16:32,34:36)])
-
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  
-  group_by(expression, component, drug.placebo, bin_frame)%>%
-    group_by(filename,component)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  facet_grid(~expression )+
-  theme_classic()
-
-# visualization by emotion and drug
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, drug.placebo, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = drug.placebo))+
-  geom_smooth(se = F)+
-  facet_grid(expression~component)+
-  theme_classic()
-
-
-nrow(df_OF_output_AUsW_unblind_posed_binned)
-
-
-```
-
-
-
-timeseries
-```{r}
-chool_talk$ts_smooth <- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  
-      group_by(filename,component,subject,expression)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max) %>%
-  
-  group_by(expression, component, bin_frame,subject)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  # geom_smooth(aes(group = subject), se = F)+
-  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
-  facet_grid(~expression )+
-  theme_classic()+
-   xlab("time bin")+
-  p$graphstyle_int+
-   scale_color_viridis_d(option = "magma")
-
-
-chool_talk$ts_smooth
-
-# just components
-paper_plots$posed_comp_ts<-
-df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  
-      group_by(filename,component)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max) %>%
-  
-  group_by(component, bin_frame,subject)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  # geom_smooth(aes(group = subject), se = F)+
-  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
-  # facet_grid(~expression )+
-  theme_classic()+
-   xlab("time bin")+
-  p$graphstyle_int+
-   scale_color_viridis_d(option = "magma")
-paper_plots$posed_comp_ts
-```
-
-
-   
-chool_talk$ts_smooth
-
-chool_talk$ts_pca_smooth<-
-    df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,48:50)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  
-      group_by(filename,component,subject,expression)%>%
-        # mutate_at(c("coef"), normalize)%>%
-  # mutate(coef_max = max(coef),
-  #        coef = coef/coef_max) %>%
-  
-  group_by(expression, component, bin_frame,subject)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-      mutate(component =substring(component, 5,9))%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  # geom_smooth(aes(group = subject), se = F)+
-  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
-  facet_grid(~expression )+
-        theme_classic()+
-      xlab("time bin")+
-  p$graphstyle_int+
-   scale_color_viridis_d(option = "magma")+
-  theme(panel.spacing = unit(1, "cm"))
-
-
-chool_talk$patch_PCA_NMF_ts <- (chool_talk$ts_smooth+theme(panel.spacing = unit(1, "cm")))/
-(chool_talk$ts_pca_smooth+theme(panel.spacing = unit(1, "cm")))+
-   plot_layout(guides = "collect") & theme(legend.position = "top")
-
-chool_talk$patch_PCA_NMF_ts
-chool_talk$ts_smooth+theme(panel.spacing = unit(1, "cm"))
-
-
-ggsave("patch_PCA_NMF_ts.tiff", chool_talk$patch_PCA_NMF_ts, device  ="tiff",
-       width = 9, height = 7, dpi = 800)
-
-chool_talk$ts_smooth
-
-chool_talk$AU_NM
-
-
-
-heatmap + timeseries + timeseries heatmap
-```{r}
-chool_talk$ts_hm <-
-df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  group_by(filename,component)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max)%>%
-  # mutate_at(c("coef"), scale)%>%
-  group_by(component, expression, bin_frame)%>%
-
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, component, fill= coef))+
-  geom_tile()+
-  xlab("time bin")+
-  scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
-                       limits =c(0,1))+#)+
-  # geom_smooth(se = F)+
-  facet_grid(~expression)+
-  theme_classic()+
-  p$graphstyle_int+
-  guides(fill=guide_colorbar(ticks.colour = NA))+
-  theme(panel.spacing = unit(1, "cm"))
-   # guides(fill = guide_colourbar(barwidth = 1.5,ticks.colour = NA, barheight = 5))
-
-chool_talk$ts_hm 
-
-paper_plots$posed_comp_ts_hm<-
-df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  group_by(filename,component)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max)%>%
-  # mutate_at(c("coef"), scale)%>%
-  group_by(component, bin_frame)%>%
-
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, component, fill= coef))+
-  geom_tile()+
-  xlab("time bin")+
-  scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
-                       limits =c(0,1))+#)+
-  # facet_grid(~expression)+
-  theme_classic()+
-  p$graphstyle_int +
-  guides(fill=guide_colorbar(ticks.colour = NA))+
-  theme(panel.spacing = unit(1, "cm"))
-   # guides(fill = guide_colourbar(barwidth = 1.5,ticks.colour = NA, barheight = 5))
-
-chool_talk$ts_hm 
-
-paper_plots$posed_comp_ts_hm
-
-```
-
-library(patchwork)
-```{r}
-# chool_talk$ts_nmf_heat_NMF <- (chool_talk$ts_smooth/
-#   chool_talk$ts_hm)+
-#   plot_layout(heights = c(1,2))
-
-# soace out values in x axis
-chool_talk$ts_smooth <- chool_talk$ts_smooth + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
-    scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
-  theme(panel.spacing.x = unit(1.5, "lines"))+
-  theme(legend.position = "top")
-
-chool_talk$ts_smooth
-
-test4pot5
-
-
-# chool_talk$ts_smooth <- test4pot5 + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
-#     scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
-#   theme(panel.spacing.x = unit(1.5, "lines"))+
-#   theme(legend.position = "top")
-
-chool_talk$ts_hm <- chool_talk$ts_hm +scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
-  theme(panel.spacing.x = unit(1.5, "lines"))
-
-chool_talk$ts_hm 
-# components
-paper_plots$posed_comp_ts <- paper_plots$posed_comp_ts + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
-    # scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
-  theme(panel.spacing.x = unit(1.5, "lines"))+
-  theme(legend.position = "top")
-
-paper_plots$posed_comp_ts_hm <-paper_plots$posed_comp_ts_hm +scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
-  theme(panel.spacing.x = unit(1.5, "lines"))
-
-chool_talk$ts_smooth
-chool_talk$ts_hm 
-paper_plots$posed_comp_ts
-paper_plots$posed_comp_ts_hm
-
-```
-
-
-````{r}
-# chool_talk$AU_NM <- chool_talk$AU_NM +
-#   xlab("Component (K)")
-# 
-#   ggtitle("POSED EXPRESSIONS")
-
-# chool_talk$AU_NM 
-# paper_plots<- list()
-# 
-# chool_talk$AU_NM+
-#    theme(plot.background = element_rect(fill = "black"))
-# panel
-require(patchwork)
-
-paper_plots$NMF_panel_posed
-
-# ((chool_talk$AU_NM/(paper_plots$posed_comp_ts+paper_plots$posed_comp_ts_hm)) 
-#   (chool_talk$ts_smooth/chool_talk$ts_hm))+
-#   plot_layout(ncol = 2, widths = c(.7,2))
-
-
-test
-library(patchwork)
-# make sure to flip 1 to 3
-
- triangle_plots$delaunay_tri_comp1.1 <- triangle_plots$delaunay_tri_comp1+
-theme_void()+theme(legend.position = "none",
-                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp1")
-
-  triangle_plots$delaunay_tri_comp2.1<- triangle_plots$delaunay_tri_comp2+
-theme_void()+theme(legend.position = "none",
-                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp2")
- 
- triangle_plots$delaunay_tri_comp3.1<- triangle_plots$delaunay_tri_comp3+
-theme_void()+theme(legend.position = "none",
-                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp3")
-
-
-comp1_2_3<- triangle_plots$delaunay_tri_comp1.1 /
-        triangle_plots$delaunay_tri_comp2.1/
-       triangle_plots$delaunay_tri_comp3.1
-
-paper_plots$posed_comp_ts
-paper_plots$posed_comp_ts_hm
-
-ts_ts_hm_compns<- (paper_plots$posed_comp_ts/paper_plots$posed_comp_ts_hm)
-
-
-```
-
-
-START COMBINING
-
-```{r}
- 
-test1 <- (wrap_elements(full =chool_talk$AU_NM)+ wrap_elements(full = comp1_2_3)+wrap_elements(ts_ts_hm_compns))+
-    plot_layout(ncol = 3, widths = c(1.2,.5,1))+ plot_annotation(tag_levels = 'A')+
-  theme(plot.tag = element_text(size = 20*(sf+.5)))
- 
- test1
- 
-```
-# (wrap_elements(full =chool_talk$AU_NM)+(wrap_elements(full = (
-#     ((triangle_plots$delaunay_tri_comp3.1) /
-#         (triangle_plots$delaunay_tri_comp2.1)/
-#        (triangle_plots$delaunay_tri_comp1.1))))|
-#        (chool_talk$ts_smooth/chool_talk$ts_hm)))+
-  # plot_layout(ncol = 3, widths = c(1.2,.5,1))
-      
-        
-# 
-#   
-#   |wrap_elements( full= (paper_plots$posed_comp_ts/paper_plots$posed_comp_ts_hm)))+
-#   plot_layout(ncol = 2)
-# 
-# 
-
-```{r}
-triangle_plots$delaunay_tri_ang<-triangle_plots$delaunay_tri_ang+scale_x_continuous(limits = c(-.2,1.2))
-triangle_plots$delaunay_tri_happy<-triangle_plots$delaunay_tri_happy+scale_x_continuous(limits = c(-.2,1.2))
-
-triangle_plots$delaunay_tri_sad<-triangle_plots$delaunay_tri_sad+scale_x_continuous(limits = c(-.2,1.2))
-
-
-```
-
-
-```{r}
-patchwork::wrap_elements(test3)/test2
-
-
-# triangle_plots$delaunay_tri_ang+
-#   xlim(-10,110)
-triang_patch<- (triangle_plots$delaunay_tri_ang +
-                         triangle_plots$delaunay_tri_happy+
-                         triangle_plots$delaunay_tri_sad)
-
-test2 <-(chool_talk$ts_smooth/
-           patchwork::wrap_elements(triang_patch)/
-    chool_talk$ts_hm)+
-  plot_layout(nrow = 3, heights = c(1,1.5,1))+
-  plot_annotation(tag_levels = list(c('D', 'E','F')))+
-  theme(plot.tag = element_text(size =20*(sf+.5)))
-  
-
-test2
-
-
-```
-  
- 
- 
- 
-```{r} 
- # (chool_talk$ts_smooth/chool_talk$ts_hm)+
-  # plot_layout(ncol = 2, widths = c(.7,2))
-require(ggtext)
-require(tidyverse)
-
-require(patchwork)
-
-paper_plots$panel_NMF_posed<-
-wrap_elements(full = test1) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))
-   plot_annotation(tag_levels = 'A')
-
-
-paper_plots$panel_NMF_posed
-
-ggsave("panel_NMF_posed.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
-       width = 15,
-       height = 15,
-       dpi = 800)
-
-ggsave("panel_NMF_poseddpi300.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
-       width = 25,
-       height = 25,
-       dpi = 300)
-
-ggsave("panel_NMF_posed1.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
-       width = 25,
-       height = 25,
-       dpi = 800)
-
-```
-
-# setting
-# 2300 vy 1200 for test 2
-# 2300 by 2300
-
-design<-'AAB
-ABC'
-
-wrap_plots(D = p1, C = p2, B = p3, design = layout)
-
-plot_annotation(title = "POSED EXPRESSIONS")
-
-
-
-
-# ggsave("ts_nmf_heat_NMF.tiff", chool_talk$ts_nmf_heat_NMF, device = "tiff",
-#        width = 10, height = 7, dpi = 800)
-paper_plots$NMF_panel_posed/paper_plots$NMF_panel_posed
-
-paper_plots$NMF_panel_posed
-ggsave("fig2_NMF_panel_posed.tiff", paper_plots$NMF_panel_posed, device = "tiff",
-       width = 14, height = 7, dpi = 800)
-
-
-# spoken
-
-
-require(ggplot2); require(grid); require(png); require(RCurl)
-install.packages("RCurl")
-require(RCurl)
-
-p = ggplot(iris, aes(Sepal.Length, Sepal.Width)) + geom_point() + facet_wrap(~Species)
-
-img1 = readPNG(getURLContent('https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/ang.png'))
-img2 = readPNG(getURLContent('https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/hap.png'))
-img3 = readPNG(getURLContent('https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/sad.png'))
-
-
-annotation_custom2 <- 
-function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data){ layer(data = data, stat = StatIdentity, position = PositionIdentity, 
-        geom = ggplot2:::GeomCustomAnn,
-        inherit.aes = TRUE, params = list(grob = grob, 
-                                          xmin = xmin, xmax = xmax, 
-                                          ymin = ymin, ymax = ymax))}
-
-test2
-
-test4_df<-
- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  
-      group_by(filename,component,subject,expression)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max) %>%
-  
-  group_by(expression, component, bin_frame,subject)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-
-test4pot<-test4_df%>%
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  # geom_smooth(aes(group = subject), se = F)+
-  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
-  facet_grid(~expression )+
-  theme_classic()+
-   xlab("time bin")+
-  p$graphstyle_int+
-   scale_color_viridis_d(option = "magma")+
-  theme(legend.position = "top")
-
-
-a1 = annotation_custom2(rasterGrob(img1, interpolate=TRUE), xmin=60, xmax=100, ymin = .5, ymax = 1, data=test4_df%>%subset(expression == "angry"))
-a2 = annotation_custom2(rasterGrob(img2, interpolate=TRUE), xmin=60, xmax=100, ymin = .5, ymax = 1, data=test4_df%>%subset(expression == "happy"))
-a3 = annotation_custom2(rasterGrob(img3, interpolate=TRUE), xmin=60, xmax=100, ymin = .5, ymax = 1, data=test4_df%>%subset(expression == "sad"))
-
-test4_df[2000,]
-test4pot5<- test4pot + a1 + a2 + a3
- + a1 + a2 + a3
-```
-
-
-
-# plot component classification of emotion
-
-```{r}
-df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  group_by(filename,component)%>%
-  mutate(coef_max = max(coef),
-         coef = coef/coef_max)%>%
-  # mutate_at(c("coef"), scale)%>%
-  group_by(component, filename, expression)%>%
-
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  ggplot(aes(component, coef, group = expression, color = expression))+
-  stat_summary(geom = "pointrange", position = position_dodge(1))+
-  ggpubr::stat_compare_means()+
-  geom_jitter( position = position_dodge2( width = .))
-
-
-```
-
-```{r}
-colnames(df_OF_output_AUsW_unblind_posed_binned_k2)
-df_OF_output_AUsW_unblind_posed_binned_k2[,c(1,2:3,9:10, 49:50)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
-  group_by(expression, component, drug.placebo, bin_frame,filename)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = drug.placebo))+
-  geom_smooth(se = F)+
-  # geom_smooth(aes(group = filename), se = F, size = .5)+
-  facet_grid(expression~component)+
-  theme_classic()
-
-
-```
-
-
-PCA
-```{r}
-chool_talk$NMF_PCA <- chool_talk$AU_NM +theme(legend.position = "none") +(chool_talk$pca_AU+theme(axis.text.y = element_blank(),
-                                         axis.title.y = element_blank()))
-
-
-ggsave("NMF_PCA.tiff", chool_talk$NMF_PCA, device = "tiff", width = 10, height = 7, dpi = 800)
-
-```
-  
-visualise time NMF
-
-
-```{r}
-
-dcast_time2$table_time_NMF_k3<- as.data.frame(res_k3_time@fit@W)
-# res_k3_time
-dcast_time2$comp1 = dcast_time2$table_time_NMF_k3$V1
-dcast_time2$comp2 = dcast_time2$table_time_NMF_k3$V2
-dcast_time2$comp3 = dcast_time2$table_time_NMF_k3$V3
-
-
-res_k3_time@fit@ibterms
-res_k3_time@fit@H
-colnames(dcast_time2)
-
-dcast_time2[c(1:4,106:108)]%>%
-    # mutate_if(is.numeric, scale)%>%
-  group_by(filename,subject, drug.placebo, expression)%>%
-
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  gather(comp, coef, -filename, -subject, -drug.placebo, - expression)%>%
-  ggplot(aes(comp, coef, color = expression))+
-  geom_jitter(aes(group = expression), position = position_dodge(1), alpha = .1)+
-  stat_summary(aes(group = expression), position = position_dodge(1),geom = "pointrange")
-
-  facet_grid(~expression)
-
-  
-  as.data.frame(res_k3_time@fit@H)%>%
-    # mutate(id = row_number())%>%
-    mutate(id = 1:n())%>%
-gather(time_bin,coef,-id)%>%
-    ggplot(aes(as.numeric(time_bin), id, fill = coef))+
-    geom_tile()+
-    theme_classic()+
-    scale_fill_viridis_c(option = "inferno")
-  
-  
-  
-  res_k5_time
-  
-  
-    as.data.frame(res_k5_time@fit@H)%>%
-    # mutate(id = row_number())%>%
-    mutate(id = 1:n())%>%
-gather(time_bin,coef,-id)%>%
-    ggplot(aes(as.numeric(time_bin), id, fill = coef))+
-    geom_tile()+
-    theme_classic()+
-    scale_fill_viridis_c(option = "inferno")
-    
-        as.data.frame(res_k3_time@fit@H)%>%
-    # mutate(id = row_number())%>%
-    mutate(id = 1:n())%>%
-gather(time_bin,coef,-id)%>%
-          mutate(coef = ifelse(time_bin <=2, 0,
-                               ifelse(time_bin >98, 0, coef))) %>%
-          group_by(id)%>%
-          mutate_at(c("coef"), scale)%>%
-    ggplot(aes(as.numeric(time_bin), coef, color = as.factor(id)))+
-          # geom_line()
-          geom_smooth(se = F, span = .5, size = 2)+
-          # geom_density(aes(y = coef))+
-    # geom_tile()+
-    theme_classic()+
-    scale_fill_viridis_c(option = "inferno")
-  
-  
-        
-res_k3_time@fit@W
-
-colnames(dcast_time2)
-dcast_time2_aggjasp<- dcast_time2[,c(1:4,107:109)] %>%
-  group_by(filename)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)
-
-write_csv(dcast_time2_aggjasp, "dcast_time2_aggjasp.csv")
-
-
-
-```
-  
-dcast_time3<- dcast_time2[,6:105]+.001
-?rowMax
-colnames(dcast_time3)
-pmax(dcast_time3)
-install.packages("matrixStats")
-library(matrixStats)
-
-dcast_time3$max<- rowMaxs(as.matrix(         dcast_time3))
-
-
-max(dcast_time3)
-table(is.na(dcast_time3))
-
-dcast_time_h<-subset(dcast_time4, 
-                     dcast_time2$expression == "angry")
-
-
-  res_k3_time_a <- NMF::nmf(dcast_time_h, r = 3, 
-                  nrun = 100, 
-                  seed=123456,
-                 .options = list( 'v')) #
-  
-  dcast_time_h<-subset(dcast_time4, 
-                     dcast_time2$expression == "sad")
-
-
-  res_k3_time_s <- NMF::nmf(dcast_time_h, r = 3, 
-                  nrun = 100, 
-                  seed=123456,
-                 .options = list( 'v')) #
-  
-  # happy
-    dcast_time_ha<-subset(dcast_time4, 
-                     dcast_time2$expression == "happy")
-
-
-  res_k3_time_ha <- NMF::nmf(dcast_time_ha, r = 3, 
-                  nrun = 100, 
-                  seed=123456,
-                 .options = list( 'v')) #
-  
-  
- dcast_time_h$table_time_NMF_k3<- as.data.frame(res_k3_time_a@fit@W)
-# res_k3_time
-dcast_time_h$comp1 = dcast_time_h$table_time_NMF_k3$V1
-dcast_time_h$comp2 = dcast_time_h$table_time_NMF_k3$V2
-dcast_time_h$comp3 = dcast_time_h$table_time_NMF_k3$V3
-
-# sad
-dcast_time_s$table_time_NMF_k3<- as.data.frame(res_k3_time_s@fit@W)
-# res_k3_time
-dcast_time_s$comp1 = dcast_time_s$table_time_NMF_k3$V1
-dcast_time_s$comp2 = dcast_time_s$table_time_NMF_k3$V2
-dcast_time_s$comp3 = dcast_time_s$table_time_NMF_k3$V3
-
-# happy
-dcast_time_ha$table_time_NMF_k3<- as.data.frame(res_k3_time_ha@fit@W)
-# res_k3_time
-dcast_time_ha$comp1 = dcast_time_ha$table_time_NMF_k3$V1
-dcast_time_ha$comp2 = dcast_time_ha$table_time_NMF_k3$V2
-dcast_time_ha$comp3 = dcast_time_ha$table_time_NMF_k3$V3
-
-# then bidn these
-
-
-# angry
-  
-
-same as above for  k 4
-
-```{r}
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,38:41)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, drug.placebo, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = expression))+
-  geom_smooth()+
-  facet_grid(~component)+
-  theme_classic()
-
-# visualization by emotion and drug
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,38:41)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, drug.placebo, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = drug.placebo))+
-  geom_smooth(se = F)+
-  facet_grid(expression~component)+
-  theme_classic()
-
-
-
-tsne(pollen$data,labels=as.factor(pollen$celltypes))
-
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]
-
-library(tsne)
-library(M3C)
-
-install.packages("M3C")
-
-df_OF_output_AUsW_unblind_posed_binned_max_norm
-tsnetest<- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
-  # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(filename, expression, drug.placebo)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-   ungroup()%>%
-  mutate_if(is.numeric, scale)
-
-tsnetest
-
-
-```
-
-```{r}
-tsnresul<- tsne::tsne(tsnetest[,c(5:7)],
-           k = 3)
-
-plot(tsnresul, col = "black", bg =as.numeric(tsnetest$expression))
-
-
-```
-
-tsnresult
-
-```{r}
-tsne(df_OF_output_AUsW_unblind_posed_binned[,c(10, 34:36)],
-     labels=as.factor(df_OF_output_AUsW_unblind_posed_binned$expression))
-
-
-library(Rtsne)
-
-
-
-set.seed(142)
-
-```
-
-
-```{r}
-tSNE_fit$Y <- tsnetest[,c(5:7)] %>%
-  ungroup() %>%
-  mutate(ID=row_number()) %>%
-  column_to_rownames("ID") %>%
-  scale() %>% 
-  Rtsne(dim = 3)
-
-tSNE_df <- 
-  as.data.frame(tSNE_fit$Y) %>%
-  rename(tSNE1="V1",
-         tSNE2="V2") %>%
-  mutate(ID=row_number())
-
-
-
- tsnetest<- tsnetest %>%
-  ungroup() %>%
-  mutate(ID=row_number())
-
- tSNE_df2 <- tSNE_df %>%
-  inner_join(tsnetest[c(1:3,8)], by="ID")
- 
- 
- 
-
-tSNE_df2 %>%
-  ggplot(aes(x = tSNE1, 
-             y = tSNE2,
-             color = expression,
-             shape = expression))+
-  geom_point()+
-  theme(legend.position="bottom")
-
-
-ggsave("tSNE_plot_example1.png")
-
-
-require(rgl)
-plot3d(tSNE_fit$Y, col=cols[tSNE_df2$expression])
-legend3d("topright", legend = '0':'5', pch = 16, col = rainbow(5))
-
-cols
-?plot3d
-plot3d(tSNE_fit$Y, col= c(1,2,3))
-plot3d(tSNE_fit$Y)
-
-# 2nd tsne on AUS
-
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-tsnetest2<- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,16:32)]%>%
-  # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(filename, expression, drug.placebo)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  ungroup()%>%
-  mutate_if(is.numeric, scale)
-
-tsnetest2
-colnames(tsnetest2)
-
-
-tsnresul2<- tsne::tsne(tsnetest2[,c(5:21)],
-           k = 3)
-
-plot(tsnresul2[,1:2], col = "black", bg =c(1,2,3))
-
-
-
-
-tSNE_fit2 <- tsnetest2[,c(5:21)] %>%
-  ungroup() %>%
-  mutate(ID=row_number()) %>%
-  column_to_rownames("ID") %>%
-  scale() %>% 
-  Rtsne(dim = 3)
-
-tSNE_df2 <- tSNE_fi2t$Y %>% 
-  as.data.frame() %>%
-  rename(tSNE1="V1",
-         tSNE2="V2") %>%
-  mutate(ID=row_number())
-
-
-
-
- tSNE_df2 <- tSNE_df %>%
-  inner_join(tsnetest[c(1:3,8)], by="ID")
- 
- 
- 
-tSNE_fit2
-
-plot3d(tSNE_fit2$Y, col= c(1,2,3))
-
-library(scatterplot3d)
-?scatterplot3d::scatterplot3d
-scatterplot3d::scatterplot3d(tSNE_fit2$Y)
-install.packages("plot3D")
-library(plot3D)
-scatter3D(as.data.frame(tSNE_fit2$Y)[,1], phi = 0, bty = "g",  type = "h", 
-           ticktype = "detailed", pch = 19, cex = 0.5)
-```
-
-aggregate solution
-```{r}
-library(lmerTest)
-
-# test_lmer<- lmer()
-df_OF_output_AUsW_unblind_posed_binned
-
-# visualization by emotion and drug
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, drug.placebo)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(expression, component, fill = coef))+
-    geom_tile()+
-  facet_grid(~drug.placebo)+
-  theme_classic()+
-    scale_fill_viridis_c(option="magma")
-
-
-# 
-#   ggplot(aes(Emotion, component, fill = coef))+
-#   geom_tile()+
-#   scale_fill_viridis(option="magma")+
-#   theme_classic()+
-#   facet_grid(~Dataset)
-
-
-# aggregated plot
-```
-
-
-
-```{r}
-  df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,34:36)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, drug.placebo)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  ggplot(aes(component , coef, color = expression, fill = expression)) +
-  geom_jitter(alpha = .1, position = position_dodge(1))+
-  stat_summary(geom = "pointrange")+
-  geom_boxplot(alpha = .1)+
-    theme_classic()+
-  facet_grid(~expression)+
-  ggpubr::stat_compare_means()+
-  scale_color_brewer(palette = "Dark2")+
-  scale_fill_brewer(palette = "Dark2")
-
-
-
-```
-
-same as above for k4
-
-```{r}
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,38:41)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, drug.placebo)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(expression, component, fill = coef))+
-    geom_tile()+
-  facet_grid(~drug.placebo)+
-  theme_classic()+
-    scale_fill_viridis_c(option="magma")
-
-
-# 
-#   ggplot(aes(Emotion, component, fill = coef))+
-#   geom_tile()+
-#   scale_fill_viridis(option="magma")+
-#   theme_classic()+
-#   facet_grid(~Dataset)
-
-
-# aggregated plot
-  
-  df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,38:41)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(subject,expression, component, drug.placebo)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  ggplot(aes(drug.placebo , coef, color = expression, fill = expression)) +
-  geom_jitter(alpha = .1, position = position_dodge(1))+
-  stat_summary(geom = "pointrange")+
-  geom_boxplot(alpha = .1)+
-    theme_classic()+
-  facet_grid(expression~component)+
-  ggpubr::stat_compare_means()+
-  scale_color_brewer(palette = "Dark2")+
-  scale_fill_brewer(palette = "Dark2")
-
-
-  
-  df_OF_output_AUsW_unblind_posed_binned
-```
-
-
-do we get different patterns if we fit placebo and drug separately
-
-```{r}
-# df_OF_output_AUsW_unblind_posed_binned[df_OF_output_AUsW_unblind_posed_binned$drug.placebo == "drug"] 
-#   subset(drug.placebo == "drug")[,16:32]
-
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-# df_OF_output_AUsW_unblind_posed_binned$drug.placebo
-
-df_OF_output_AUsW_unblind_posed_binned_drug<- df_OF_output_AUsW_unblind_posed_binned %>%
-                         subset(drug.placebo == "drug")%>%
-                         ungroup()%>%
-                         select(16:32)
-
-
-df_OF_output_AUsW_unblind_posed_binned_placebo<- df_OF_output_AUsW_unblind_posed_binned %>%
-                         subset(drug.placebo == "placebo")%>%
-                         ungroup()%>%
-                         select(16:32)
-
-res_k3_drug <-NMF::nmf(df_OF_output_AUsW_unblind_posed_binned_drug,
-                       r = 3, 
-                  nrun = 200, 
-                  seed=123456,
-                 .options = list( 'v')) #
-
-
-plot(res_k3_drug)
-summary(res_k3_drug)
-
-# basis components 
-NMF::basismap(res_k3_drug) # weights/ amplitudes
-
-# mixture coefficients 
-coefmap(res_k3)
-coefmap(res_k3_drug) #hidden variables
-
-# access more info
-# res_k3_drug
-
-res_k4_drug <-NMF::nmf(df_OF_output_AUsW_unblind_posed_binned_drug, r = 4, 
-                  nrun = 200, 
-                   seed=123456,
-                   .options = list( 'v'))
-
-
-NMF::basismap(res_k4) 
-coefmap(res_k4) 
-NMF::basismap(res_k4_drug) 
-coefmap(res_k4_drug) 
-
-# very similar so far
-# now fit placebo
-
-res_k3_placebo <-NMF::nmf(df_OF_output_AUsW_unblind_posed_binned_placebo,
-                       r = 3, 
-                  nrun = 200, 
-                  seed=123456,
-                 .options = list( 'v')) #
-
-
-# plot(res_k3_placebo)
-# summary(res_k3_placebo)
-
-# basis components 
-NMF::basismap(res_k3) 
-NMF::basismap(res_k3_placebo) # weights/ amplitudes
-
-# mixture coefficients 
-coefmap(res_k3)
-coefmap(res_k3_placebo) #hidden variables
-
-# access more info
-# res_k3_drug
-
-res_k4_placebo <-NMF::nmf(df_OF_output_AUsW_unblind_posed_binned_placebo, r = 4, 
-                  nrun = 200, 
-                   seed=123456,
-                   .options = list( 'v'))
-
-
-NMF::basismap(res_k4) 
-
-NMF::basismap(res_k4_placebo) 
-coefmap(res_k4) 
-coefmap(res_k4_placebo)
-
-
-
-
-
-# visualisations
-# - differences between emotions on the components
-# - differences between drug vs no drug?
-# - classification - can we classify drug vs no drug based in these components
-# 
-# 
-
-
-```
-
-now visualise joint NMF vs separate NMFS
-
-```{r}
-df_OF_output_AUsW_unblind_posed_binned_drug
-df_OF_output_AUsW_unblind_posed_binned_placebo
-
-# lets store the components frm k 4
-
-df_OF_output_AUsW_unblind_posed_binned_drug
-
-df_OF_output_AUsW_unblind_posed_binned_drug<- df_OF_output_AUsW_unblind_posed_binned %>%
-                         subset(drug.placebo == "drug")
-                         # ungroup()%>%
-                         # select(16:32)
-
-df_OF_output_AUsW_unblind_posed_binned_placebo<- df_OF_output_AUsW_unblind_posed_binned %>%
-                         subset(drug.placebo != "drug")
-
-df_OF_output_AUsW_unblind_posed_binned_drug$NMFtable_k4<- as.data.frame(res_k4_drug@fit@W)
-
-# for drug set
-df_OF_output_AUsW_unblind_posed_binned_drug$k4_comp1 = df_OF_output_AUsW_unblind_posed_binned_drug$NMFtable_k4$V1
-df_OF_output_AUsW_unblind_posed_binned_drug$k4_comp2 = df_OF_output_AUsW_unblind_posed_binned_drug$NMFtable_k4$V2
-df_OF_output_AUsW_unblind_posed_binned_drug$k4_comp3 = df_OF_output_AUsW_unblind_posed_binned_drug$NMFtable_k4$V3
-df_OF_output_AUsW_unblind_posed_binned_drug$k4_comp4 = df_OF_output_AUsW_unblind_posed_binned_drug$NMFtable_k4$V4
-
-# for placebo set
-df_OF_output_AUsW_unblind_posed_binned_placebo$NMFtable_k4<- as.data.frame(res_k4_placebo@fit@W)
-
-df_OF_output_AUsW_unblind_posed_binned_placebo$k4_comp1 = df_OF_output_AUsW_unblind_posed_binned_placebo$NMFtable_k4$V1
-df_OF_output_AUsW_unblind_posed_binned_placebo$k4_comp2 = df_OF_output_AUsW_unblind_posed_binned_placebo$NMFtable_k4$V2
-df_OF_output_AUsW_unblind_posed_binned_placebo$k4_comp3 = df_OF_output_AUsW_unblind_posed_binned_placebo$NMFtable_k4$V3
-df_OF_output_AUsW_unblind_posed_binned_placebo$k4_comp4 = df_OF_output_AUsW_unblind_posed_binned_placebo$NMFtable_k4$V4
-
-
-
-# compare vis for joint vs separwte NMF results
-
-# start with selectign drug
-
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,38:41)]%>%
-  subset(drug.placebo == "drug")%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  facet_grid(~expression)+
-  theme_classic()
-
-colnames(df_OF_output_AUsW_unblind_posed_binned_drug)
-# forgot to store the combined data with info
-
-df_OF_output_AUsW_unblind_posed_binned_drug[,c(2:3,9:10,38:41)]%>%
-  # subset(drug.placebo == "drug")%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  facet_grid(~expression)+
-  theme_classic()
-
-
-
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,38:41)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, drug.placebo, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  facet_grid(drug.placebo~expression)+
-  theme_classic()
-
-bind_rows(df_OF_output_AUsW_unblind_posed_binned_drug,df_OF_output_AUsW_unblind_posed_binned_placebo)[,c(2:3,9:10,38:41)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(expression, component, drug.placebo, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_smooth()+
-  facet_grid(drug.placebo~expression)+
-  theme_classic()
-  
-  
-
-
-  
-  
-df_OF_output_AUsW_unblind_posed_binned[,c(2:3,9:10,38:41)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(subject,expression, component, drug.placebo)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  ggplot(aes(drug.placebo , coef, color = expression, fill = expression)) +
-  geom_jitter(alpha = .1, position = position_dodge(1))+
-  stat_summary(geom = "pointrange")+
-  geom_boxplot(alpha = .1)+
-    theme_classic()+
-  facet_grid(expression~component)+
-  ggpubr::stat_compare_means()+
-  scale_color_brewer(palette = "Dark2")+
-  scale_fill_brewer(palette = "Dark2")
-
-
-
-bind_rows(df_OF_output_AUsW_unblind_posed_binned_drug,df_OF_output_AUsW_unblind_posed_binned_placebo)[,c(2:3,9:10,38:41)]%>%
-  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  group_by(subject,expression, component, drug.placebo)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  ggplot(aes(drug.placebo , coef, color = expression, fill = expression)) +
-  geom_jitter(alpha = .1, position = position_dodge(1))+
-  stat_summary(geom = "pointrange")+
-  geom_boxplot(alpha = .1)+
-    theme_classic()+
-  facet_grid(expression~component)+
-  ggpubr::stat_compare_means()+
-  scale_color_brewer(palette = "Dark2")+
-  scale_fill_brewer(palette = "Dark2")
-
-# this plot is deceiving as the compents shift order
-# overall the patterns are the same_src(
-# so its better to fit in one go to abvoid flips in compoent orders
-```
-
-
-we can also do classification on this
-i.e. knowing the spatiotemporal components can we predict whether a condition is drug vs placebo
-
-```{r}
-df_OF_output_AUsW_unblind_posed_binned
-
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-# combine the datasets keep timbeins and stimuli
-nmfk4_agg_no_ts <- df_OF_output_AUsW_unblind_posed_binned%>%
-  ungroup()%>%
-  select(c(3,9:10,16:41))%>%
-  # gather( component, coef, -timebin,-Emotion, -Dataset, -morph, -filename)%>%
-  group_by(subject,drug.placebo, expression)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)
-
-nmfk4_agg_no_ts
-
-# combine datasets and aggregate over time bins
-# nmf_agg_ts <- bind_rows(db_of_natural1, db_of_morph)[,c(1,2:5,31:33)]%>%
-#   group_by(filename, Emotion, Dataset, morph)%>%
-#   summarise_at(c("comp1", "comp2", "comp3"), mean, na.rm = TRUE)
-# 
-# # save 
-write_csv(nmfk4_agg_no_ts, "nmfk4_agg_no_ts.csv")
-# write_csv(nmf_agg_ts_tb, "nmf_agg_ts_tb.csv")
-
-
-```
-
-before we do for classification and clustering
-let's do BADIA
-
-```{r}
-# start with the dimensions
-colnames(nmfk4_agg_no_ts)
-# drug no drug
-
-bada_models<-list()
-bada_models$drug_nodrug<- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,24:27], 
-                                                       scale = FALSE, 
-                                                       center = FALSE, 
-                                                       DESIGN = as.factor(nmfk4_agg_no_ts$drug.placebo),
-                                                       make_design_nominal = TRUE,
-                                                       group.masses = NULL, 
-                                                       weights = NULL, 
-                                                       graphs = TRUE, 
-                                                       k = 0, 
-                                                       test.iters = 1000, 
-                                                       critical.value = 2)
-
-# based on emotion
-bada_models$emotion <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,24:27], 
-                                                       scale = FALSE, 
-                                                       center = FALSE, 
-                                                       DESIGN = as.factor(nmfk4_agg_no_ts$expression),
-                                                       make_design_nominal = TRUE,
-                                                       group.masses = NULL, 
-                                                       weights = NULL, 
-                                                       graphs = TRUE, 
-                                                       k = 0, 
-                                                       test.iters = 1000, 
-                                                       critical.value = 2)
-
-
-# based on AUS
-colnames(nmfk4_agg_no_ts)
-bada_models$drug_nodrug_fromAUS<- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,4:20], 
-                                                       scale = FALSE, 
-                                                       center = FALSE, 
-                                                       DESIGN = as.factor(nmfk4_agg_no_ts$drug.placebo),
-                                                       make_design_nominal = TRUE,
-                                                       group.masses = NULL, 
-                                                       weights = NULL, 
-                                                       graphs = TRUE, 
-                                                       k = 0, 
-                                                       test.iters = 1000, 
-                                                       critical.value = 2)
-
-
-bada_models$emotion_fromAUS <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,4:20], 
-                                                       scale = FALSE, 
-                                                       center = FALSE, 
-                                                       DESIGN = as.factor(nmfk4_agg_no_ts$expression),
-                                                       make_design_nominal = TRUE,
-                                                       group.masses = NULL, 
-                                                       weights = NULL, 
-                                                       graphs = TRUE, 
-                                                       k = 0, 
-                                                       test.iters = 1000, 
-                                                       critical.value = 2)
-
-
-
-# do placebo vs  drug separately
-nmfk4_agg_no_ts_drug<-subset(nmfk4_agg_no_ts, drug.placebo == "drug")
-nmfk4_agg_no_ts_plac<-subset(nmfk4_agg_no_ts, drug.placebo != "drug")
-
-colnames(nmfk4_agg_no_ts_drug)
-bada_models$drug_emotion_NMF <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts_drug[,24:27], 
-                                                       scale = FALSE, 
-                                                       center = FALSE, 
-                                                       DESIGN = as.factor(nmfk4_agg_no_ts_drug$expression),
-                                                       make_design_nominal = TRUE,
-                                                       group.masses = NULL, 
-                                                       weights = NULL, 
-                                                       graphs = TRUE, 
-                                                       k = 0, 
-                                                       test.iters = 1000, 
-                                                       critical.value = 2)
-
-# lacebo
-
-bada_models$placebo_emotion_NMF <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts_plac[,24:27], 
-                                                       scale = FALSE, 
-                                                       center = FALSE, 
-                                                       DESIGN = as.factor(nmfk4_agg_no_ts_plac$expression),
-                                                       make_design_nominal = TRUE,
-                                                       group.masses = NULL, 
-                                                       weights = NULL, 
-                                                       graphs = TRUE, 
-                                                       k = 0, 
-                                                       test.iters = 1000, 
-                                                       critical.value = 2)
-
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-
-df_OF_output_AUsW_unblind_posed_binned_drug<-subset(df_OF_output_AUsW_unblind_posed_binned, drug.placebo  =="drug")
-
-bada_models$ts_drug<- TInPosition::tepBADA.inference.battery(df_OF_output_AUsW_unblind_posed_binned_drug[,38:41], 
-                                                       scale = FALSE, 
-                                                       center = FALSE, 
-                                                       DESIGN = as.factor(df_OF_output_AUsW_unblind_posed_binned_drug$expression),
-                                                       make_design_nominal = TRUE,
-                                                       group.masses = NULL, 
-                                                       weights = NULL, 
-                                                       graphs = TRUE, 
-                                                       k = 0, 
-                                                       test.iters = 100, 
-                                                       critical.value = 2)
-
-df_OF_output_AUsW_unblind_posed_binned$subject<- as.factor(df_OF_output_AUsW_unblind_posed_binned$subject)
-
-summary(lmer(k4_comp3 ~ 1 + expression*drug.placebo +(1+drug.placebo|subject),
-             REML = FALSE,
-     data  =df_OF_output_AUsW_unblind_posed_binned))
-
-df_OF_output_AUsW_unblind_posed_binned%>%
-  group_by(subject, expression, drug.placebo)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
-  ggplot(aes(drug.placebo, k4_comp4))+
-  geom_boxplot(alpha = .1)+
-  stat_summary(geom = "pointrange")+
-  geom_smooth(aes(group =subject), method = "lm", se  =F, sie = 1, alpha = .1)+
-  facet_grid(~expression)
-
-
-```
-
-
-movement substates
-```{r}
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-unique(df_OF_output_AUsW_unblind_posed_binned$filename)
-
-df_OF_output_AUsW_unblind_posed_binned %>%
-  ungroup()%>%
-  subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
-  select(c(2,38:41))%>%
-    # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo)%>%
-  gather(component, coef,-bin_frame)%>%
-  group_by( component, bin_frame)%>%
-  summarise_if(is.numeric, mean, na.rm = TRUE) %>%
-  ggplot(aes(bin_frame, coef, color = component))+
-  geom_line()+
-  # geom_smooth(se = F)+
-  # facet_grid(expression~component)+
-  theme_classic()
-
-
-library(zoo)
-
-colnames(df_OF_output_AUsW_unblind_posed_binned)
-
-??zoo::rollmean
-
-install.packages("RcppRoll")
-library(RcppRoll)
-RcppRoll::roll_mean(df_OF_output_AUsW_unblind_posed_binned$k4_comp4)
-??RcppRoll::roll_mean
-
-library(zoo)
-# stick to k = 3
-df_OF_output_AUsW_unblind_posed_binned$idno
-df_OF_output_AUsW_unblind_posed_binned[,1:36] %>%
-  group_by(filename)%>%
-   dplyr::mutate(comp1_k3 = rollmean(comp1, k = 10, fill = NA),
-                 comp2_k3 = rollmean(comp2, k = 10, fill = NA),
-                 comp3_k3 = rollmean(comp3, k = 10, fill = NA)) %>%
-    # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
-ungroup%>%
-  select(filename,subject, bin_frame,expression, drug.placebo, comp1_k3,comp2_k3,comp3_k3)%>%
-  gather(component, coef,-bin_frame,-subject, -expression, -drug.placebo,-filename) %>%
-
-  ggplot(aes(bin_frame, coef, color =drug.placebo ))+
-  # geom_line()+
-  geom_smooth(se = F)+
-  geom_smooth(aes(group = filename), se = F, size = .1)+
-  facet_grid(component~expression)+
-  theme_classic()
-  
-
-
-```
-
-
 classify substates
 
 - quick test witha  single case
@@ -2335,6 +29,7 @@ set.seed(1)
 wcss = vector()
 colnames(p1_angry)
 # for (i in 1:10) wcss[i] = sum(kmeans(p1_angry[,38:41], i)$withinss)
+kmeans(p1_angry[,38:41], i)$withinss)
 # plot(1:10,
 #      wcss,
 #      type = 'b',
@@ -2428,16 +123,12 @@ cor(p1_angry[,2:5])
 ```{r}
 
 colnames(p1_angry)
-
-
 # replace nas
 replace_na(list(p1_angry=0, y = 0))
 p1_angry<-as.data.frame(p1_angry)
 p1_angry[is.na(p1_angry)] <-0
 
 p1_angry[is.na(p1_angry)] <- 0
-
-
 
 
 p1_angry %>%
@@ -2534,7 +225,7 @@ left_join(p1_angry1_scale, p1_angry)[,c(1,10:14)]%>%
 
 algorithmic from 2 to 10 and 
 store
-- kmean result cluster in each itteration
+- kmean result cluster in each iteration
 
 we need a list that will store unique trial name + number of K+ resulting k object
 
@@ -2605,9 +296,9 @@ unique(df_OF_output_AUsW_unblind_posed_binned1$filename)
 df_OF_output_AUsW_unblind_posed_binned1%>%
   subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
   mutate(speed_diff = abs(k3_comp1_speed - lag(k3_comp1_speed)))%>%
-  ggplot(aes(bin_frame, k3_comp1_speed))+
+  ggplot(aes(bin_frame, k3_comp1_speed_ma))+
   geom_line()+
-  geom_line(aes(y  = speed_diff), color = "red")
+  geom_line(aes(y  = k3_comp1_diff_ma), color = "red")
 
 df_OF_output_AUsW_unblind_posed_binned
 
@@ -2729,8 +420,36 @@ colnames(df_OF_output_AUsW_unblind_posed_binned2_nona)
 
 # loop fit kmeans and store clusters in the original data
 
+
+df_OF_output_AUsW_unblind_posed_binned2_nona<- df_OF_output_AUsW_unblind_posed_binned2_nona%>%
+  mutate(speed_avg_comp1to3_ma = (k3_comp1_speed_ma+k3_comp3_speed_ma+k3_comp3_speed_ma )/3,
+         diff_avg_comp1to3_ma = (k3_comp1_diff_ma +k3_comp2_diff_ma+k3_comp3_diff_ma)/3,
+         abs_diff_avg_comp1to3_ma = (abs(k3_comp1_diff_ma) +abs(k3_comp2_diff_ma)+abs(k3_comp3_diff_ma))/3)
+         
+
+
+# plot
+
+
+df_OF_output_AUsW_unblind_posed_binned2_nona%>%
+  subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+  mutate(speed_avg_comp1to3_ma = normalize(speed_avg_comp1to3_ma),
+         diff_avg_comp1to3_ma = normalize(diff_avg_comp1to3_ma),
+         abs_diff_avg_comp1to3_ma = normalize(abs_diff_avg_comp1to3_ma)
+         )%>%
+  # mutate(speed_diff = abs(k3_comp1_speed - lag(k3_comp1_speed)))%>%
+  ggplot(aes(bin_frame, speed_avg_comp1to3_ma))+
+  geom_line()+
+  # geom_line(aes(y  = diff_avg_comp1to3_ma), color = "red")+
+  geom_line(aes(y  = abs_diff_avg_comp1to3_ma), color = "blue")
+
+df_OF_output_AUsW_unblind_posed_binned
+
+```
+
+```{r}
 for (u in 1: length(unique_trial)) {
-  # subset each trail on every run
+  # subset each reial on every run
    temp_df<- subset(df_OF_output_AUsW_unblind_posed_binned2_nona,filename == unique_trial[u])[,43:48]
 
        # r = u+r
@@ -2787,201 +506,13 @@ df_OF_output_AUsW_unblind_posed_binned3_nona %>%
 
 # scald
 
-df_OF_output
-df_OF_output_AUsW_unblind_posed_binned1$timestamp
-colnames(df_OF_output)
-
-colnames(df_OF_output[,c(1,3,300:435,715)])
-
-unique(df_OF_output$filename)
-
-df_OF_output_land<- df_OF_output[,c(1,3,300:435,715)]
-
-
-# avarage and normalise
-df_OF_output_land
-
-library(data.table)
-
-df_OF_output_land_f10<- df_OF_output_land%>%
-subset(frame == 10)
-
-df_OF_output_land_f10_dcast<-df_OF_output_land_f10%>%
-  group_by(filename)%>%
-  gather(key, value, -frame, -timestamp,-filename) %>%
-  mutate(coordinate = substr(key,1,1))%>%
-  mutate(lanmark_id = substr(key,3,4)) %>%
-  dcast(filename+lanmark_id+frame+timestamp~coordinate, value.var = "value",  mean)
-
-
-
-# maxnormalize <- function(x, ...) {
-#     return((x - min(x, na ...)) /(max(x, ...) - min(x, ...))) }
-
-df_OF_output_land_f10_dcast_norm<- df_OF_output_land_f10_dcast%>%
-    group_by(filename,frame)%>%
-  mutate(x_new_norm = maxnormalize(x),
-         y_new_norm = maxnormalize(y))
-
-df_OF_output_land_f10_dcast_norm%>%
-  group_by(lanmark_id)%>%
-summarise_if(is.numeric, mean, na.rm = T)%>%
-  ggplot(aes(x_new_norm, y_new_norm))+
-  geom_point()+
-  ylim(1,0)
-
-
-
-df_OF_output_land_f10_dcast_normagg<-df_OF_output_land_f10_dcast_norm%>%
-  group_by(lanmark_id)%>%
-summarise_if(is.numeric, mean, na.rm = T)
-
-
-
-# First, isolate the points of interest (the subject's left and right eyes)
-
-left_eye  <- df_OF_output_land_f10_dcast_normagg[df_OF_output_land_f10_dcast_normagg$lanmark_id == 42,]
-right_eye <- df_OF_output_land_f10_dcast_normagg[df_OF_output_land_f10_dcast_normagg$lanmark_id == 39,] 
-
-# Now find the difference in the y co-ordinates and x co-ordinates between these two points:
-
-diff_x <- left_eye$x_new_norm - right_eye$x_new_norm
-diff_y <- left_eye$y_new_norm - right_eye$y_new_norm
-
-
-# The arctangent of the ratio will be the angle you need to rotate all the points by:
-
-theta  <- atan2(-diff_y, diff_x)
-
-mat <- matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), 2)
-
-df_OF_output_land_f10_dcast_normagg[,8:9] <- t(apply(df_OF_output_land_f10_dcast_normagg[,6:7], 1, function(x) mat %*% x))
-
-
-df_OF_output_land_f10_dcast_normagg %>%
-  ggplot(aes(V1, V2, label = lanmark_id)) + 
-  geom_point(color = 'gray') +
-  geom_text() +
-  scale_y_reverse() +
-  theme_bw()
-
-
-df_OF_output_land_f10_dcast_normagg
-
-
-install.packages("ggvoronoi")
-
-?ggvoronoi::stat_voronoi
-write_csv(df_OF_output_land_f10_dcast_normagg, "df_OF_output_land_f10_dcast_normagg.csv")
-df_OF_output_land_f10_dcast_normagg %>%
-  arrange(lanmark_id)%>%
-  ggplot(aes(V1, V2, label = lanmark_id)) + 
-  ggvoronoi::stat_voronoi(geom="path", outline = c(df_OF_output_land_f10_dcast_normagg$V1, df_OF_output_land_f10_dcast_normagg$V2)) +
-  geom_point()+
-  ylim(1,0)
-
-
-write_csv(pca_AUs, "pca_AUs.csv")
-
-
-# coded landmarks
-library(readxl)
-codeLandmarksAUs <- read_excel("codeLandmarksAUs.xlsx")
-View(codeLandmarksAUs)
-codeLandmarksAUs%>%
-  arrange(lanmark_id)%>%
-  ggplot(aes(V1, V2, label = lanmark_id)) + 
-  # geom_path()+
-  # ggvoronoi::stat_voronoi(geom="path", outline = c(df_OF_output_land_f10_dcast_normagg$V1, df_OF_output_land_f10_dcast_normagg$V2)) +
-  geom_point()+
-  ylim(1,0)+
-  theme_bw()
-
-codeLandmarksAUs
-
-
-df_OF_output_AUsW_unblind_posed_binned1
-
-library(readxl)
-LANDMARKNMF <- read_excel("LANDMARKNMF.xlsx")
-View(LANDMARKNMF)
-
-LANDMARKNMF[is.na(LANDMARKNMF)] <- 0
-
-```
-
-
-```{r}
-
-#Replace NA avalues with 0
-LANDMARKNMF <- replace(as.data.frame(LANDMARKNMF),is.na(as.data.frame(LANDMARKNMF)),0)
-LANDMARKNMF
-
-LANDMARKNMF%>%
-  # mutate()
-  arrange(lanmark_id)%>%
-  ggplot(aes(V1, V2, label = lanmark_id, color = NMF1)) + 
-  # geom_path()+
-  # ggvoronoi::stat_voronoi(geom="path", outline = c(df_OF_output_land_f10_dcast_normagg$V1, df_OF_output_land_f10_dcast_normagg$V2)) +
-  geom_point()+
-  ylim(1,0)+
-  theme_bw()
-
-
-LANDMARKNMF$frame<-NULL
-
-LANDMARKNMF
-
 
 
 ```
 
 
-all for loop
+whats this below not substate
 
-```{r}
-
-temp_df_bind<- data.frame() # e empty dataframe to store results
-
-for (f in 1:length(filename_unique)) {
-  # f = 2
-  # video = filename_video[f]
-  temp_df <- df_OF_select%>%
-    subset(Stimuli_frame == filename_unique[f])
-  
-    # start
-  message(paste0("running video no_: ", f), paste0("_",filename_unique[f]))
-
-
-  
-  # First, isolate the points of interest (the subject's left and right eyes)
-  left_eye  <- temp_df[temp_df$lanmark_id == 42,]
-  right_eye <- temp_df[temp_df$lanmark_id == 39,] 
-  
-  # now find the difference in the y co-ordinates and x co-ordinates between these two points:
-  diff_x <- left_eye$x - right_eye$x
-  diff_y <- left_eye$y - right_eye$y
-  
-   message(paste0("angle - ratio - transform"))
-  # The arctangent of the ratio will be the angle you need to rotate all the points by:
-  theta  <- atan2(-diff_y, diff_x)
-  
-# print("matrix") 
-# To transform the points, you need to create a rotation matrix, which is a specific two-by-two matrix which you can use to rotate the original points:
-# 
-# enter image description here - https://stackoverflow.com/questions/74493141/align-x-and-y-coordinates-of-face-landmarks-in-r/74493424?noredirect=1#comment131500839_74493424
-  mat <- matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), 2)
-
-# Now we multiply each x, y point by this matrix to get our rotated points, and write it back into our original data frame:
-  temp_df[,9:10] <- t(apply(temp_df[,6:7], 1, function(x) mat %*% x))
-  
-   message(paste0("bind datasets"))
-  
-    temp_df_bind<- bind_rows(temp_df_bind,temp_df)
-}
-
-
-```
 
 spatiotemporal clustering
 
@@ -3531,6 +1062,567 @@ ungroup()%>%
     scale_fill_viridis_d(option = "plasma")
 
 
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust$clust3
+
+
+```
+
+New
+```{r}
+
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust$sp_avg
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust$comp_delta_avg
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust
+
+abs_diff_avg_comp1to3_ma
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+  subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+  mutate(sp_avg = normalize(sp_avg),
+         comp_delta_avg = normalize(comp_delta_avg),
+         # comp_delta_avg = normalize(abs_diff_avg_comp1to3_ma),
+           comp_delta_avg_abs = (abs(k3_comp1_diff_ma) +abs(k3_comp2_diff_ma)+abs(k3_comp3_diff_ma))/3)%>%
+  mutate(comp_delta_avg_abs = normalize(comp_delta_avg_abs))%>%
+         # )%>%
+  # mutate(speed_diff = abs(k3_comp1_speed - lag(k3_comp1_speed)))%>%
+  ggplot(aes(bin_frame, sp_avg))+
+  geom_line()+
+  # geom_line(aes(y  = comp_delta_avg_abs), color = "red")+
+  geom_line(aes(y  = comp_delta_avg), color = "blue")
+
+
+
+```
+
+df_OF_output_AUsW_unblind_posed_binned
+
+
+
+```{r}
+# new approach
+# Load the required packages
+library(dplyr)
+library(purrr)
+
+# Define a custom function to perform max-norm normalization
+maxnorm <- function(x) {
+  x / max(abs(x))
+}
+
+# Define a custom function to perform clustering with k-means
+perform_kmeans_clustering <- function(data) {
+  # Normalize the X and Y columns using max-norm
+
+  data$sp_avg <- maxnorm(data$sp_avg)
+  data$comp_delta_avg <- maxnorm(data$comp_delta_avg)
+  
+  kmeans_result <- kmeans(data[, c("sp_avg", "comp_delta_avg")], centers = 3)
+  data$cluster_avg_new <- kmeans_result$cluster
+  return(data)
+}
+
+# Assume 'df' is your data frame with columns: video_name, time_frame, X, Y, ...
+# Perform clustering and update the data frame with a new 'cluster' column
+df_with_clusters <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
+  group_by(filename) %>%
+  group_split() %>%
+  map_dfr(perform_kmeans_clustering)
+
+
+df_with_clusters%>%
+    subset(filename == "./cut_posed_sad_day1_p7.csv")
+
+
+
+
+# visualise one
+colnames(df_with_clusters)
+
+df_with_clusters
+df_with_clusters%>%
+  subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+
+# df_OF_output_AUsW_unblind_posed_binned3_nona %>%
+#   subset(idno  == 1)%>%
+#     group_by(idno)%>%
+#     mutate(sp_avg = (k3_comp1_speed_ma+k3_comp2_speed_ma+k3_comp3_speed_ma)/3,
+#            cutoff = (mean(sp_avg, na.rm = TRUE) + (2* mad(sp_avg, na.rm = TRUE)))) %>%
+#   ungroup() %>%
+  # select(c(2,43:49, 50:51, 34:36))%>%
+  # gather(component, coef,-bin_frame,-clust3,-idno ) %>%
+  # mutate(var_type = if_else(grepl("diff", component ), "diff",
+  #                       if_else(grepl("speed", component ), "speed",  
+  #                               if_else(grepl("sp_avg", component ), "avg_speed",  
+  #                           "comp_nmf"))))%>%
+
+  
+  # scale so we dob;t have massivelly different sizes acordss variables
+   # group_by(var_type)%>%
+  # mutate(coef_z = scale(coef))%>%
+  # group_by(component,var_type, bin_frame)%>%
+  # summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+```
+  # facet_grid(var_type~.)
+  geom_hline(yintercept = 0.5118612)
+
+```{r}
+  # quick heatmaps
+  df_with_clusters$idno
+  
+  df_with_clusters
+  df_with_clusters%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = sp_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+  
+  
+
+  df_with_clusters%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = comp_delta_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+  
+  
+  
+    df_with_clusters%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(expression), fill = sp_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")
+    facet_grid(~expression)
+    
+        df_with_clusters%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(expression), fill = comp_delta_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")
+    facet_grid(~expression)
+  
+df_with_clusters%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+
+
+  ggplot(aes(as.numeric(bin_frame), as.factor(idno), fill = as.factor(cluster_avg_new)))+
+  geom_tile()+
+
+   # scale_color_viridis_d(option = "magma")+
+
+  # facet_grid(drug.day~expression)+
+  theme_classic()
+
+    
+  
+# wgata happening is that the order of clusters is changing per person.
+
+# lets see cluster across people while normalised
+
+
+# Load the required packages
+library(dplyr)
+
+# Define a custom function to perform max-norm normalization
+maxnorm <- function(x) {
+  x / max(abs(x))
+}
+
+# Define a custom function to perform clustering with k-means
+perform_kmeans_clustering <- function(data) {
+  kmeans_result <- kmeans(data[, c("sp_avg", "comp_delta_avg")], centers = 3)
+  return(kmeans_result$cluster)
+}
+
+# Apply max-norm normalization and perform k-means clustering
+df_with_clusters2 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
+  # group_by(filename) %>%
+    group_by(subject) %>%
+  mutate(sp_avg = maxnorm(sp_avg),
+         comp_delta_avg = maxnorm(comp_delta_avg)) %>%
+  ungroup() %>%
+  mutate(cluster_across = perform_kmeans_clustering(cur_data()))
+
+
+
+# Display the result
+df_with_clusters2
+
+
+  
+df_with_clusters2%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = as.factor(cluster_across)))+
+  geom_tile()+
+
+   scale_fill_viridis_d(option = "magma")+
+
+  facet_grid(~expression)+
+  theme_classic()
+
+
+```
+
+
+ 
+```{r}
+ df_with_clusters%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = sp_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+  
+  
+
+  df_with_clusters%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = comp_delta_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+  
+  
+  
+  df_with_clusters2$drug.placebo
+  df_with_clusters2%>%
+    # subset(drug.placebo = placebo)%>%
+    group_by(filename, cluster_across, expression, subject)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+    group_by(filename, cluster_across,expression,drug.placebo)%>%
+    summarise_if(is.numeric, mean, na.rm = T)%>%
+    ggplot(aes(max_displacement, peak_speed, colour = drug.placebo))+
+      # geom_point()+
+  geom_smooth(method = "glm",se = T, formula = y~log(x+.1),
+  method.args = list(
+                     start=c(A=0,B=0)))+
+    # geom_smooth(method = "lm",se = T)+
+    facet_grid(expression~cluster_across)
+  
+  
+df_with_clusters_agg<-  df_with_clusters2%>%
+    group_by(filename, cluster_across, expression, subject)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+    group_by(filename, cluster_across,expression, subject)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+
+write_csv(df_with_clusters_agg, "df_with_clusters_agg.csv")
+
+
+df_with_clusters
+
+df_with_clusters2%>%
+  subset(idno == 30)%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_across)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(~drug.placebo)+
+  theme_classic()
+
+```
+
+
+
+# include activation
+```{r}
+
+
+# Load the required packages
+library(dplyr)
+library(purrr)
+
+# Load the required packages
+library(dplyr)
+library(purrr)
+
+# Define a custom function to perform max-norm normalization
+maxnorm <- function(x) {
+  x / max(abs(x))
+}
+
+# Define a custom function to perform clustering with k-means
+perform_kmeans_clustering <- function(data) {
+  # Normalize the X, Y, and the new 'compavg' columns using max-norm
+  data$sp_avg <- maxnorm(data$sp_avg)
+  data$comp_delta_avg <- maxnorm(data$comp_delta_avg)
+  data$compavg <- maxnorm(data$compavg)
+  
+  kmeans_result <- kmeans(data[, c("sp_avg", "comp_delta_avg", "compavg")], centers = 3)
+  
+  # Calculate the Euclidean distance between the centroids and the reference point (0, 0, 0)
+  distances <- sqrt(rowSums((kmeans_result$centers - c(0, 0, 0))^2))
+  
+  # Sort the cluster indices by the calculated distances
+  sorted_cluster_indices <- order(distances)
+  
+  # Create a named vector to map the original cluster labels to the sorted labels
+  label_mapping <- setNames(sorted_cluster_indices, sort(unique(kmeans_result$cluster)))
+  
+  # Assign the consistent cluster labels
+  data$cluster_avg_new <- as.integer(factor(kmeans_result$cluster, levels = names(label_mapping), labels = label_mapping))
+  
+  return(data)
+}
+
+# Load the required packages
+library(dplyr)
+library(purrr)
+
+# Define a custom function to perform max-norm normalization
+maxnorm <- function(x) {
+  x / max(abs(x))
+}
+
+# Perform clustering and update the data frame with a new 'cluster' column
+df_with_clusters4 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
+  group_by(filename) %>%
+  group_split() %>%
+  map_dfr(perform_kmeans_clustering)
+
+
+
+
+
+df_with_clusters4
+  
+df_with_clusters4%>%
+    subset(idno == 50)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+df_with_clusters4%>%
+    subset(idno == 30)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+# Define a custom function to perform hierarchical clustering
+perform_hclust_clustering <- function(data) {
+  # Normalize the X, Y, and the 'compavg' columns using max-norm
+  data$sp_avg <- maxnorm(data$sp_avg)
+  data$comp_delta_avg <- maxnorm(data$comp_delta_avg)
+  data$compavg <- maxnorm(data$compavg)
+  
+  # Perform hierarchical clustering using the "complete" linkage method
+  dist_matrix <- dist(data[, c("sp_avg", "comp_delta_avg", "compavg")], method = "euclidean")
+  hclust_result <- hclust(dist_matrix, method = "complete")
+  
+  # Cut the tree to obtain 3 clusters
+  clusters <- cutree(hclust_result, k = 3)
+  
+  # Assign the cluster labels
+  data$cluster_avg_new <- clusters
+  
+  return(data)
+}
+
+
+
+# Load the required packages
+library(dplyr)
+library(purrr)
+
+# Define a custom function to perform max-norm normalization
+maxnorm <- function(x) {
+  x / max(abs(x))
+}
+
+# Perform clustering and update the data frame with a new 'cluster' column
+df_with_clusters5 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
+  group_by(filename) %>%
+  group_split() %>%
+  map_dfr(perform_hclust_clustering)
+
+
+unique(df_with_clusters4$cluster_avg_new)
+
+df_with_clusters5hier$cluster_avg_new
+unique(df_with_clusters5hier$cluster_avg_new)
+
+
+  
+df_with_clusters5%>%
+    subset(idno == 50)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+df_with_clusters5%>%
+    subset(idno == 30)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+```
+
+```{r}
+
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+  mutate(compavg = (comp1+comp2+comp3)/3)
+
+perform_kmeans_clustering <- function(data) {
+  kmeans_result <- kmeans(data[, c("sp_avg", "comp_delta_avg","compavg")], centers = 3)
+  return(kmeans_result$cluster)
+}
+
+
+
+df_with_clusters3 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
+  group_by(filename) %>%
+  mutate(sp_avg = maxnorm(sp_avg),
+         comp_delta_avg = maxnorm(comp_delta_avg)) %>%
+  ungroup() %>%
+  mutate(cluster_across = perform_kmeans_clustering(cur_data()))
+
+  df_with_clusters3%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = comp_delta_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+  
+  df_with_clusters3%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = as.factor(cluster_across)))+
+  geom_tile()+
+
+   scale_fill_viridis_d(option = "magma")+
+
+  facet_grid(~expression)+
+  theme_classic()
+  
+  
+  
+df_with_clusters3%>%
+    subset(idno == 10)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_across)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+```
+df_with_clusters3$drug.placebo
+
+  df_with_clusters3%>%
+    # subset(drug.placebo = placebo)%>%
+    group_by(filename, cluster_across, expression, subject)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+    group_by(filename, cluster_across,expression,drug.placebo)%>%
+    summarise_if(is.numeric, mean, na.rm = T)%>%
+    ggplot(aes(max_displacement, peak_speed,colour= expression))+
+      geom_point()+
+  geom_smooth(method = "glm",se = T, formula = y~log(x+.1),
+  method.args = list(
+                     start=c(A=0,B=0)))+
+    # geom_smooth(method = "lm",se = T)+
+    facet_grid(~cluster_across)
+  
+  
+    
+df_with_clusters3_agg<-  df_with_clusters3%>%
+    group_by(filename, cluster_across, expression, subject)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+    group_by(filename, cluster_across,expression, subject)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+
+write_csv(df_with_clusters3_agg, "df_with_clusters3_agg.csv")
+  
 
 ```
 
@@ -4134,8 +2226,10 @@ ungroup()%>%
 
 
 chool_talk$speed_disp_fucntionk3
+install.packages("patchwork")
 
 library(patchwork)
+
 chool_talk$speed_displace_fucn_patch<- (chool_talk$speed_disp_fucntionk1 +chool_talk$speed_disp_fucntionk2 +chool_talk$speed_disp_fucntionk3)+
    plot_layout(guides = "collect") & theme(legend.position = "top")
 
@@ -4682,7 +2776,7 @@ df_OF_output_AUsW_unblind_posed_binned3_nona1%>%
 
 ```
 
-
+# don't plot
 
 ```{r}
 
