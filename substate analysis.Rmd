@@ -1353,192 +1353,9 @@ df_with_clusters2%>%
 
 
 
-# include activation
+
+cluster across with speed and displacement normalised per viudeo
 ```{r}
-
-
-# Load the required packages
-library(dplyr)
-library(purrr)
-
-# Load the required packages
-library(dplyr)
-library(purrr)
-
-# Define a custom function to perform max-norm normalization
-maxnorm <- function(x) {
-  x / max(abs(x))
-}
-
-# Define a custom function to perform clustering with k-means
-perform_kmeans_clustering <- function(data) {
-  # Normalize the X, Y, and the new 'compavg' columns using max-norm
-  data$sp_avg <- maxnorm(data$sp_avg)
-  data$comp_delta_avg <- maxnorm(data$comp_delta_avg)
-  data$compavg <- maxnorm(data$compavg)
-  
-  kmeans_result <- kmeans(data[, c("sp_avg", "comp_delta_avg", "compavg")], centers = 3)
-  
-  # Calculate the Euclidean distance between the centroids and the reference point (0, 0, 0)
-  distances <- sqrt(rowSums((kmeans_result$centers - c(0, 0, 0))^2))
-  
-  # Sort the cluster indices by the calculated distances
-  sorted_cluster_indices <- order(distances)
-  
-  # Create a named vector to map the original cluster labels to the sorted labels
-  label_mapping <- setNames(sorted_cluster_indices, sort(unique(kmeans_result$cluster)))
-  
-  # Assign the consistent cluster labels
-  data$cluster_avg_new <- as.integer(factor(kmeans_result$cluster, levels = names(label_mapping), labels = label_mapping))
-  
-  return(data)
-}
-
-# Load the required packages
-library(dplyr)
-library(purrr)
-
-# Define a custom function to perform max-norm normalization
-maxnorm <- function(x) {
-  x / max(abs(x))
-}
-
-# Perform clustering and update the data frame with a new 'cluster' column
-df_with_clusters4 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
-  group_by(filename) %>%
-  group_split() %>%
-  map_dfr(perform_kmeans_clustering)
-
-
-
-
-
-df_with_clusters4
-  
-df_with_clusters4%>%
-    subset(idno == 50)%>%
-  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
-
-  ggplot(aes(as.numeric(bin_frame), sp_avg))+
-
-  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
-            alpha = .6)  +
-    geom_line(size = 1)+
-  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
-  geom_line(aes(y = comp1))+
-  geom_line(aes(y = comp2))+
-  geom_line(aes(y = comp3))+
-  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
-  # geom_smooth(se = F)+
-  # facet_grid(expression~component)+
-  theme_classic()
-
-
-df_with_clusters4%>%
-    subset(idno == 30)%>%
-  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
-
-  ggplot(aes(as.numeric(bin_frame), sp_avg))+
-
-  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
-            alpha = .6)  +
-    geom_line(size = 1)+
-  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
-  geom_line(aes(y = comp1))+
-  geom_line(aes(y = comp2))+
-  geom_line(aes(y = comp3))+
-  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
-  # geom_smooth(se = F)+
-  # facet_grid(expression~component)+
-  theme_classic()
-
-
-# Define a custom function to perform hierarchical clustering
-perform_hclust_clustering <- function(data) {
-  # Normalize the X, Y, and the 'compavg' columns using max-norm
-  data$sp_avg <- maxnorm(data$sp_avg)
-  data$comp_delta_avg <- maxnorm(data$comp_delta_avg)
-  data$compavg <- maxnorm(data$compavg)
-  
-  # Perform hierarchical clustering using the "complete" linkage method
-  dist_matrix <- dist(data[, c("sp_avg", "comp_delta_avg", "compavg")], method = "euclidean")
-  hclust_result <- hclust(dist_matrix, method = "complete")
-  
-  # Cut the tree to obtain 3 clusters
-  clusters <- cutree(hclust_result, k = 3)
-  
-  # Assign the cluster labels
-  data$cluster_avg_new <- clusters
-  
-  return(data)
-}
-
-
-
-# Load the required packages
-library(dplyr)
-library(purrr)
-
-# Define a custom function to perform max-norm normalization
-maxnorm <- function(x) {
-  x / max(abs(x))
-}
-
-# Perform clustering and update the data frame with a new 'cluster' column
-df_with_clusters5 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
-  group_by(filename) %>%
-  group_split() %>%
-  map_dfr(perform_hclust_clustering)
-
-
-unique(df_with_clusters4$cluster_avg_new)
-
-df_with_clusters5hier$cluster_avg_new
-unique(df_with_clusters5hier$cluster_avg_new)
-
-
-  
-df_with_clusters5%>%
-    subset(idno == 50)%>%
-  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
-
-  ggplot(aes(as.numeric(bin_frame), sp_avg))+
-
-  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
-            alpha = .6)  +
-    geom_line(size = 1)+
-  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
-  geom_line(aes(y = comp1))+
-  geom_line(aes(y = comp2))+
-  geom_line(aes(y = comp3))+
-  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
-  # geom_smooth(se = F)+
-  # facet_grid(expression~component)+
-  theme_classic()
-
-df_with_clusters5%>%
-    subset(idno == 30)%>%
-  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
-
-  ggplot(aes(as.numeric(bin_frame), sp_avg))+
-
-  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
-            alpha = .6)  +
-    geom_line(size = 1)+
-  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
-  geom_line(aes(y = comp1))+
-  geom_line(aes(y = comp2))+
-  geom_line(aes(y = comp3))+
-  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
-  # geom_smooth(se = F)+
-  # facet_grid(expression~component)+
-  theme_classic()
-
-```
-
-```{r}
-
-
 df_OF_output_AUsW_unblind_posed_binned3_nona_clust<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
   mutate(compavg = (comp1+comp2+comp3)/3)
 
@@ -1595,24 +1412,414 @@ df_with_clusters3%>%
   theme_classic()
 
 ```
-df_with_clusters3$drug.placebo
 
-  df_with_clusters3%>%
-    # subset(drug.placebo = placebo)%>%
-    group_by(filename, cluster_across, expression, subject)%>%
+cluster across using dtw clustering and normalised speed, disp and compavg within each video
+
+```{r}
+# Load the stclus package
+install.packages("stclus")
+library(stclus)
+test
+
+test<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
+    subset(idno == 27)
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")
+# Load the mvtsclust package
+install.packages('dtwclust')
+# Load the dtwclust package
+# library(dtwclust)
+
+
+# Model selection
+
+range(test$sp_avg)
+range(test$comp_delta_avg)
+range(test$compavg)
+
+test1<- test%>%
+  mutate(sp_avg = maxnorm(sp_avg),
+         comp_delta_avg = maxnorm(comp_delta_avg),
+         compavg = maxnorm(compavg))
+
+
+# colnames(test1)
+?dtwclust::tsclust()
+
+model <- tsclust(test[,c(55:56,58)], k = 3)
+
+
+test1$clust_dtw_ts<- model@cluster
+
+test1%>%
+    # subset(idno == 30)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(clust_dtw_ts)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+```
+
+
+```{r}
+# Load the required packages
+# Load the required packages
+library(dplyr)
+library(tsclust)
+
+# Define a custom function to perform max-norm normalization
+maxnorm <- function(x) {
+  x / max(abs(x))
+}
+
+
+
+# Define a custom function to perform clustering with tsclust
+perform_tsclust_clustering <- function(data) {
+  tsclust_result <- tsclust(data[, c("sp_avg", "comp_delta_avg", "compavg")], k = 3)
+  return(tsclust_result@cluster)
+}
+
+# Apply max-norm normalization and perform tsclust clustering
+df_with_clusters6 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
+  group_by(filename) %>%
+    # group_by(subject) %>%
+  mutate(sp_avg = maxnorm(sp_avg),
+         comp_delta_avg = maxnorm(comp_delta_avg),
+         compavg = maxnorm(compavg)) %>%
+  ungroup() %>%
+  mutate(cluster_across = perform_tsclust_clustering(cur_data()))
+
+# quick check
+
+df_with_clusters6%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = as.factor(cluster_across)))+
+  geom_tile()+
+
+   scale_fill_viridis_d(option = "magma")+
+
+  facet_grid(~expression)+
+  theme_classic()
+
+# table(df_with_clusters6$filename, df_with_clusters6$cluster_across)
+# # 
+# rm(df_with_clusters5)
+# rm(df_with_clusters4)
+
+# rm(df_with_clusters3)
+```
+
+
+check a clustering based on NF components only
+
+```{r}
+# Define a custom function to perform clustering with tsclust
+perform_tsclust_clustering_comp <- function(data) {
+  tsclust_result <- tsclust(data[, c("comp1", "comp2", "comp3")], k = 3)
+  return(tsclust_result@cluster)
+}
+
+# Apply max-norm normalization and perform tsclust clustering
+
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust$comp1
+df_OF_output_AUsW_unblind_posed_binned3_nona_clust$comp1
+df_with_clusters6_comp <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
+  group_by(filename) %>%
+    # group_by(subject) %>%
+  mutate(comp1 = maxnorm(comp1),
+         comp2 = maxnorm(comp2),
+         comp3 = maxnorm(comp3)) %>%
+  ungroup() %>%
+  mutate(cluster_across = perform_tsclust_clustering_comp(cur_data()))
+
+# quick check
+
+df_with_clusters6_comp%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = as.factor(cluster_across)))+
+  geom_tile()+
+
+   # scale_fill_viridis_d(option = "magma")+
+
+  facet_grid(~expression)+
+  theme_classic()
+
+df_with_clusters6_comp$sp_avg
+df_with_clusters6_comp%>%
+    subset(idno == 43)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_across)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+df_with_clusters6_comp%>%
+  group_by(expression, subject,cluster_across)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(as.factor(cluster_across),sp_avg ))+
+  geom_jitter(alpha = .1, width = .3)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~expression)
+
+
+df_with_clusters6_comp%>%
+  group_by(expression, subject,cluster_across)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(as.factor(cluster_across),comp_delta_avg ))+
+  geom_jitter(alpha = .1, width = .3)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~expression)
+
+
+```
+
+
+spoken clusters
+
+
+
+
+
+Entropy
+
+
+```{r}  
+rm(df_with_clusters6)
+df_with_clusters6_agg<-  df_with_clusters6%>%
+    group_by(filename, cluster_across, expression, subject,drug.placebo)%>%
     mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
            max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
-    group_by(filename, cluster_across,expression,drug.placebo)%>%
-    summarise_if(is.numeric, mean, na.rm = T)%>%
-    ggplot(aes(max_displacement, peak_speed,colour= expression))+
-      geom_point()+
-  geom_smooth(method = "glm",se = T, formula = y~log(x+.1),
-  method.args = list(
-                     start=c(A=0,B=0)))+
-    # geom_smooth(method = "lm",se = T)+
-    facet_grid(~cluster_across)
+   group_by(filename)%>%
+  
+  mutate(peak_speed_norm =  maxnorm(peak_speed),
+max_displacement_norm =  maxnorm(max_displacement))%>%
+    group_by(filename, cluster_across,expression, subject,drug.placebo)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+
+df_with_clusters6$cluster_across
+
+library(data.table)
+df_with_clusters6_agg
+
+install.packages("entropy")
+
+
+df_with_clusters6$cluster_across<- as.factor(df_with_clusters6$cluster_across)
+?entropy::entropy()
+df_with_clusters6<- df_with_clusters6%>%
+group_by(filename, cluster_across)%>%
+mutate(freq_clus = n())%>%
+  group_by(filename)%>%
+  mutate(freq_clus_perc = freq_clus/n())%>%
+  group_by(filename, expression, subject)%>%
+mutate(cluster_count_group = rleid(cluster_across))%>%
+  group_by(filename, cluster_across, expression, subject,drug.placebo)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+   group_by(filename)%>%
+  
+  mutate(peak_speed_norm =  maxnorm(peak_speed),
+max_displacement_norm =  maxnorm(max_displacement))%>%
+  mutate(entropy_clust = entropy::entropy(table(cluster_across)))
+
+df_with_clusters6$entropy_clust
+
+df_with_clusters6$entropy_clust
+df_with_clusters6$cluster_across
+df_with_clusters6$cluster_count_group
+
+df_with_clusters6_agg<- df_with_clusters6%>%
+  group_by(filename, cluster_across, cluster_count_group)%>%
+  mutate(clust_dur_count = n())%>%
+  group_by(filename)%>%
+  mutate(clust_dur_count_perc = clust_dur_count/n())%>%
+
+# group_by(filename, manual_clust_sp_disp)%>%
+#   mutate(clust_frame_no_bin = n())%>%
+# df_with_clusters6
+    group_by(filename, cluster_across,expression, subject,drug.placebo)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+
+  df_with_clusters6_agg$cluster_count_group
+
+
+df_with_clusters6_agg%>%
+ ggplot(aes( expression, freq_clus_perc))+
+  geom_jitter(alpha = .1, width = .2)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~cluster_across)
+
+
+df_with_clusters6_agg%>%
+ ggplot(aes(expression, clust_dur_count_perc))+
+  # geom_jitter(alpha = .1, width = .2)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~cluster_across)
+
+
+df_with_clusters6_agg%>%
+ ggplot(aes(expression, freq_clus))+
+  # geom_jitter(alpha = .1, width = .2)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~cluster_across)
+
+
+df_with_clusters6_agg%>%
+ ggplot(aes(expression, clust_dur_count))+
+  # geom_jitter(alpha = .1, width = .2)+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~cluster_across)
+
+install.packages("ggpubr")
+
+
+# Normalize the variable between zero and one
+normalize_0_1 <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+x_norm <- (scale(x) - min(scale(x))) / (max(scale(x)) - min(scale(x)))
+
+df_with_clusters6_agg%>%
+  ungroup%>%
+  group_by(subject)%>%
+  mutate(entropy_clust_norm = normalize_0_1(entropy_clust))%>%
+  group_by(filename, expression)%>%
+  
+  summarise_if(is.numeric,mean, na.rm = T)%>%
+  # subset(entropy_clust> 4.53)%>%
+ ggplot(aes(expression, entropy_clust_norm))+
+  geom_jitter(alpha = .1, width = .2)+
+  stat_summary(geom = "pointrange")
+  facet_grid(~cluster_across)
+    # ggpubr::stat_central_tendency()
   
   
+df_with_clusters6_agg<-  df_with_clusters6_agg%>%
+  ungroup%>%
+  group_by(subject)%>%
+  mutate(entropy_clust_norm = normalize_0_1(entropy_clust))
+
+df_with_clusters6_agg_bysubj
+```
+  
+
+write_csv(df_with_clusters6_agg, "df_with_clusters6_agg.csv")
+
+install.packages("lmerTest")
+```{r}
+
+df_with_clusters6_agg$subject<- as.factor(df_with_clusters6_agg$subject)
+
+df_with_clusters6_agg$cluster_across<- as.factor(df_with_clusters6_agg$cluster_across)
+
+library(lmerTest)
+options(scipen = 999)
+
+lmer_substates$clust_dur_count_perc<- lmer(clust_dur_count_perc~ expression*cluster_across + (1+expression*cluster_across| subject), REML = FALSE,
+     data = df_with_clusters6_agg)
+
+summary(lmer_substates$clust_dur_count_perc)
+
+df_with_clusters6_agg$cluster_across
+
+anova(lmer_substates$clust_dur_count_perc)
+# install.packages("emmeans")
+
+# emmeans::emmeans()
+# ?emmeans::emmeans
+emmeans::emmeans(lmer_substates$clust_dur_count_perc, pairwise~expression|cluster_across, type = "response" )
+
+# install.packages("interactions")
+# interactions
+?interactions::probe_interaction
+
+
+
+ interactions::cat_plot(lmer_substates$clust_dur_count_perc, pred = cluster_across, modx =  expression,
+                       plot.points = TRUE,
+                       point.alpha = .3)
+ 
+ 
+ df_with_clusters6_agg$subject<-as.factor(df_with_clusters6_agg$subject)
+ lmer_substates$freq_clus_perc<- lmer(freq_clus_perc~ expression+cluster_across + (1 | subject), REML = FALSE,
+     data = df_with_clusters6_agg)
+ 
+ summary( lmer_substates$freq_clus_perc)
+ anova(lmer_substates$freq_clus_perc)
+ 
+ 
+ emmeans::emmeans( lmer_substates$freq_clus_perc, pairwise~expression|cluster_across, type = "response" )
+
+# install.packages("interactions")
+# interactions
+?interactions::probe_interaction
+
+interactions::probe_interaction(lmer_substates$clust_dur_count_perc, modx = cluster_across,modx2  = expression)
+
+
+
+ interactions::cat_plot(lmer_substates$clust_dur_count_perc, pred = cluster_across, modx =  expression,
+                       plot.points = TRUE,
+                       point.alpha = .3)
+ 
+ interactions::cat_plot( lmer_substates$freq_clus_perc, pred =cluster_across , modx =  expression,
+                       plot.points = TRUE,
+                       point.alpha = .3)
+```
+ 
+ 
+```{r}
+df_with_clusters6_agg_bysubj<-  df_with_clusters6_agg%>%
+   group_by(subject, expression, cluster_across)%>%
+   summarise_if(is.numeric, mean, na.rm = T)
+write_csv(df_with_clusters6_agg_bysubj, "df_with_clusters6_agg_bysubj.csv")
+
+df_with_clusters6_agg_bysubj$dr
+
+df_with_clusters6_agg_bysubj$cluster_count_group
+df_with_clusters6_agg_bysubj%>%
+  group_by(subject,expression)%>%
+  summarise_if(is.numeric,mean)%>%
+  
+  ggplot(aes(expression, entropy_clust_norm))+
+  # geom_jitter(width = .1, alpha = .3)+
+  stat_summary(geom = "pointrange")
+
+
+df_with_clusters6_agg_bysubj$cluster_count_group
+
+df_with_clusters6_agg_bysubj2<-
+df_with_clusters6_agg_bysubj%>%
+  group_by(subject,expression)%>%
+  summarise_if(is.numeric,mean)
+
+write_csv(df_with_clusters6_agg_bysubj2, "df_with_clusters6_agg_bysubj2.csv")
+
+```
     
 df_with_clusters3_agg<-  df_with_clusters3%>%
     group_by(filename, cluster_across, expression, subject)%>%
@@ -2939,5 +3146,245 @@ partials_first<- bind_rows(partials_first, partials_temp)
 
 
 ```
-
+```
 store the cluster
+
+
+SUBSTATE POSED
+spoken_NMF
+
+```{r}
+colnames(spoken_NMF)
+
+unique(spoken_NMF$posed_spoken)
+
+
+k3_comp1
+install.packages("zoo")
+spoken_NMF<- spoken_NMF %>%
+  group_by(filename)%>%
+  ungroup()%>%
+  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  # select(c(2,38,42))%>%
+  mutate(k3_comp1_speed = (abs(lag(k3_comp1) - k3_comp1))/abs((lead(bin_frame)-bin_frame)),
+         k3_comp2_speed = (abs(lag(k3_comp2) - k3_comp2))/abs((lead(bin_frame)-bin_frame)),
+         k3_comp3_speed = (abs(lag(k3_comp3) - k3_comp3))/abs((lead(bin_frame)-bin_frame)),
+        
+         k3_comp1_diff = as.numeric(diff(zoo::zoo(k3_comp1), na.pad = TRUE)),
+         k3_comp2_diff =as.numeric(diff(zoo::zoo(k3_comp2), na.pad = TRUE)),
+         k3_comp3_diff =as.numeric(diff(zoo::zoo(k3_comp3), na.pad = TRUE)),
+         
+         # moving averages
+         k3_comp1_diff_ma = as.numeric(zoo::rollmean(k3_comp1_diff, k = 5, fill = NA)),
+         k3_comp2_diff_ma = as.numeric(zoo::rollmean(k3_comp2_diff, k = 5, fill = NA)),
+         k3_comp3_diff_ma = as.numeric(zoo::rollmean(k3_comp3_diff, k = 5, fill = NA)),
+           
+          k3_comp1_speed_ma = as.numeric(zoo::rollmean(k3_comp1_speed, k = 5, fill = NA)),
+        k3_comp2_speed_ma = as.numeric(zoo::rollmean(k3_comp2_speed, k = 5, fill = NA)),
+         k3_comp3_speed_ma = as.numeric(zoo::rollmean(k3_comp3_speed, k = 5, fill = NA)))%>%
+  
+  
+  mutate(sp_avg = (k3_comp1_speed_ma+k3_comp2_speed_ma+k3_comp3_speed_ma)/3)%>%
+   mutate(comp_delta_avg = (k3_comp1_diff_ma +k3_comp2_diff_ma+k3_comp3_diff_ma)/3)%>%
+  
+  
+  mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE),
+          compavg = sum(abs(k3_comp1+k3_comp2+k3_comp3), na.rm = TRUE)
+         )
+
+
+# plot to see if we can viusally notice subates based on speed profiles
+unique(spoken_NMF$filename)
+spoken_NMF$filename
+spoken_NMF%>%
+  subset(drug.placebo == "placebo")%>%
+      ungroup()%>%
+  # mutate(idno = rep(1:333, each = 100))%>%
+  ggplot(aes(bin_frame, as.factor(subject), fill = sp_avg))+
+  geom_tile()+
+  scale_fill_viridis_c(option = "magma")+
+  facet_grid(~expression)
+
+
+spoken_NMF%>%
+  subset(drug.placebo == "placebo")%>%
+      ungroup()%>%
+  # mutate(idno = rep(1:333, each = 100))%>%
+  ggplot(aes(bin_frame, as.factor(subject), fill = comp_delta_avg))+
+  geom_tile()+
+  scale_fill_viridis_c(option = "magma")+
+  facet_grid(~expression)
+
+
+
+
+```
+  
+# cluster substates here
+  
+```{r}
+# Load the required packages
+
+# Define a custom function to perform clustering with tsclust
+perform_tsclust_clustering <- function(data) {
+  tsclust_result <- tsclust(data[, c("sp_avg", "comp_delta_avg", "compavg")], k = 3)
+  return(tsclust_result@cluster)
+}
+
+# Apply max-norm normalization and perform tsclust clustering
+
+?zoo::na.approx()
+library(zoo)
+
+spoken_NMF_int <- spoken_NMF %>%
+  group_by(filename) %>%
+  mutate(sp_avg = na.approx(sp_avg, na.rm = FALSE),
+         comp_delta_avg = na.approx(comp_delta_avg, na.rm = FALSE),
+ compavg = na.approx(compavg, na.rm = FALSE))%>%
+  ungroup()
+
+
+table(is.na(spoken_NMF_int$sp_avg))
+
+table(is.na(spoken_NMF_int$comp_delta_avg))
+table(is.na(spoken_NMF_int$compavg))
+
+spoken_NMF_int$sp_avg<- if_else(is.na(spoken_NMF_int$sp_avg), 0,spoken_NMF_int$sp_avg)
+spoken_NMF_int$comp_delta_avg<- if_else(is.na(spoken_NMF_int$comp_delta_avg), 0,spoken_NMF_int$comp_delta_avg)
+spoken_NMF_int$compavg<- if_else(is.na(spoken_NMF_int$compavg), 0,spoken_NMF_int$compavg)
+
+rm(df_with_clusters5hier, df_with_clusters6_lm_nonl)
+rm(df_with_clusters3_agg)
+rm(dcast_time)
+rm(df_OF_output_AU_andLand)
+rm(df_OF_output_AUstest)
+
+rm(df_OF_output_AUsW_unblind)
+rm(df_OF_output_land_posed_binned_select)
+rm(df_sp)
+
+spoken_NMF_with_clusters6 <- spoken_NMF_int %>%
+  group_by(filename) %>%
+  subset(drug.placebo == "placebo")%>%
+
+  mutate(sp_avg = maxnorm(sp_avg),
+         comp_delta_avg = maxnorm(comp_delta_avg),
+         compavg = maxnorm(compavg)) %>%
+  ungroup() %>%
+  mutate(cluster_across = perform_tsclust_clustering(cur_data()))
+
+# quick check
+
+spoken_NMF_with_clusters6%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = as.factor(cluster_across)))+
+  geom_tile()+
+
+   scale_fill_viridis_d(option = "magma")+
+
+  facet_grid(~expression)+
+  theme_classic()
+
+
+# 
+unique(spoken_NMF_with_clusters6$filename)
+spoken_NMF_with_clusters6%>%
+    # subset(idno == 30)%>%
+  subset(filename == "./cut_spoken_happy_day1_p1.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_across)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = k3_comp1))+
+  geom_line(aes(y = k3_comp2))+
+  geom_line(aes(y = k3_comp3))+
+     scale_fill_viridis_d(option = "magma")+
+
+  theme_classic()
+
+# peak speed displ
+
+spoken_NMF_with_clusters6%>%
+group_by(filename, cluster_across, expression, subject)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+  group_by(filename)%>%
+  # mutate(max_displacement = maxnorm(max_displacement),
+  #       peak_speed = maxnorm(peak_speed) 
+  #        )%>%
+  
+    group_by(filename, cluster_across,expression,drug.placebo)%>%
+    summarise_if(is.numeric, mean, na.rm = T)%>%
+    ggplot(aes(max_displacement, peak_speed))+
+      geom_point()+
+  # geom_smooth(method = "glm",se = T, formula = y~log(x+.1),
+  # method.args = list(
+  #                    start=c(A=0,B=0)))+
+    geom_smooth(method = "lm",se = T)+
+    facet_grid(~cluster_across)
+
+
+
+# entropy
+
+
+
+spoken_NMF_with_clusters6<- spoken_NMF_with_clusters6%>%
+group_by(filename, cluster_across)%>%
+mutate(freq_clus = n())%>%
+  group_by(filename)%>%
+  mutate(freq_clus_perc = freq_clus/n())%>%
+  group_by(filename, expression, subject)%>%
+mutate(cluster_count_group = rleid(cluster_across))%>%
+  group_by(filename, cluster_across, expression, subject,drug.placebo)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+   group_by(filename)%>%
+  
+  mutate(peak_speed_norm =  maxnorm(peak_speed),
+max_displacement_norm =  maxnorm(max_displacement))%>%
+  mutate(entropy_clust = entropy::entropy(table(cluster_across)))%>%
+  group_by(filename, cluster_across, cluster_count_group)%>%
+  mutate(clust_dur_count = n())%>%
+  group_by(filename)%>%
+  mutate(clust_dur_count_perc = clust_dur_count/n())
+
+  spoken_NMF_with_clusters6
+  
+  
+  df_with_clusters6_agg_bysubj%>%
+  group_by(subject,expression)%>%
+  summarise_if(is.numeric,mean)%>%
+  
+  ggplot(aes(expression, entropy_clust_norm))+
+  # geom_jitter(width = .1, alpha = .3)+
+  stat_summary(geom = "pointrange")
+  
+  
+  spoken_NMF_with_clusters6%>%
+  ungroup%>%
+  group_by(subject)%>%
+  mutate(entropy_clust_norm = normalize_0_1(entropy_clust))%>%
+  group_by(filename, expression)%>%
+  
+  summarise_if(is.numeric,mean, na.rm = T)%>%
+  # subset(entropy_clust> 4.53)%>%
+ ggplot(aes(expression, entropy_clust_norm))+
+  # geom_jitter(alpha = .1, width = .2)+
+  stat_summary(geom = "pointrange")
+  
+  # unique(spoken_NMF_with_clusters6)
+  spoken_NMF_with_clusters6_agg_subj<- spoken_NMF_with_clusters6%>%
+    subset(drug.placebo == "placebo")%>%
+  group_by(subject, cluster_across,expression)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+  
+  spoken_NMF_with_clusters6_agg
+
+
+```
