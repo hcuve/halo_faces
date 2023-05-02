@@ -1494,6 +1494,8 @@ perform_tsclust_clustering <- function(data) {
 }
 
 # Apply max-norm normalization and perform tsclust clustering
+unique(df_OF_output_AUsW_unblind_posed_binned3_nona_clust$sp_avg)
+range(df_OF_output_AUsW_unblind_posed_binned3_nona_clust$sp_avg)
 df_with_clusters6 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
   group_by(filename) %>%
     # group_by(subject) %>%
@@ -3502,12 +3504,15 @@ spoken_NMF_with_clusters6%>%
 group_by(filename, cluster_label, expression, subject)%>%
     mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
            max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+  
+  mutate(speed_avg =  max((sp_avg), na.rm = TRUE),
+           displacement_avg = max(abs(comp_delta_avg), na.rm = TRUE))%>%
   group_by(filename)%>%
     group_by(filename, cluster_label,expression,drug.placebo)%>%
     summarise_if(is.numeric, mean, na.rm = T)%>%
-    ggplot(aes(max_displacement, peak_speed))+
+    ggplot(aes(displacement_avg, speed_avg))+
       geom_point()+
-    geom_smooth(aes(colour = cluster_label),method = "lm",se = T)
+    geom_smooth(aes(colour = cluster_label),method = "lm",se = T)+
     facet_grid(~cluster_label)
 
 
@@ -3746,7 +3751,7 @@ table(test_bind_agg_spoken_posed_noneutr$expression)
 
 bind spoken and posed by filename
 ```{r}
-spoken_NMF_with_clusters6_agg$posed_spoken<-"spoken"
+spoken_NMF_with_clusters6_agg$posed_spoken <-"spoken"
 
 spoken_NMF_with_clusters6$cluster_label<-if_else(spoken_NMF_with_clusters6$cluster_label=="relax", "relaxed", spoken_NMF_with_clusters6$cluster_label)
 
@@ -3817,6 +3822,7 @@ unique(spoken_NMF_with_clusters6$drug.placebo)
 spoken_NMF_with_clusters6$comp1<- spoken_NMF_with_clusters6$k3_comp1
 spoken_NMF_with_clusters6$comp2<- spoken_NMF_with_clusters6$k3_comp2
 spoken_NMF_with_clusters6$comp3<- spoken_NMF_with_clusters6$k3_comp3
+
 df_with_clusters6$comp1
 
 spoken_posed_nmf<- bind_rows(
@@ -3830,28 +3836,117 @@ spoken_posed_nmf<- bind_rows(
 
 spoken_posed_nmf
 
-spoken_posed_nmf$cluster_label<- if_else(spoken_posed_nmf$cluster_label == "relax", "relaxed", spoken_posed_nmf$cluster_label)
+# spoken_posed_nmf$cluster_label<- if_else(spoken_posed_nmf$cluster_label == "relax", "relaxed", spoken_posed_nmf$cluster_label)
 
 unique(spoken_posed_nmf$cluster_label)
 
 # compute substate metrics
 # note this recomputes a few things computed before, for doublechecking purposes
 cluster_across
-spoken_posed_nmf <- spoken_posed_nmf%>%
+
+
+```
+
+
+```{r}
+
+# recompute speed and displacement
+spoken_posed_nmf$comp1
+
+
+spoken_posed_nmf%>%
+  
   arrange(subject,filename,bin_frame)%>%
-group_by(subject,filename, cluster_label)%>%
-mutate(freq_clus = n())%>% # compute frequency of each state
+group_by(filename)%>%
+   mutate(comp_avg = (comp1 +comp2+comp3)/3)%>%
+  mutate(displacement = (comp_avg - lag(comp_avg, default = NA))) %>%
+  mutate(time_difference = abs(bin_frame - lag(bin_frame, default = NA))) %>%
+  mutate(speed = abs(displacement) / time_difference) %>%
+  mutate(acceleration = ((speed - lag(speed, default = speed[1])) / time_difference))%>%
+  subset(filename == "./cut_posed_angry_day1_p10.csv")%>%
+  ggplot(aes(bin_frame, displacement, colour = "red"))+
+  geom_line()+
+  # geom_line(aes(y = comp2))+
+  #  geom_line(aes(y = comp3))+
+   # geom_line(aes(y = displacement), linetype = "dashed", colour = "red")+
+   geom_line(aes(y = speed), linetype = "dashed", colour = "blue")+
+   geom_line(aes(y = acceleration), linetype = "dashed", colour = "green")
+
+
+# check peak and stuff
+
+spoken_posed_nmf%>%
+  
+  arrange(subject,filename,bin_frame)%>%
+group_by(filename)%>%
+   mutate(comp_avg = (comp1 +comp2+comp3)/3)%>%
+  mutate(displacement = (comp_avg - lag(comp_avg, default = NA))) %>%
+  mutate(time_difference = abs(bin_frame - lag(bin_frame, default = NA))) %>%
+  mutate(speed = abs(displacement) / time_difference) %>%
+  mutate(acceleration = ((speed - lag(speed, default = speed[1])) / time_difference))%>%
+  # subset(filename == "./cut_posed_angry_day1_p10.csv")%>%
+  group_by(filename,cluster_label,posed_spoken,expression)%>%
+  summarise_if(is.numeric, max, na.rm =T)%>%
+  ggplot(aes(comp_avg, speed, colour =posed_spoken ))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  facet_grid(cluster_label ~expression)
+
+
+spoken_posed_nmf%>%
+  
+  arrange(subject,filename,bin_frame)%>%
+group_by(filename)%>%
+   mutate(comp_avg = (comp1 +comp2+comp3)/3)%>%
+  mutate(displacement = abs(comp_avg - lag(comp_avg, default = NA))) %>%
+  mutate(time_difference = abs(bin_frame - lag(bin_frame, default = NA))) %>%
+  mutate(speed = abs(displacement) / time_difference) %>%
+  mutate(acceleration = ((speed - lag(speed, default = speed[1])) / time_difference))%>%
+  # subset(filename == "./cut_posed_angry_day1_p10.csv")%>%
+  group_by(filename,cluster_label,posed_spoken,expression)%>%
+  summarise_if(is.numeric, mean, na.rm =T)%>%
+  ggplot(aes(expression, speed, colour =posed_spoken ))+
+  stat_summary(geom = "pointrange")+
+  geom_smooth(method = "lm")+
+  facet_grid(~cluster_label)
+
+
+spoken_posed_nmf<- spoken_posed_nmf%>%
+  
+  arrange(subject,filename,bin_frame)%>%
+group_by(filename)%>%
+   mutate(comp_avg_new = (comp1 +comp2+comp3)/3)%>%
+  mutate(displacement = comp_avg - lag(comp_avg, default = NA)) %>%
+  mutate(time_difference = abs(bin_frame - lag(bin_frame, default = NA))) %>%
+  mutate(speed = abs(displacement) / time_difference) %>%
+  mutate(acceleration = ((speed - lag(speed, default = speed[1])) / time_difference))
+
+spoken_posed_nmf
+
+```
+ 
+ 
+ 
+
+ compute frequency entropy, etc
+```{r}
+library(data.table)
+ 
+spoken_posed_nmf<- spoken_posed_nmf%>%
+ mutate(freq_clus = n())%>% # compute frequency of each state
   group_by(filename)%>%
-  mutate(freq_clus_perc = freq_clus/n())%>% # compute percentage of eacch state e.g. duration
+  mutate(freq_clus_perc = freq_clus/n())%>% # compute percentage of each state e.g. duration
   group_by(filename, expression, subject)%>%
 mutate(cluster_count_group = rleid(cluster_label))%>%
   group_by(filename, cluster_label, expression, subject,drug.placebo)%>%
-    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
-           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
-   group_by(filename)%>%
+    mutate(speed_avg =  mean(speed, na.rm = TRUE),
+           displacement_avg = mean(displacement, na.rm = TRUE),
+acceleration_avg = mean(acceleration, na.rm = TRUE))%>%
+   group_by(subject)%>%
   
-  mutate(peak_speed_norm =  maxnorm(peak_speed),
-max_displacement_norm =  maxnorm(max_displacement))%>%
+  mutate(speed_avg_norm =  maxnorm(speed_avg),
+displacement_avg_norm =  maxnorm(displacement_avg),
+acceleration_avg_norm =  maxnorm(acceleration_avg))%>%
   # compute entropy
   # shanon entropy
   mutate(entropy_clust = entropy::entropy(table(cluster_label)),
@@ -3865,18 +3960,18 @@ max_displacement_norm =  maxnorm(max_displacement))%>%
   group_by(filename)%>%
   mutate(clust_dur_count_perc = clust_dur_count/n())
 
-
+# store transition entropy
 spoken_posed_nmf$trans_entropy_perclust_use<-spoken_posed_nmf$trans_entropy_perclust$Entropy
 
+
+
+spoken_posed_nmf
 # 
-colnames(spoken_posed_nmf)
-spoken_posed_nmf_agg<- spoken_posed_nmf%>%
-  group_by(subject, filename, expression,posed_spoken, drug.placebo, cluster_label)%>%
-  summarise_if(is.numeric,mean, na.rm = T)
+# colnames(spoken_posed_nmf)
+# spoken_posed_nmf$sp_avg
 
-# remove those withou one of the sets
+# remove those without one of the sets
 
-# completdatasets::
 
 # no data for p9 as he refused to do the task and then day 1 data only for 
 
@@ -3884,14 +3979,18 @@ spoken_posed_nmf_agg<- spoken_posed_nmf%>%
 tmp_subj_to_remove <- c(4, 9, 12, 26, 34, 35, 41, 42, 43)
 
 # Dataframe filtering
-spoken_posed_nmf_filtered <- spoken_posed_nmf_agg[!spoken_posed_nmf_agg$subject %in% tmp_subj_to_remove, ]
+spoken_posed_nmf_filtered <- spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
+    subset(expression!= "neutral")
 
-spoken_posed_nmf_filtered<- spoken_posed_nmf_filtered%>%
-  subset(expression!= "neutral")
+
+spoken_posed_nmf_filtered_agg<- spoken_posed_nmf_filtered%>%
+  group_by(subject, filename, expression,posed_spoken, drug.placebo, cluster_label)%>%
+  summarise_if(is.numeric,mean, na.rm = T)
+
 
 spoken_posed_nmf_filtered$trans_entropy_perclust<-NULL
-write_csv(spoken_posed_nmf_filtered, "spoken_posed_nmf_filtered.csv")
-colnames(spoken_posed_nmf_filtered)
+write_csv(spoken_posed_nmf_filtered_agg, "spoken_posed_nmf_filtered_agg.csv")
+
 
 ```
 
@@ -3903,6 +4002,7 @@ spoken_posed_nmf_filtered$subject<- as.factor(spoken_posed_nmf_filtered$subject)
 
 peak_speed
 
+spoken_posed_nmf_filtered$sp_avg
 spoken_posed_nmf_filtered_agg_bysubj<- spoken_posed_nmf_filtered%>%
   group_by(subject)%>%
   mutate(peak_speed_norm = normalize_0_1(peak_speed),
@@ -3933,25 +4033,22 @@ Figure 5
 
 ```{r}
 
-spoken_posed_nmf
-
-spoken_posed_nmf_onlycomplete<-  spoken_posed_nmf[!spoken_posed_nmf$subject %in% spoken_posed_nmf, ]%>%
-  subset(expression!= "neutral")
-
-unique(spoken_posed_nmf_onlycomplete$filename)
 
 # spoken p30 angry
 plts<- list()
+
 plts_substate_posed<-
-spoken_posed_nmf_onlycomplete%>%  
+
+
+spoken_posed_nmf_filtered%>%  
   subset(filename == "./cut_posed_angry_day1_p30.csv")%>%
 mutate(speed = sp_avg,
        displacement = comp_delta_avg)%>%
-  select(c(bin_frame,speed,displacement,comp1,comp2,comp3,cluster_label))%>%
+  select(c(bin_frame,speed,displacement,acceleration, comp1,comp2,comp3,cluster_label))%>%
   gather(variable, coef,-bin_frame,-cluster_label,-filename) %>%
   mutate(var_type = if_else(grepl("speed", variable), "2. speed",  
                                         if_else(grepl("displacement", variable), "3. displacement",  
- if_else(grepl("comp", variable ), "1. NMF-comp",NA)))) %>%
+ if_else(grepl("comp", variable ), "1. NMF-comp","acceleration")))) %>%
 
 group_by(var_type)%>%
   mutate(coef_z = scale(coef))%>%
@@ -3975,23 +4072,27 @@ group_by(var_type)%>%
   xlab("time bin")+
   # p$
   p$graphstyle_int
-  
 
+plts_substate_posed
+  
+```
 # spoken
 
 # spoken p30 angry
 
+```{r}
+
 plts_substate_spoken<-
 
-spoken_posed_nmf_onlycomplete%>%  
-  subset(filename == "./cut_spoken_sad_day1_p30.csv")%>%
+spoken_posed_nmf_filtered%>%  
+  subset(filename == "./cut_spoken_happy_day1_p30.csv")%>%
 mutate(speed = sp_avg,
        displacement = comp_delta_avg)%>%
-  select(c(bin_frame,speed,displacement,comp1,comp2,comp3,cluster_label))%>%
+  select(c(bin_frame,speed,displacement,acceleration, comp1,comp2,comp3,cluster_label))%>%
   gather(variable, coef,-bin_frame,-cluster_label,-filename) %>%
   mutate(var_type = if_else(grepl("speed", variable), "2. speed",  
                                         if_else(grepl("displacement", variable), "3. displacement",  
- if_else(grepl("comp", variable ), "1. NMF-comp",NA)))) %>%
+ if_else(grepl("comp", variable ), "1. NMF-comp","acceleration")))) %>%
 
 group_by(var_type)%>%
   mutate(coef_z = scale(coef))%>%
@@ -4016,6 +4117,10 @@ group_by(var_type)%>%
   # p$
   p$graphstyle_int
 
+plts_substate_spoken
+```
+
+```{r}
 plts_substate_posed<- plts_substate_posed+
   theme(axis.text.y = element_blank(),
         legend.position = "top",
@@ -4023,7 +4128,7 @@ plts_substate_posed<- plts_substate_posed+
     scale_fill_brewer(palette = "Dark2")
 plts_substate_spoken
 
-plts_substate_spoken+
+plts_substate_spoken<-plts_substate_spoken+
     theme(axis.text.y = element_blank(),
         legend.position = "top",
         strip.text.x = element_text(angle = 0, vjust = 0.5, hjust = 1))+
@@ -4033,13 +4138,44 @@ plts_substate_spoken+
 plts_substate_posed
 plts_substate_spoken
 
-# speed and displacement plots
 
-plts_substate_posed_HM<-
-spoken_posed_nmf_onlycomplete%>%
+```
+
+# speed and displacement plots
+```{r}
+plts_substate_posed_HM
+
+
+spoken_posed_nmf_filtered%>%
   subset(posed_spoken == "posed")%>%
       ungroup()%>%
+  group_by(filename)%>%
+  mutate(acceleration = acceleration/max(speed,na.rm = T))%>%
+  # mutate(idno = rep(1:333, each = 100))%>%
+  ggplot(aes(bin_frame, subject, fill = acceleration))+
+  geom_tile()+
+  facet_grid(~expression)+
+  ylab("subject")+
+  xlab("time bin")+
+  theme_classic()+
+  p$graphstyle_int+
+    scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+     scale_fill_viridis_c(option = "magma")+
+   # scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+   #                     limits =c(0,1))+#)+
+  theme(panel.spacing.x = unit(1.5, "lines"),
+        axis.text.y = element_blank())+
+        guides(fill=guide_colorbar(ticks.colour = NA))
+
+
+plts_substate_posed_HM<-
+spoken_posed_nmf_filtered%>%
+  subset(posed_spoken == "posed")%>%
+      ungroup()%>%
+  group_by(filename)%>%
+  # mutate(speed = speed/max(speed,na.rm = T))%>%
   mutate(speed = sp_avg)%>%
+    # mutate(speed = speed/max(speed,na.rm = T))%>%
   # mutate(idno = rep(1:333, each = 100))%>%
   ggplot(aes(bin_frame, subject, fill = speed))+
   geom_tile()+
@@ -4049,17 +4185,18 @@ spoken_posed_nmf_onlycomplete%>%
   theme_classic()+
   p$graphstyle_int+
     scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
-   scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
-                       limits =c(0,1))+#)+
+     scale_fill_viridis_c(option = "magma")+
+   # scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+   #                     limits =c(0,1))+#)+
   theme(panel.spacing.x = unit(1.5, "lines"),
         axis.text.y = element_blank())+
         guides(fill=guide_colorbar(ticks.colour = NA))
-
+```
 range(unique(spoken_posed_nmf_onlycomplete$sp_avg))
 
-
+```{r}
 plts_substate_spok_HM<-
-spoken_posed_nmf_onlycomplete%>%
+spoken_posed_nmf_filtered%>%
   subset(posed_spoken == "spoken")%>%
       ungroup()%>%
   mutate(speed = sp_avg)%>%
@@ -4078,6 +4215,39 @@ spoken_posed_nmf_onlycomplete%>%
         axis.text.y = element_blank())+
         guides(fill=guide_colorbar(ticks.colour = NA))
 
+
+unique(spoken_posed_nmf_filtered$cluster_label)
+spoken_posed_nmf_filtered%>%
+  subset(posed_spoken == "spoken")%>%
+      ungroup()%>%
+  # mutate(speed = sp_avg)%>%
+
+    mutate(speed = speed/max(speed,na.rm = T))%>%
+  # mutate(idno = rep(1:333, each = 100))%>%
+  ggplot(aes(bin_frame, subject, fill = speed))+
+  geom_tile()+
+  facet_grid(~expression)+
+  ylab("subject")+
+  xlab("time bin")+
+    theme_classic()+
+  p$graphstyle_int+
+    scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+   scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  theme(panel.spacing.x = unit(1.5, "lines"),
+        axis.text.y = element_blank())+
+        guides(fill=guide_colorbar(ticks.colour = NA))
+
+
+plts_substate_posed
+plts_substate_spoken
 plts_substate_posed_HM
 plts_substate_spok_HM
+
+install.packages("patchwork")
+library(patchwork)
+
+
+(plts_substate_posed+ plts_substate_spoken)/ (plts_substate_posed_HM/plts_substate_spok_HM)+
+  plot_layout(heights = c(1,2))
 ```

@@ -730,6 +730,8 @@ write_csv(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts,
 range(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp1_maxnorm)
 range(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp2_maxnorm)
 range(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts$comp3_maxnorm, na.rm = T)
+
+colnames(df_OF_output_AUsW_unblind_spoken1_binned_agg_no_ts)
 ```
 
 colnames(spoken_dcast_formts_maxnorm)
@@ -1636,3 +1638,7 @@ ggplot(aes(x =  specificities, y = sensitivities, group = expression, colour = e
 
 
 ```
+
+
+
+
