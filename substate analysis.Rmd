@@ -1283,7 +1283,7 @@ df_with_clusters2%>%
 ```
 
 
- 
+two substates illustration
 ```{r}
  df_with_clusters%>%
       # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
@@ -1354,7 +1354,8 @@ df_with_clusters2%>%
 
 
 
-cluster across with speed and displacement normalised per viudeo
+cluster across with speed and displacement normalised per video
+probably deleted cluster
 ```{r}
 df_OF_output_AUsW_unblind_posed_binned3_nona_clust<- df_OF_output_AUsW_unblind_posed_binned3_nona_clust%>%
   mutate(compavg = (comp1+comp2+comp3)/3)
@@ -1413,8 +1414,11 @@ df_with_clusters3%>%
 
 ```
 
-cluster across using dtw clustering and normalised speed, disp and compavg within each video
+cluster across using DTW clustering and normalised speed, disp and compavg within each video
 
+
+
+quiick dtw test first
 ```{r}
 # Load the stclus package
 install.packages("stclus")
@@ -1483,8 +1487,6 @@ maxnorm <- function(x) {
   x / max(abs(x))
 }
 
-
-
 # Define a custom function to perform clustering with tsclust
 perform_tsclust_clustering <- function(data) {
   tsclust_result <- tsclust(data[, c("sp_avg", "comp_delta_avg", "compavg")], k = 3)
@@ -1520,6 +1522,67 @@ df_with_clusters6%>%
 # rm(df_with_clusters4)
 
 # rm(df_with_clusters3)
+
+# illustration
+df_with_clusters6%>%
+  subset(idno == 30)%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_across)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(~drug.placebo)+
+  theme_classic()
+
+# name clusters
+df_with_clusters6$cluster_label <- if_else(df_with_clusters6$cluster_across == 2,
+                                             "relaxed",
+                                             if_else(df_with_clusters6$cluster_across == 1,
+                                             "transition",
+                                             if_else(df_with_clusters6$cluster_across == 3,
+                                             "sustain",NA)))
+
+
+
+
+colnames(df_with_clusters6)
+df_with_clusters6%>%
+  mutate(speed = sp_avg,
+         displacement = comp_delta_avg,
+         nmf_k1 = comp1,
+         nmf_k2 = comp2,
+         nmf_k3 = comp3)%>%
+  subset(idno == 10)%>%
+  select(c(bin_frame,speed,displacement,nmf_k1,nmf_k2,nmf_k3,cluster_label))%>%
+  # gather(variable,value,-bin_frame,-cluster_label,-filename)%>%
+
+  # test
+  gather(variable, coef,-bin_frame,-filename,-cluster_label) %>%
+  mutate(var_type = if_else(grepl("speed", variable), "2. speed",  
+                                
+                                        if_else(grepl("displacement", variable), "3. displacement",  
+ if_else(grepl("nmf", variable ), "1. nmf",NA)))) %>%
+
+group_by(var_type)%>%
+  mutate(coef_z = scale(coef))%>%
+  # group_by(variable, bin_frame,var_type, cluster_label)%>%
+  # summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(bin_frame, coef_z, group = variable))+
+  
+    geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = cluster_label),
+            alpha = .3)  +
+  geom_line(aes(group = variable, linetype = var_type), size = 1)+
+   facet_grid(var_type~.)+
+  # facet_grid(variable_type~.)+
+  theme_classic()
+
 ```
 
 
@@ -1609,15 +1672,16 @@ Entropy
 
 ```{r}  
 rm(df_with_clusters6)
+
 df_with_clusters6_agg<-  df_with_clusters6%>%
-    group_by(filename, cluster_across, expression, subject,drug.placebo)%>%
+    group_by(filename, cluster_across, cluster_label, expression, subject,drug.placebo)%>%
     mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
            max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
    group_by(filename)%>%
   
   mutate(peak_speed_norm =  maxnorm(peak_speed),
 max_displacement_norm =  maxnorm(max_displacement))%>%
-    group_by(filename, cluster_across,expression, subject,drug.placebo)%>%
+    group_by(filename, cluster_across,expression, subject,drug.placebo,cluster_label)%>%
     summarise_if(is.numeric, mean, na.rm = T)
 
 df_with_clusters6$cluster_across
@@ -1794,8 +1858,9 @@ interactions::probe_interaction(lmer_substates$clust_dur_count_perc, modx = clus
  
 ```{r}
 df_with_clusters6_agg_bysubj<-  df_with_clusters6_agg%>%
-   group_by(subject, expression, cluster_across)%>%
+   group_by(subject, expression, cluster_across, cluster_label)%>%
    summarise_if(is.numeric, mean, na.rm = T)
+
 write_csv(df_with_clusters6_agg_bysubj, "df_with_clusters6_agg_bysubj.csv")
 
 df_with_clusters6_agg_bysubj$dr
@@ -3221,7 +3286,7 @@ spoken_NMF%>%
 
 ```
   
-# cluster substates here
+# cluster substates here spoken?
   
 ```{r}
 # Load the required packages
@@ -3254,15 +3319,15 @@ spoken_NMF_int$sp_avg<- if_else(is.na(spoken_NMF_int$sp_avg), 0,spoken_NMF_int$s
 spoken_NMF_int$comp_delta_avg<- if_else(is.na(spoken_NMF_int$comp_delta_avg), 0,spoken_NMF_int$comp_delta_avg)
 spoken_NMF_int$compavg<- if_else(is.na(spoken_NMF_int$compavg), 0,spoken_NMF_int$compavg)
 
-rm(df_with_clusters5hier, df_with_clusters6_lm_nonl)
-rm(df_with_clusters3_agg)
-rm(dcast_time)
-rm(df_OF_output_AU_andLand)
-rm(df_OF_output_AUstest)
-
-rm(df_OF_output_AUsW_unblind)
-rm(df_OF_output_land_posed_binned_select)
-rm(df_sp)
+# rm(df_with_clusters5hier, df_with_clusters6_lm_nonl)
+# rm(df_with_clusters3_agg)
+# rm(dcast_time)
+# rm(df_OF_output_AU_andLand)
+# rm(df_OF_output_AUstest)
+# 
+# rm(df_OF_output_AUsW_unblind)
+# rm(df_OF_output_land_posed_binned_select)
+# rm(df_sp)
 
 spoken_NMF_with_clusters6 <- spoken_NMF_int %>%
   group_by(filename) %>%
@@ -3290,9 +3355,10 @@ spoken_NMF_with_clusters6%>%
 
 # 
 unique(spoken_NMF_with_clusters6$filename)
+
 spoken_NMF_with_clusters6%>%
     # subset(idno == 30)%>%
-  subset(filename == "./cut_spoken_happy_day1_p1.csv")%>%
+  subset(filename == "./cut_spoken_sad_day1_p17.csv")%>%
 
   ggplot(aes(as.numeric(bin_frame), sp_avg))+
 
@@ -3307,8 +3373,61 @@ spoken_NMF_with_clusters6%>%
 
   theme_classic()
 
-# peak speed displ
 
+spoken_NMF_with_clusters6%>%
+    # subset(idno == 30)%>%
+  subset(filename == "./cut_spoken_happy_day1_p17.csv")%>%
+
+  # ggplot(aes(as.numeric(bin_frame), sp_avg))+
+  # 
+  # geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_across)), 
+  #           alpha = .6)  +
+  #   geom_line(size = 1)+
+  # geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  # geom_line(aes(y = k3_comp1))+
+  # geom_line(aes(y = k3_comp2))+
+  # geom_line(aes(y = k3_comp3))+
+  #    scale_fill_viridis_d(option = "magma")+
+  # 
+  # theme_classic()
+mutate(speed = sp_avg,
+       displacement = comp_delta_avg)%>%
+
+
+  select(c(bin_frame,speed,displacement,k3_comp1,k3_comp2,k3_comp3,cluster_across))%>%
+
+  gather(variable, coef,-bin_frame,-filename,-cluster_across) %>%
+  mutate(var_type = if_else(grepl("speed", variable), "2. speed",  
+                                
+                                        if_else(grepl("displacement", variable), "3. displacement",  
+ if_else(grepl("k3", variable ), "1. nmf",NA)))) %>%
+
+group_by(var_type)%>%
+  mutate(coef_z = scale(coef))%>%
+  # group_by(variable, bin_frame,var_type, cluster_label)%>%
+  # summarise_if(is.numeric, mean, na.rm = TRUE) %>%
+  ggplot(aes(bin_frame, coef_z, group = variable))+
+  
+    geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = as.factor(cluster_across)),
+            alpha = .6)  +
+  geom_line(aes(group = variable, linetype = var_type), size = 1)+
+   facet_grid(var_type~.)+
+  # facet_grid(variable_type~.)+
+  theme_classic()
+
+
+spoken_NMF_with_clusters6$cluster_label <- if_else(spoken_NMF_with_clusters6$cluster_across == 1, "relax",
+                                                 if_else(spoken_NMF_with_clusters6$cluster_across == 2, "transition",
+                                                         if_else(spoken_NMF_with_clusters6$cluster_across == 3,"sustain", NA)))
+
+
+spoken_NMF_with_clusters6
+
+
+```
+
+# peak speed displ
+```{r}
 spoken_NMF_with_clusters6%>%
 group_by(filename, cluster_across, expression, subject)%>%
     mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
@@ -3333,9 +3452,9 @@ group_by(filename, cluster_across, expression, subject)%>%
 # entropy
 
 
-
+spoken_NMF_with_clusters6
 spoken_NMF_with_clusters6<- spoken_NMF_with_clusters6%>%
-group_by(filename, cluster_across)%>%
+group_by(filename, cluster_label, cluster_across)%>%
 mutate(freq_clus = n())%>%
   group_by(filename)%>%
   mutate(freq_clus_perc = freq_clus/n())%>%
@@ -3351,6 +3470,8 @@ max_displacement_norm =  maxnorm(max_displacement))%>%
   mutate(entropy_clust = entropy::entropy(table(cluster_across)))%>%
   group_by(filename, cluster_across, cluster_count_group)%>%
   mutate(clust_dur_count = n())%>%
+  group_by(subject)%>%
+  mutate(entropy_clust_norm = normalize_0_1(entropy_clust))%>%
   group_by(filename)%>%
   mutate(clust_dur_count_perc = clust_dur_count/n())
 
@@ -3380,11 +3501,141 @@ max_displacement_norm =  maxnorm(max_displacement))%>%
   
   # unique(spoken_NMF_with_clusters6)
   spoken_NMF_with_clusters6_agg_subj<- spoken_NMF_with_clusters6%>%
-    subset(drug.placebo == "placebo")%>%
-  group_by(subject, cluster_across,expression)%>%
+    # subset(drug.placebo == "placebo")%>%
+  group_by(subject, cluster_across, cluster_label, expression)%>%
     summarise_if(is.numeric, mean, na.rm = T)
   
-  spoken_NMF_with_clusters6_agg
+  spoken_NMF_with_clusters6_agg_subj$subject<- as.factor(spoken_NMF_with_clusters6_agg_subj$subject)
+  
+  
+  
+  spoken_NMF_with_clusters6_agg<- spoken_NMF_with_clusters6%>%
+    # subset(drug.placebo == "placebo")%>%
+  group_by(filename,subject, cluster_across, cluster_label, expression)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+  
+  spoken_NMF_with_clusters6_agg_subj$subject<- as.factor(spoken_NMF_with_clusters6_agg_subj$subject)
+  
+  spoken_NMF_with_clusters6_agg_subj$cluster_across<- as.factor(spoken_NMF_with_clusters6_agg_subj$cluster_across)  
+  
+  
+  spoken_NMF_with_clusters6_agg_subj$posed.spoken<- "spoken"
+  df_with_clusters6_agg_bysubj$posed.spoken<- "posed"
+  
+  rbind(
+  spoken_NMF_with_clusters6_agg_subj [,c("subject", "cluster_label","expression","posed.spoken", "peak_speed", "max_displacement")],
+  df_with_clusters6_agg_bysubj[,c("subject", "cluster_label","expression","posed.spoken", "peak_speed", "max_displacement")])%>%
+    subset(expression!= "neutral")%>%
+     ggplot(aes(max_displacement, peak_speed, colour = posed.spoken))+
+    geom_point()+
+    geom_smooth(method = "lm")+
+    facet_grid(~expression)
+    facet_grid(~posed.spoken)
+    
+
+spoken_NMF_with_clusters6_agg_subj$cluster_label
+df_with_clusters6_agg_bysubj$clu
+
+table(spoken_NMF_with_clusters6_agg_subj$subject)
+table(df_with_clusters6_agg_bysubj$subject)
+bind_rows()
+test_bind_agg_spoken_posed<-
+bind_rows(
+  spoken_NMF_with_clusters6_agg_subj [,c("subject", "cluster_label","expression","posed.spoken", "peak_speed", "max_displacement")],
+  df_with_clusters6_agg_bysubj[,c("subject", "cluster_label","expression","posed.spoken", "peak_speed", "max_displacement")])
+
+write_csv(test_bind_agg_spoken_posed, "test_bind_agg_spoken_posed")
+```
+
+
+anova
+
+```{r}
+install.packages("afex")
+library(afex)
+
+
+table(test_bind_agg_spoken_posed$posed.spoken)
+tmp_tbl<-table(test_bind_agg_spoken_posed$subject)
+
+unique(test_bind_agg_spoken_posed$expression
+       )
+
+tmp_tbl
+
+
+# count unmatches
+test_bind_agg_spoken_posed<-test_bind_agg_spoken_posed%>%
+  group_by(subject)%>%
+  mutate(subject_posed_spok_cnt = n())
+
+table(test_bind_agg_spoken_posed$subject, test_bind_agg_spoken_posed$subject_posed_spok_cnt)
+
+table(test_bind_agg_spoken_posed$subject)
+
+test_bind_agg_spoken_posed_noneutr<- test_bind_agg_spoken_posed%>%
+  subset(subject_posed_spok_cnt !=9 &
+           expression!="neutral")
+
+unique(test_bind_agg_spoken_posed_noneutr$subject)
+unique(test_bind_agg_spoken_posed_noneutr)
+
+table(test_bind_agg_spoken_posed_noneutr$posed.spoken)
+table(test_bind_agg_spoken_posed_noneutr$expression)
+
+
+```
+
+
+
+```{r}
+
+spoken_NMF_with_clusters6_agg$posed_spoken<-"spoken"
+
+
+spoken_NMF_with_clusters6$cluster_label<-if_else(spoken_NMF_with_clusters6$cluster_label=="relax", "relaxed", spoken_NMF_with_clusters6$cluster_label)
+
+df_with_clusters6_agg$posed_spoken<-"posed"
+
+posed_spoken_NMF_with_clusters6_agg <-bind_rows(
+  spoken_NMF_with_clusters6 [,c("filename","subject", "cluster_label","expression","posed_spoken","drug.placebo", "peak_speed", "max_displacement")],
+  df_with_clusters6[,c("filename","subject", "cluster_label","expression","posed_spoken","drug.placebo", "peak_speed", "max_displacement")])%>%
+  group_by(filename, subject, cluster_label, expression, posed_spoken,
+           drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
+
+posed_spoken_NMF_with_clusters6_agg
+table(posed_spoken_NMF_with_clusters6_agg$drug.placebo,
+      posed_spoken_NMF_with_clusters6_agg$posed_spoken)
+write_csv(posed_spoken_NMF_with_clusters6_agg, "posed_spoken_NMF_with_clusters6_agg.csv")
+```
+
+```{r}
+
+posed_spoken_NMF_with_clusters6_agg_bysubj<-
+
+bind_rows(
+  spoken_NMF_with_clusters6 [,c("filename","subject", "cluster_label","expression","posed_spoken","drug.placebo", "peak_speed", "max_displacement","entropy_clust")],
+  df_with_clusters6[,c("filename","subject", "cluster_label","expression","posed_spoken","drug.placebo", "peak_speed", "max_displacement","entropy_clust")])%>%
+  group_by(subject, cluster_label, expression, posed_spoken,
+           drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
+
+posed_spoken_NMF_with_clusters6_agg_bysubj
+
+unique(posed_spoken_NMF_with_clusters6_agg_bysubj$expression)
+
+posed_spoken_NMF_with_clusters6_agg_bysubj<-
+posed_spoken_NMF_with_clusters6_agg_bysubj%>%
+  subset(expression!="neutral")
+
+rsl_aov_peakspeed<-
+afex::aov_ez(data = posed_spoken_NMF_with_clusters6_agg_bysubj,
+              id = "subject",
+              dv = "peak_speed",
+              within = c("posed_spoken", "expression","cluster_label"),
+              # fun_aggregate = "mean",
+              print.formula = TRUE)
 
 
 ```
