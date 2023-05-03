@@ -4036,34 +4036,36 @@ Figure 5
 
 # spoken p30 angry
 plts<- list()
+?recode
+
+spoken_posed_nmf_filtered$cluster<- as.factor(recode(spoken_posed_nmf_filtered$cluster_label, "relaxed" = 1, "transition" = 2, "sustain" = 3))
 
 plts_substate_posed<-
-
-
 spoken_posed_nmf_filtered%>%  
   subset(filename == "./cut_posed_angry_day1_p30.csv")%>%
 mutate(speed = sp_avg,
        displacement = comp_delta_avg)%>%
-  select(c(bin_frame,speed,displacement,acceleration, comp1,comp2,comp3,cluster_label))%>%
-  gather(variable, coef,-bin_frame,-cluster_label,-filename) %>%
-  mutate(var_type = if_else(grepl("speed", variable), "2. speed",  
-                                        if_else(grepl("displacement", variable), "3. displacement",  
- if_else(grepl("comp", variable ), "1. NMF-comp","acceleration")))) %>%
+  select(c(bin_frame,speed,displacement,acceleration, comp1,comp2,comp3,cluster_label, cluster))%>%
+  gather(variable, coef,-bin_frame,-cluster_label,-cluster, -filename,) %>%
+  mutate(var_type = if_else(grepl("speed", variable), "speed",  
+                                        if_else(grepl("displacement", variable), "displacement",  
+ if_else(grepl("comp", variable ), "NMF-comp","acceleration")))) %>%
+  mutate(var_type = factor(var_type, levels = c("NMF-comp", "displacement", "speed", "acceleration")))%>%
 
 group_by(var_type)%>%
   mutate(coef_z = scale(coef))%>%
   
-  group_by(variable, bin_frame,var_type, cluster_label)%>%
+  group_by(variable, bin_frame,var_type, cluster)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
   ggplot(aes(bin_frame, coef_z, group = variable))+
   
-    geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill =cluster_label),
+    geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill =cluster),
             alpha = .4)  +
   
     # geom_smooth(
     #             method = "gam", se = FALSE, aes(col = "GAM")) +
   # geom_smooth(aes(group = variable, linetype = var_type), size = 1)+
-  geom_line(aes(group = variable), size = 1)+
+  geom_line(aes(group = variable), size = 1.5)+
    facet_grid(var_type~.)+
   scale_fill_brewer(palette = "Dark2")+
    # scale_fill_viridis_d(option = "inferno")+
@@ -4071,7 +4073,11 @@ group_by(var_type)%>%
   ylab("z-score")+
   xlab("time bin")+
   # p$
-  p$graphstyle_int
+  p$graphstyle_int+
+  facet_wrap(~ var_type, ncol = 1)+
+  ggtitle("Posed example")
+
+
 
 plts_substate_posed
   
@@ -4088,26 +4094,27 @@ spoken_posed_nmf_filtered%>%
   subset(filename == "./cut_spoken_happy_day1_p30.csv")%>%
 mutate(speed = sp_avg,
        displacement = comp_delta_avg)%>%
-  select(c(bin_frame,speed,displacement,acceleration, comp1,comp2,comp3,cluster_label))%>%
-  gather(variable, coef,-bin_frame,-cluster_label,-filename) %>%
-  mutate(var_type = if_else(grepl("speed", variable), "2. speed",  
-                                        if_else(grepl("displacement", variable), "3. displacement",  
- if_else(grepl("comp", variable ), "1. NMF-comp","acceleration")))) %>%
+  select(c(bin_frame,speed,displacement,acceleration, comp1,comp2,comp3,cluster_label,cluster))%>%
+  gather(variable, coef,-bin_frame,-cluster_label,-cluster,-filename) %>%
+  mutate(var_type = if_else(grepl("speed", variable), "speed",  
+                                        if_else(grepl("displacement", variable), "displacement",  
+ if_else(grepl("comp", variable ), "NMF-comp","acceleration")))) %>%
+  mutate(var_type = factor(var_type, levels = c("NMF-comp", "displacement", "speed", "acceleration")))%>%
 
 group_by(var_type)%>%
   mutate(coef_z = scale(coef))%>%
   
-  group_by(variable, bin_frame,var_type, cluster_label)%>%
+  group_by(variable, bin_frame,var_type, cluster)%>%
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
   ggplot(aes(bin_frame, coef_z, group = variable))+
   
-    geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill =cluster_label),
+    geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill =cluster),
             alpha = .4)  +
   
     # geom_smooth(
     #             method = "gam", se = FALSE, aes(col = "GAM")) +
   # geom_smooth(aes(group = variable, linetype = var_type), size = 1)+
-  geom_line(aes(group = variable), size = 1)+
+  geom_line(aes(group = variable), size = 1.5)+
    facet_grid(var_type~.)+
   scale_fill_brewer(palette = "Dark2")+
    # scale_fill_viridis_d(option = "inferno")+
@@ -4115,7 +4122,9 @@ group_by(var_type)%>%
   ylab("z-score")+
   xlab("time bin")+
   # p$
-  p$graphstyle_int
+  p$graphstyle_int+
+  facet_wrap(~ var_type, ncol = 1)+
+    ggtitle("Spoken example")
 
 plts_substate_spoken
 ```
@@ -4126,12 +4135,11 @@ plts_substate_posed<- plts_substate_posed+
         legend.position = "top",
         strip.text = element_text(size = 5))+
     scale_fill_brewer(palette = "Dark2")
-plts_substate_spoken
 
 plts_substate_spoken<-plts_substate_spoken+
     theme(axis.text.y = element_blank(),
         legend.position = "top",
-        strip.text.x = element_text(angle = 0, vjust = 0.5, hjust = 1))+
+           strip.text = element_text(size = 5))+
     scale_fill_brewer(palette = "Dark2")
 
 
@@ -4186,11 +4194,12 @@ spoken_posed_nmf_filtered%>%
   p$graphstyle_int+
     scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
      scale_fill_viridis_c(option = "magma")+
-   # scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
-   #                     limits =c(0,1))+#)+
+   scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
   theme(panel.spacing.x = unit(1.5, "lines"),
         axis.text.y = element_blank())+
-        guides(fill=guide_colorbar(ticks.colour = NA))
+        guides(fill=guide_colorbar(ticks.colour = NA))+
+  ggtitle("Posed")
 ```
 range(unique(spoken_posed_nmf_onlycomplete$sp_avg))
 
@@ -4213,7 +4222,8 @@ spoken_posed_nmf_filtered%>%
                        limits =c(0,1))+#)+
   theme(panel.spacing.x = unit(1.5, "lines"),
         axis.text.y = element_blank())+
-        guides(fill=guide_colorbar(ticks.colour = NA))
+        guides(fill=guide_colorbar(ticks.colour = NA))+
+    ggtitle("Spoken")
 
 
 unique(spoken_posed_nmf_filtered$cluster_label)
@@ -4248,6 +4258,149 @@ install.packages("patchwork")
 library(patchwork)
 
 
-(plts_substate_posed+ plts_substate_spoken)/ (plts_substate_posed_HM/plts_substate_spok_HM)+
-  plot_layout(heights = c(1,2))
+plts_substate_illustration_hm <- ((((plts_substate_posed+ plts_substate_spoken)+plot_annotation(title = "sample expressions"))+   plot_layout(guides = "collect") & theme(legend.position = "top"))/ 
+  
+  ((plts_substate_posed_HM+plts_substate_spok_HM) + plot_layout(nrow = 2) & theme(legend.position = "top")))+
+  plot_layout(heights = c(1,2))+plot_annotation(tag_levels = 'A') 
+
+
+
+ggsave("plts_substate_illustration_hm.tiff", plts_substate_illustration_hm, device = "tiff",
+       width = 14, height = 14, dpi = 800)
+  
+```
+
+
+
+speed lmms
+
+```{r}
+library(lmerTest)
+options(scipen = 999)
+
+rslt_speedavg<-lmer(speed_avg~ expression*posed_spoken*cluster_label +(1|subject),
+     REML =FALSE,
+     data = spoken_posed_nmf_filtered_agg)
+
+summary(rslt_speedavg)
+anova(rslt_speedavg)
+
+interactions::sim_margins(rslt_speedavg, pred = expression)
+emmeans::emmeans(rslt_speedavg, pairwise~cluster_label, adjust = "bonf")
+emmeans::emmeans(rslt_speedavg, pairwise~expression, adjust = "bonf")
+
+emmeans::emmeans(rslt_speedavg, pairwise~posed_spoken, adjust = "bonf")
+
+# twp way interactions
+
+# emmeans::emmeans(rslt_speedavg, pairwise~cluster_label|expression, adjust = "bonf")
+emmeans::emmeans(rslt_speedavg, pairwise~expression|cluster_label, adjust = "bonf")
+emmeans::emmeans(rslt_speedavg, pairwise~expression, adjust = "bonf")
+
+emmeans::emmeans(rslt_speedavg, pairwise~posed_spoken|expression, adjust = "bonf")
+emmeans::emmeans(rslt_speedavg, pairwise~expression|posed_spoken, adjust = "bonf")
+
+# 3way
+emmeans::emmeans(rslt_speedavg, pairwise~expression|posed_spoken*cluster_label, adjust = "bonf")
+
+
+```
+
+
+frequency
+
+```{r}
+rslt_clust_dur_count_perc<-lmer(clust_dur_count_perc~ expression*posed_spoken*cluster_label +(1|subject),
+     REML =FALSE,
+     data = spoken_posed_nmf_filtered_agg)
+
+summary(rslt_clust_dur_count_perc)
+anova(rslt_clust_dur_count_perc)
+
+interactions::sim_margins(rslt_clust_dur_count_perc, pred = expression)
+emmeans::emmeans(rslt_clust_dur_count_perc, pairwise~cluster_label, adjust = "bonf")
+emmeans::emmeans(rslt_clust_dur_count_perc, pairwise~expression, adjust = "bonf")
+
+emmeans::emmeans(rslt_clust_dur_count_perc, pairwise~posed_spoken, adjust = "bonf")
+
+# twp way interactions
+
+# emmeans::emmeans(rslt_speedavg, pairwise~cluster_label|expression, adjust = "bonf")
+emmeans::emmeans(rslt_clust_dur_count_perc, pairwise~expression|cluster_label, adjust = "bonf")
+# emmeans::emmeans(rslt_clust_dur_count_perc, pairwise~posed_spoken|expression, adjust = "bonf")
+emmeans::emmeans(rslt_clust_dur_count_perc, pairwise~expression|posed_spoken, adjust = "bonf")
+
+# 3way
+emmeans::emmeans(rslt_clust_dur_count_perc, pairwise~expression|posed_spoken*cluster_label, adjust = "bonf")
+
+```
+entropy
+
+```{r}
+
+spoken_posed_nmf_filtered_agg2<- spoken_posed_nmf_filtered_agg%>%
+  group_by(subject,expression,posed_spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
+
+spoken_posed_nmf_filtered_agg2$subject <- as.factor(spoken_posed_nmf_filtered_agg2$subject)
+
+rslt_trans_entropy<-lmer(trans_entropy~ expression*posed_spoken +(1|subject),
+     REML =FALSE,
+     data = spoken_posed_nmf_filtered_agg2)
+eigen(rslt_trans_entropy)
+
+spoken_posed_nmf_filtered%>%
+    # group_by(subject,expression,posed_spoken)%>%
+  # summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(posed_spoken, entropy_clust))+
+  # geom_jitter(width = .2,alpha = .1)+
+  stat_summary(geom = "pointrange")
+  facet_grid(~expression)
+  
+  
+  afex::aov_ez(data = spoken_posed_nmf_filtered_agg2,
+              id = "subject",
+              dv = "trans_entropy",
+              within = c("posed_spoken", "expression"),
+              # fun_aggregate = "mean",
+              print.formula = TRUE)
+
+```
+
+
+
+Plots
+
+
+```{r}
+# install.packages("ggside")
+spoken_posed_nmf_filtered_agg%>%
+  group_by(subject,expression,cluster_label, posed_spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(cluster_label , speed, 
+             color = posed_spoken))+
+  # geom_split_violin(color = FALSE, alpha = .3)+
+  # geom_smooth(aes(group = expression), method = 'lm', se = F, 
+  #             color = "gray80", alpha = .5,size = .5)+
+  geom_jitter(width = .1, alpha = .2)+
+  # geom_point(fill = NA, pch = 21, position = position_jitterdodge(),width = .01, alpha = .5)+
+  # stat_summary(aes(group = posed_spoken,colour = posed_spoken),fun = mean, geom = 'pointrange', width = 0.1, size = .2,
+  #              # color = "black", 
+  #              alpha = .8,position=position_dodge(width=0.3)) +
+    facet_grid(~expression)+
+  # ggside::geom_ysidedensity()+
+  ggside::geom_ysidedensity(aes(x=stat(density), fill = expression), alpha = .5) +
+  theme_classic()+
+  p$graphstyle_int
+
+  # ggtitle()
+ paper_plots$ADFES_valence +
+  p$graphstyle+
+  scale_y_continuous(breaks = c(0, 50,100), limits = c(0,100))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank())
+paper_plots$ADFES_valence
+
+
 ```

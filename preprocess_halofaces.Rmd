@@ -555,3 +555,29 @@ df_OF_output_AUsW_unblind_spoken1_2%>%
 table(ç$bin_frame)
 
 ```
+
+
+Demographics
+
+```{r}
+
+Unblinding_BMI_drugday%>%
+  group_by(gender)%>%
+  summarize_if(is.numeric, mean, na.rm = T)
+
+mean(Unblinding_BMI_drugday$age)
+
+table(Unblinding_BMI_drugday$gender)
+
+nmfk4_agg_no_t
+
+unique(df_with_clusters6_agg$filename)
+
+unique(spoken_NMF$filename)
+
+unique(df_OF_output_AUsW_unblind_posed_binned3_nona1$filename)
+
+304+228
+
+(43*7)*2
+```
