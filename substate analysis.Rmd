@@ -4423,14 +4423,23 @@ spoken_posed_nmf_filtered_agg%>%
     facet_grid(~expression)+
   xlab("Substate cluster")+
   scale_color_brewer(palette = "Dark2")+
+      scale_fill_brewer(palette = "Dark2")+
+ggside::geom_ysidedensity(aes(x=stat(density), color = posed_spoken,  fill = posed_spoken), alpha = .5)+
+  ggside::geom_xsideboxplot(aes(group = cluster), alpha = .5, orientation = "x")+
+   # ggside::geom_xsideboxplot(aes(group = cluster), alpha = .5)+
 
   theme_classic()+
   theme(legend.position = "top")+
   p$graphstyle_int+
-    theme(legend.title = element_blank())
+    theme(legend.title = element_blank())+
+      theme(ggside.panel.scale = .5,
+          ggside.axis.text.y = element_blank())
+
+plts_substate_speed_avg
+```
 
 # frequency
-
+```{r}
 plts_substate_freq
 plts_substate_freq<-
 spoken_posed_nmf_filtered_agg%>%
@@ -4459,30 +4468,41 @@ spoken_posed_nmf_filtered_agg%>%
     # geom = "errorbar"
     ) +
     facet_grid(~expression)+
+
+ggside::geom_ysidedensity(aes(x=stat(density), color = posed_spoken,  fill = posed_spoken), alpha = .5)+
+  ggside::geom_xsideboxplot(aes(group = cluster), alpha = .5, orientation = "x")+
+
+
   xlab("Substate cluster")+
-  xlab("Proportion")+
+  ylab("Proportion")+
   scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
 
   theme_classic()+
   theme(legend.position = "top")+
   p$graphstyle_int+
-    theme(legend.title = element_blank())
-
+    theme(legend.title = element_blank())+
+      theme(ggside.panel.scale = .5,
+          ggside.axis.text.y = element_blank())
+plts_substate_freq
+```
 
 # entropy
 
-
-plts_substate_freq
-spoken_NMF_with_clusters6
-spoken_NMF_with_clusters6
-
+```{r}
+plts_substate_entropy<-
+# spoken_posed_nmf$trans_entropy
 
 spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
     subset(expression!= "neutral")%>%
   mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
-  group_by(subject,expression,cluster_label,cluster, posed_spoken)%>%
+  group_by(subject)%>%
+  
+    group_by(subject)%>%
+  mutate(trans_entropy = maxnormalize(trans_entropy))%>%
+      group_by(subject,expression, posed_spoken, cluster)%>%
   summarise_if(is.numeric, mean, na.rm = T)%>%
-  ggplot(aes( expression , trans_entropy, 
+  ggplot(aes(cluster , trans_entropy, 
              color = posed_spoken, shape =posed_spoken))+
   geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),alpha = .2) +
  stat_summary(aes(group = posed_spoken, colour =posed_spoken, linetype =posed_spoken),fun.y = mean,  geom = "line",
@@ -4503,15 +4523,96 @@ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
                # geom = "pointrange"
     # geom = "errorbar"
     ) +
-    # facet_grid(~expression)+
+    facet_grid(~expression)+
   xlab("Substate cluster")+
-  xlab("Proportion")+
-  scale_color_brewer(palette = "Dark2")+
+  ylab("entropy (bits)")+
+
+  
+ ggside::geom_ysidedensity(aes(x=stat(density), color = posed_spoken,  fill = posed_spoken), alpha = .5)+
+  ggside::geom_xsideboxplot(aes(group = cluster), alpha = .5, orientation = "x")+
+  # ggside::geom_xsidepath()+
+
+  
+     # ggside(x.pos = "bottom", y.pos = "left") +
+    scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
 
   theme_classic()+
   theme(legend.position = "top")+
   p$graphstyle_int+
-    theme(legend.title = element_blank())
+    theme(legend.title = element_blank())+
+    theme(ggside.panel.scale = .5,
+          ggside.axis.text.y = element_blank())
+
+plts_substate_entropy
+
+
+ggsave("plts_substate_entropy.tiff", plts_substate_entropy, device = "tiff",
+       width = 14, height = 14, dpi = 800)
+```
+
+```{r}
+((plts_substate_speed_avg/
+plts_substate_freq)|(guide_area() +
+plts_substate_entropy))+
+   plot_layout(guides = "collect")+
+  plot_layout(nrow = 2,widths = c(2.5,1.5))
+
+plts_substate_speed_entropy<-
+(plts_substate_speed_avg/plts_substate_entropy)+
+   plot_layout(guides = "collect")& theme(legend.position = "top")
+  plot_layout(nrow = 2,widths = c(2.5,1.5))
+  
+  
+  plts_substate_speed_entropy<-
+((plts_substate_speed_avg+theme(axis.title.x = element_blank()))/plts_substate_entropy)+
+   plot_layout(guides = "collect")& theme(legend.position = "top")
+
+  
+  
+    plts_substate_speed_entropy_freq<-
+((plts_substate_speed_avg+theme(axis.title.x = element_blank()))/(plts_substate_entropy+theme(axis.title.x = element_blank()))/plts_substate_freq)+
+   plot_layout(guides = "collect")& theme(legend.position = "top")
+  
+  
+  
+ggsave("plts_substate_speed_entropy.tiff", plts_substate_speed_entropy, device = "tiff",
+       width = 12, height = 10, dpi = 800)
+
+ggsave("plts_substate_speed_entropy_freq.tiff", plts_substate_speed_entropy_freq, device = "tiff",
+       width = 12, height = 12, dpi = 800)
+
+```
+
+
+spoken_posed_nmf$trans_entropy_perclust_use<- spoken_posed_nmf$trans_entropy_perclust$Entropy
+spoken_posed_nmf1<- spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
+    subset(expression!= "neutral")%>%
+  mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
+  group_by(filename)%>%
+  mutate(entropy_clust = entropy::entropy(table(cluster_label)),
+         trans_entropy = GrpString::TransEntro(cluster),
+         trans_entropy_perclust = GrpString::TransEntropy(cluster_label)[,2])
+
+spoken_posed_nmf1$trans_entropy_perclust
+
+spoken_posed_nmf1$cluster
+spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
+    subset(expression!= "neutral")%>%
+  group_by(subject,cluster_label)%>%
+  mutate(trans_entropy = scale(trans_entropy))%>%
+  # subset(cluster_label!= "transition")%>%
+    group_by(subject,expression, cluster_label)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(trans_entropy, clust_dur_count_perc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  facet_grid(~cluster_label)+
+  ggside::geom_ysidedensity()+
+    ggside::geom_xsidedensity()+
+  ggpubr::stat_cor()
+  
+  p$graphstyle_int
 
 ```
 
