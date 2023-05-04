@@ -4490,18 +4490,18 @@ plts_substate_freq
 # entropy
 
 ```{r}
-plts_substate_entropy<-
+plts_substate_entropy
+
 # spoken_posed_nmf$trans_entropy
 
 spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
     subset(expression!= "neutral")%>%
   mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
-  group_by(subject)%>%
-  
     group_by(subject)%>%
-  mutate(trans_entropy = maxnormalize(trans_entropy))%>%
-      group_by(subject,expression, posed_spoken, cluster)%>%
+  mutate(trans_entropy = maxnormalize(trans_entropy_perclust_use))%>%
+      group_by(filename,subject,expression, posed_spoken, cluster)%>%
   summarise_if(is.numeric, mean, na.rm = T)%>%
+  
   ggplot(aes(cluster , trans_entropy, 
              color = posed_spoken, shape =posed_spoken))+
   geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),alpha = .2) +
@@ -4516,13 +4516,7 @@ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
                geom = "errorbar",
                width  = .5,
                size = 1.5,
-               position = position_dodge(width = 1)
-    # fun.y = mean,
-               # fun.ymin = function(x) mean(x) - sd(x), 
-               # fun.ymax = function(x) mean(x) + sd(x), 
-               # geom = "pointrange"
-    # geom = "errorbar"
-    ) +
+               position = position_dodge(width = 1))+
     facet_grid(~expression)+
   xlab("Substate cluster")+
   ylab("entropy (bits)")+
@@ -4549,6 +4543,52 @@ plts_substate_entropy
 
 ggsave("plts_substate_entropy.tiff", plts_substate_entropy, device = "tiff",
        width = 14, height = 14, dpi = 800)
+
+
+
+spoken_posed_nmf1<-
+spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
+    subset(expression!= "neutral")%>%
+  mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
+  group_by(subject)%>%
+  
+    group_by(subject)%>%
+  # mutate(trans_entropy = maxnormalize(trans_entropy))%>%
+      group_by(filename,subject,expression, posed_spoken,drug.placebo, cluster,cluster_label)%>%
+  summarise_if(is.numeric, mean, na.rm = T)
+
+spoken_posed_nmf1$subject<- as.factor(spoken_posed_nmf1$subject)
+
+rslt_trans_entropy<-lmer(trans_entropy~ expression*posed_spoken+
+                           expression:posed_spoken+
+                           expression:cluster_label+
+                           posed_spoken:cluster_label +
+                           (1+expression+posed_spoken|subject),
+     REML =FALSE,
+     data = spoken_posed_nmf1)
+summary(rslt_trans_entropy)
+emmeans::emmeans(rslt_trans_entropy, pairwise~cluster_label)
+
+anova(rslt_trans_entropy)
+
+# compute just one entropy
+
+unique(spoken_posed_nmf$filename)
+ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
+    subset(expression!= "neutral")%>%
+   # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
+  group_by(filename)%>%
+  mutate(entropy_clust = entropy::entropy(table(cluster_label)),
+         trans_entropy_overall = GrpString::TransEntro(cluster_label),
+         trans_entropy_within = GrpString::TransEntropy(cluster_label)[,2])%>%
+   group_by(filename, subject, expression, posed_spoken, drug.placebo, cluster,cluster_label)%>%
+   summarise_if(is.numeric, mean, na.rm = T)%>%
+ # mutate(testnew = sum(trans_entropy_within))%>%
+   ggplot(aes( cluster_label, trans_entropy_within, color = posed_spoken))+
+   stat_summary(geom = "pointrange")+
+   facet_grid(~expression)
+
 ```
 
 ```{r}
