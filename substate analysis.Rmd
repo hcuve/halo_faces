@@ -1129,7 +1129,7 @@ df_with_clusters <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
   group_split() %>%
   map_dfr(perform_kmeans_clustering)
 
-
+df_with_clusters
 df_with_clusters%>%
     subset(filename == "./cut_posed_sad_day1_p7.csv")
 
@@ -3824,7 +3824,8 @@ spoken_NMF_with_clusters6$comp2<- spoken_NMF_with_clusters6$k3_comp2
 spoken_NMF_with_clusters6$comp3<- spoken_NMF_with_clusters6$k3_comp3
 
 df_with_clusters6$comp1
-
+spoken_NMF_with_clusters6
+df_with_clusters6$
 spoken_posed_nmf<- bind_rows(
   spoken_NMF_with_clusters6 [,c("filename","bin_frame", "subject", "cluster_label","expression","posed_spoken","drug.placebo","sp_avg","comp_delta_avg", "peak_speed", "max_displacement","comp1","comp2", "comp3")],
   df_with_clusters6[,c("filename","bin_frame","subject", "cluster_label","expression","posed_spoken","drug.placebo","sp_avg","comp_delta_avg", "peak_speed", "max_displacement","comp1","comp2", "comp3")])%>%
@@ -4680,7 +4681,7 @@ plts_substate_speed_entropy<-
   
     plts_substate_speed_entropy_freq<-
 ((plts_substate_speed_avg+theme(axis.title.x = element_blank()))/(plts_substate_entropy+theme(axis.title.x = element_blank()))/plts_substate_freq)+
-   plot_layout(guides = "collect")& theme(legend.position = "top")
+   plot_layout(guides = "collect")+ plot_annotation(tag_levels = 'A') & theme(legend.position = "top")
   
   
   
@@ -4690,8 +4691,182 @@ ggsave("plts_substate_speed_entropy.tiff", plts_substate_speed_entropy, device =
 ggsave("plts_substate_speed_entropy_freq.tiff", plts_substate_speed_entropy_freq, device = "tiff",
        width = 12, height = 12, dpi = 800)
 
+
+
+```
+# compute amplitude of substate
+
+```{r}
+spoken_posed_nmf$cluster_label
+spoken_posed_nmf$bin_frame
+
+spoken_posed_nmf$speed
+spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
+    subset(expression!= "neutral")%>%
+  mutate(substate_group = rleid(cluster_label)) %>%
+  group_by(filename,subject,expression, posed_spoken,drug.placebo, cluster_label, substate_group) %>%
+  summarise(amplitude = max(bin_frame) - min(bin_frame) + 1,
+             peak_speed = max(speed))%>%
+  # substate_group
+  group_by(filename,subject,expression, posed_spoken, cluster_label,substate_group) %>%
+  summarise_if(is.numeric, mean,na.rm = T)%>%
+  subset(cluster_label == "transition")%>%
+  ungroup()%>%
+  ggplot(aes(x = amplitude, y = speed_avg)) +
+  geom_point(alpha = .1) +
+  geom_smooth(method = "lm")+
+  labs(title = "Relationship between Amplitude and Peak Speed",
+       x = "Amplitude",
+       y = "Peak Speed",
+       color = "Substate") +
+  theme_minimal()+
+  # facet_grid(~expression)+
+  ggpubr::stat_cor()
+
+
+spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
+    subset(expression!= "neutral")%>%
+  mutate(substate_group = rleid(cluster_label)) %>%
+  group_by(filename,subject,expression, posed_spoken,drug.placebo, cluster_label, substate_group) %>%
+  summarise(amplitude = max(bin_frame) - min(bin_frame) + 1,
+             peak_speed = max(speed))%>%
+  # substate_group
+  group_by(filename,subject,expression, posed_spoken, drug.placebo, cluster_label,) %>%
+  summarise_if(is.numeric, mean,na.rm = T)%>%
+  subset(cluster_label == "transition")%>%
+  ungroup()%>%
+  ggplot(aes(x = log(amplitude+.1), y = log(peak_speed+.1), colour = expression,group= expression)) +
+  geom_point(alpha = .5) +
+    # geom_smooth(
+                # method = "gam", se = FALSE) +
+  geom_smooth(method = "lm", se = F)+
+  labs(title = "Relationship between Amplitude and Peak Speed",
+       x = "Transition Amplitude",
+       y = "Peak Speed",
+       color = "expression") +
+  
+  theme_minimal()+
+  facet_grid(~posed_spoken)+
+  geom_ysidedensity(aes(x=stat(density), fill = expression), alpha = .5) +
+     ggside(x.pos = "bottom", y.pos = "right") +
+  
+  ggpubr::stat_cor()+
+  p$graphstyle_int
+
+peak_speed_transitions<-
+spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
+    subset(expression!= "neutral")%>%
+  mutate(substate_group = rleid(cluster_label)) %>%
+  group_by(filename,subject,expression, posed_spoken,drug.placebo, cluster_label, substate_group) %>%
+  summarise(amplitude = max(bin_frame) - min(bin_frame) + 1,
+             peak_speed = max(speed))%>%
+  # substate_group
+  group_by(subject,expression, posed_spoken, drug.placebo, cluster_label,) %>%
+  summarise_if(is.numeric, mean,na.rm = T)%>%
+  subset(cluster_label == "transition")%>%
+  ungroup()%>%
+  ggplot(aes(x = log1p(amplitude+.1), y = log1p(peak_speed+.1), colour = posed_spoken,group= posed_spoken ,
+             shape= posed_spoken )) +
+  geom_point(alpha = .5) +
+    # geom_smooth(
+                # method = "gam", se = FALSE) +
+  geom_smooth(method = "lm", se = F)+
+  labs(
+  # title = "Relationship between Amplitude and Peak Speed for 
+  #      n\ transition substates",
+       x = "Amplitude (log)",
+       y = "Peak Speed (log)",
+       color = "expression") +
+  
+  theme_minimal()+
+  facet_grid(~expression)+
+  geom_ysidedensity(aes(x=stat(density), fill = posed_spoken), alpha = .5) +
+     ggside(x.pos = "bottom", y.pos = "right") +
+  
+  ggpubr::stat_cor()+
+      scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
+  # p$graphstyle_int+
+  theme_classic()+
+  theme(legend.position = "top")+
+  p$graphstyle_int+
+    theme(legend.title = element_blank()
+          # legend.position = "none"
+          )+
+      theme(ggside.panel.scale = .3,
+          ggside.axis.text.x = element_blank())
+
+
+
 ```
 
+
+AU visualisation
+
+
+```{r}
+colnames(df_OF_output_AUsW_unblind_spoken1_binned)
+colnames(df_with_clusters6)
+df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]
+
+
+df_with_clusters6$comp1
+spoken_NMF_with_clusters6
+
+colnames(df_OF_output_AUsW_unblind_spoken1_binned[,c(17:33)])
+
+df_OF_output_AUsW_unblind_spoken1_binned$posed.spoken
+
+range(df_OF_output_AUsW_unblind_spoken1_binned$AU01_r_Inner_brow_raiser)
+range(df_with_clusters6$AU01_r_Inner_brow_raiser)
+
+
+df_with_clusters6$posed.spoken<- df_with_clusters6$posed_spoken
+
+
+
+bind_rows(
+  df_OF_output_AUsW_unblind_spoken1_binned [,c("filename","bin_frame", "subject" ,"expression","posed.spoken","drug.placebo", colnames(df_OF_output_AUsW_unblind_spoken1_binned[,c(17:33)]))] ,
+  df_with_clusters6[,c("filename","bin_frame", "subject" ,"expression","posed_spoken","drug.placebo", colnames(df_OF_output_AUsW_unblind_spoken1_binned[,c(17:33)]))])%>%
+  filter(!subject %in% tmp_subj_to_remove)%>%
+    subset(expression!= "neutral")%>%
+  group_by(filename, subject,bin_frame, expression, posed.spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+
+  gather("AU", "Coef", -bin_frame,-filename, -expression,-subject,-posed.spoken)%>%
+    group_by(subject,posed.spoken,AU)%>%
+  mutate(Coef = maxnormalize(Coef))%>%
+  ggplot(aes(bin_frame,AU,fill= Coef))+
+  geom_tile()+
+  facet_grid(expression~posed.spoken)+
+  scale_fill_viridis_c(option = "magma")
+
+
+# sd
+df_with_clusters6$posed.spoken<- "posed"
+bind_rows(
+  df_OF_output_AUsW_unblind_spoken1_binned [,c("filename","bin_frame", "subject" ,"expression","posed.spoken","drug.placebo", colnames(df_OF_output_AUsW_unblind_spoken1_binned[,c(17:33)]))] ,
+  df_with_clusters6[,c("filename","bin_frame", "subject" ,"expression","posed.spoken","drug.placebo", colnames(df_OF_output_AUsW_unblind_spoken1_binned[,c(17:33)]))])%>%
+  filter(!subject %in% tmp_subj_to_remove)%>%
+    subset(expression!= "neutral")%>%
+  # group_by(filename, subject,bin_frame, expression, posed.spoken)%>%
+
+
+  gather("AU", "Coef", -bin_frame,-filename, -expression,-subject,-posed.spoken,-drug.placebo) %>%
+      group_by(subject,posed.spoken,AU)%>%
+  mutate(Coef = scale(as.numeric(Coef, na.rm = T))) %>%
+  group_by(bin_frame, expression, posed.spoken,AU)%>%
+  subset(!is.na(Coef))%>%
+    summarise_at(c("Coef"), sd, na.rm = T) %>%
+
+  ggplot(aes(bin_frame,AU,fill= Coef))+
+  geom_tile()+
+  facet_grid(expression~posed.spoken)+
+  scale_fill_viridis_c(option = "magma")+
+  ylab("Variability - SD (z)")
+
+
+```
 
 spoken_posed_nmf$trans_entropy_perclust_use<- spoken_posed_nmf$trans_entropy_perclust$Entropy
 spoken_posed_nmf1<- spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
@@ -4724,14 +4899,3 @@ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
 
 ```
 
-  # ggtitle()
- paper_plots$ADFES_valence +
-  p$graphstyle+
-  scale_y_continuous(breaks = c(0, 50,100), limits = c(0,100))+
-  scale_color_brewer(palette = "Dark2")+
-  scale_fill_brewer(palette = "Dark2")+
-  theme(axis.title.x = element_blank(), axis.text.x = element_blank())
-paper_plots$ADFES_valence
-
-
-```
