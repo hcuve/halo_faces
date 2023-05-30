@@ -4801,7 +4801,7 @@ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
 ```
 
 
-AU visualisation
+AU visualisation for SM
 
 
 ```{r}
