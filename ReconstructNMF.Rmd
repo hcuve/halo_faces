@@ -1,0 +1,89 @@
+---
+title: "Reconstruct NMF"
+output: html_document
+date: "2023-09-27"
+---
+
+```{r setup, include=FALSE}
+# reconstruct
+
+res_k3
+
+install.packages("NMF")
+install.packages(Biobase)
+library(biobase)
+library(NMF)
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("Biobase")
+
+NMF
+
+
+tmp_W <- basis(res_k3)
+tmp_H <- coef(res_k3)
+
+
+res_k3
+approximate_data <- tmp_W %*% tmp_H
+
+
+tmp_approximate_data<- as.data.frame(approximate_data)
+
+
+tmp_approximate_data
+
+# get some columns back
+tmp_approximate_data$filename<-
+df_OF_output_AUsW_unblind_posed_binned$filename
+
+tmp_approximate_data$expression<-
+df_OF_output_AUsW_unblind_posed_binned$expression
+
+tmp_approximate_data$bin_frame<-
+df_OF_output_AUsW_unblind_posed_binned$bin_frame
+
+unique(tmp_approximate_data$filename)
+
+library(tidyverse)
+
+
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2,10,16:32)]%>%
+  subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+  gather("AU", "AUvalue", - filename, - expression, - bin_frame)%>%
+  mutate(AUvalue = normalize_0_1(AUvalue))%>%
+  ggplot(aes(bin_frame, AUvalue, group = AU))+
+  geom_line()
+tmp_approximate_data%>%
+  subset(filename == "./cut_posed_sad_day1_p17.csv")%>%
+  gather("AU", "AUvalue", - filename, - expression, - bin_frame)%>%
+  mutate(AUvalue = normalize_0_1(AUvalue))%>%
+  ggplot(aes(bin_frame, AUvalue, group = AU))+
+  geom_line()
+
+
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

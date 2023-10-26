@@ -1,0 +1,298 @@
+---
+title: "Untitled"
+author: "Helio Cuve"
+date: "2023-04-28"
+output: html_document
+---
+
+# include activation
+
+```{r}
+
+
+# Load the required packages
+library(dplyr)
+library(purrr)
+
+# Load the required packages
+library(dplyr)
+library(purrr)
+
+# Define a custom function to perform max-norm normalization
+maxnorm <- function(x) {
+  x / max(abs(x))
+}
+
+# Define a custom function to perform clustering with k-means
+perform_kmeans_clustering <- function(data) {
+  # Normalize the X, Y, and the new 'compavg' columns using max-norm
+  data$sp_avg <- maxnorm(data$sp_avg)
+  data$comp_delta_avg <- maxnorm(data$comp_delta_avg)
+  data$compavg <- maxnorm(data$compavg)
+  
+  kmeans_result <- kmeans(data[, c("sp_avg", "comp_delta_avg", "compavg")], centers = 3)
+  
+  # Calculate the Euclidean distance between the centroids and the reference point (0, 0, 0)
+  distances <- sqrt(rowSums((kmeans_result$centers - c(0, 0, 0))^2))
+  
+  # Sort the cluster indices by the calculated distances
+  sorted_cluster_indices <- order(distances)
+  
+  # Create a named vector to map the original cluster labels to the sorted labels
+  label_mapping <- setNames(sorted_cluster_indices, sort(unique(kmeans_result$cluster)))
+  
+  # Assign the consistent cluster labels
+  data$cluster_avg_new <- as.integer(factor(kmeans_result$cluster, levels = names(label_mapping), labels = label_mapping))
+  
+  return(data)
+}
+
+# Load the required packages
+library(dplyr)
+library(purrr)
+
+# Define a custom function to perform max-norm normalization
+maxnorm <- function(x) {
+  x / max(abs(x))
+}
+
+# Perform clustering and update the data frame with a new 'cluster' column
+df_with_clusters4 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
+  group_by(filename) %>%
+  group_split() %>%
+  map_dfr(perform_kmeans_clustering)
+
+
+
+
+
+df_with_clusters4
+  
+df_with_clusters4%>%
+    subset(idno == 50)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+df_with_clusters4%>%
+    subset(idno == 30)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+# Define a custom function to perform hierarchical clustering
+perform_hclust_clustering <- function(data) {
+  # Normalize the X, Y, and the 'compavg' columns using max-norm
+  data$sp_avg <- maxnorm(data$sp_avg)
+  data$comp_delta_avg <- maxnorm(data$comp_delta_avg)
+  data$compavg <- maxnorm(data$compavg)
+  
+  # Perform hierarchical clustering using the "complete" linkage method
+  dist_matrix <- dist(data[, c("sp_avg", "comp_delta_avg", "compavg")], method = "euclidean")
+  hclust_result <- hclust(dist_matrix, method = "complete")
+  
+  # Cut the tree to obtain 3 clusters
+  clusters <- cutree(hclust_result, k = 3)
+  
+  # Assign the cluster labels
+  data$cluster_avg_new <- clusters
+  
+  return(data)
+}
+
+
+
+# Load the required packages
+library(dplyr)
+library(purrr)
+
+# Define a custom function to perform max-norm normalization
+maxnorm <- function(x) {
+  x / max(abs(x))
+}
+
+# Perform clustering and update the data frame with a new 'cluster' column
+df_with_clusters5 <- df_OF_output_AUsW_unblind_posed_binned3_nona_clust %>%
+  group_by(filename) %>%
+  group_split() %>%
+  map_dfr(perform_hclust_clustering)
+
+
+unique(df_with_clusters4$cluster_avg_new)
+
+df_with_clusters5hier$cluster_avg_new
+unique(df_with_clusters5hier$cluster_avg_new)
+
+
+  
+df_with_clusters5%>%
+    subset(idno == 50)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+df_with_clusters5%>%
+    subset(idno == 30)%>%
+  # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+
+  ggplot(aes(as.numeric(bin_frame), sp_avg))+
+
+  geom_rect(aes(xmin = bin_frame, xmax = dplyr::lag(bin_frame), ymin = -Inf, ymax = Inf, fill = factor(cluster_avg_new)), 
+            alpha = .6)  +
+    geom_line(size = 1)+
+  geom_line(aes(y = comp_delta_avg),  size = 1, linetype = 2)+
+  geom_line(aes(y = comp1))+
+  geom_line(aes(y = comp2))+
+  geom_line(aes(y = comp3))+
+  # geom_rect(aes(xmin=kmean_order-0.5, xmax=kmean_order+0.5))+ 
+  # geom_smooth(se = F)+
+  # facet_grid(expression~component)+
+  theme_classic()
+
+
+
+```
+
+
+```{r}
+
+  df_with_clusters6%>%
+    # subset(drug.placebo = placebo)%>%
+    group_by(filename, cluster_across, expression, subject)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+    group_by(filename, cluster_across,expression,drug.placebo)%>%
+    summarise_if(is.numeric, mean, na.rm = T)%>%
+    ggplot(aes(max_displacement, peak_speed,color = expression))+
+      geom_point()+
+  # geom_smooth(method = "glm",se = T, formula = y~log(x+.1),
+  # method.args = list(
+  #                    start=c(A=0,B=0)))+
+    geom_smooth(method = "lm",se = T)+
+    facet_grid(~cluster_across)
+
+  df_with_clusters6%>%
+    # subset(drug.placebo = placebo)%>%
+    group_by(filename, cluster_across, expression, subject)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+    group_by(filename, cluster_across,expression,drug.placebo)%>%
+    summarise_if(is.numeric, mean, na.rm = T)%>%
+    ggplot(aes(max_displacement, peak_speed,color = expression))+
+      geom_point()+
+  # geom_smooth(method = "glm",se = T, formula = y~log(x+.1),
+  # method.args = list(
+  #                    start=c(A=0,B=0)))+
+    # geom_smooth(method = "lm",se = T)+
+    facet_grid(~cluster_across)
+  
+  
+    df_with_clusters6_lm_nonl<-df_with_clusters6%>%
+    # subset(drug.placebo = placebo)%>%
+    group_by(filename, cluster_across, expression, subject)%>%
+    mutate(peak_speed =  sum(abs(sp_avg), na.rm = TRUE),
+           max_displacement = sum(abs(comp_delta_avg), na.rm = TRUE))%>%
+    group_by(filename,subject, cluster_across,expression,drug.placebo)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+    
+    
+    
+ lmermodels$peak_disp_lin<-   lmer(peak_speed~max_displacement + (1| subject),
+         REML = F,
+         data = df_with_clusters6_lm_nonl)
+ 
+ ?poly
+ 
+ df_with_clusters6_lm_nonl$poly_terms1 <- poly(df_with_clusters6_lm_nonl$peak_speed, degree = 1)[,1]
+   df_with_clusters6_lm_nonl$poly_terms2
+   
+  df_with_clusters6_lm_nonl$poly_terms2 <- poly(df_with_clusters6_lm_nonl$peak_speed, degree = 2)[,2]
+model <- lm(peak_displacement ~ poly_terms, data = mydata)
+
+
+df_with_clusters6_lm_nonl$poly_terms1<- scale(df_with_clusters6_lm_nonl$poly_terms1)
+df_with_clusters6_lm_nonl$poly_terms2<- scale(df_with_clusters6_lm_nonl$poly_terms2)  
+
+lmermodels$peak_disp_lin<-   lmer(peak_speed~ poly_terms1+  (1| subject),
+         REML = F,
+         data = df_with_clusters6_lm_nonl)
+  
+  
+    lmermodels$peak_disp_lin_nl2 <-   lmer(peak_speed~ poly_terms1+poly_terms2+ (1| subject),
+         REML = F,
+         data = df_with_clusters6_lm_nonl)
+    
+    summary( lmermodels$peak_disp_lin_nl)
+    summary( lmermodels$peak_disp_lin_nl2)
+    
+    
+      df_with_clusters6%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = comp_delta_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+      
+      
+            df_with_clusters6%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(subject), fill = sp_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")+
+    facet_grid(~expression)
+      
+      df_with_clusters6%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(expression), fill = sp_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")
+    # facet_grid(~expression)
+      
+      
+      
+            df_with_clusters6%>%
+      # subset(filename == "./cut_posed_sad_day1_p7.csv")%>%
+    ggplot(aes(as.numeric(bin_frame), as.factor(expression), fill = comp_delta_avg))+
+    geom_tile()+
+        scale_fill_viridis_c(option = "magma")
+    # facet_grid(~expression)
+  
+```

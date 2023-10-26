@@ -89,7 +89,7 @@ estim.k.random <- nmf(V.random, 2:6, nrun=100, seed=123456,
 plot(res_k3, estim.k.random) + 
   geom_vline(xintercept = 3)
 
-
+res_k3@
 ```
 
 We select values of k where the magnitude of the cophenetic correlation coefficient begins to fall (see below).
@@ -925,6 +925,14 @@ chool_talk$ts_hm
 
 store NMF components o dataset
 ```{r}
+
+# reconstruct
+
+res_k3
+
+install.packages(NMF)
+
+
 df_OF_output_AUsW_unblind_posed_binned$NMFtable<- as.data.frame(res_k3@fit@W)
 
 df_OF_output_AUsW_unblind_posed_binned$comp1 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V1
