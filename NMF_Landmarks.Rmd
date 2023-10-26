@@ -1,0 +1,71 @@
+---
+title: "NMF_landmarks"
+output: html_document
+date: "2023-10-26"
+---
+
+
+do an NMF on landmarks only
+
+```{r}
+
+colnames(df_OF_output)
+df_OF_output
+
+df_OF_output_AU_andLand_unblind
+df_OF_output_AU_andLand_unblind_spoken_binned
+
+df_OF_output_AU_andLand_unblind_spoken_binned$timestamp
+unique(df_OF_output_AU_andLand_unblind_spoken_binned$bin_frame)
+
+```
+
+
+
+```{r}
+colnames(df_OF_output_AU_andLand_unblind_spoken_binned)
+colnames(df_OF_output_AU_andLand_unblind_spoken_binned[c(1,17:152)])
+
+df_OF_output_landm<-df_OF_output_AU_andLand_unblind_spoken_binned[c(1,2:3,8:17:152)]
+
+colnames(df_OF_output_land)
+
+library(tidyverse)
+
+sample_landm<- df_OF_output_landm%>%
+  subset(filename == "./cut_posed_angry_day1_p1.csv")
+
+write_csv(sample_landm, "sample_landm.csv")
+
+```
+
+normalise rotation translation and looming (procrustes analysis)
+
+````{r}
+install.packages("geomorph")
+library(geomorph)
+library(tidyr)
+
+# Convert wide format data to a 3D array: [nlandmarks, ndimensions, nsamples]
+colnames(sample_landm)
+nlandmarks <- ncol(sample_landm[13:148]) / 2
+
+nsamples <- nrow(df)
+
+landmarks_array <- array(NA, dim = c(nlandmarks, 2, nsamples))
+
+for (sample in 1:nsamples) {
+  landmarks_array[,,sample] <- matrix(df[sample, ], ncol = 2, byrow = TRUE)
+}
+
+# Perform Procrustes Analysis
+aligned_landmarks <- gpagen(landmarks_array)
+aligned_coords <- aligned_landmarks$coords
+
+
+
+
+```
+
+
+```{r}

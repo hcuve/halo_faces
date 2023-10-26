@@ -1,0 +1,27 @@
+---
+title: "NMF_landmarks"
+output: html_document
+date: "2023-10-26"
+---
+
+
+do an NMF on landmarks only
+
+```{r}
+
+colnames(df_OF_output)
+df_OF_output
+
+
+df_OF_output_AUs<- df_OF_output[,c(1:5,680:715)]
+colnames(df_OF_output_AUsW_unblind_posed)
+df_OF_output_AUsW_unblind_posed_binned <-df_OF_output_AUsW_unblind_posed%>%
+  group_by(filename, subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression )%>%
+  mutate(bin_frame = cut(frame, 100, labels = FALSE))%>%
+  group_by(filename,bin_frame,subject,test.day, age, gender,BMI,drug.day, drug.placebo, expression)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+colnames(df_OF_output_AUsW_unblind_posed_binned) 
+
+
+
+```
