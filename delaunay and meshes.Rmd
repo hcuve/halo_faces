@@ -653,6 +653,35 @@ do.call(rbind, lapply(seq_along(tri_ang),
     theme(
                                        legend.position = "none")
 
+
+
+```
+
+
+find the correct displays for components
+```{r}
+delaunay_posed_plots$posed_tri_comp1
+delaunay_posed_plots$posed_tri_comp2
+delaunay_posed_plots$posed_tri_comp3
+
+delaunay_posed_plots$posed_triang_ang_comp1
+delaunay_posed_plots$posed_triang_happy_comp2
+delaunay_posed_plots$posed_triang_sad_comp3
+delaunay_posed_plots$posed_triang_ang_comp3
+delaunay_posed_plots$posed_triang_happy_comp3
+
+
+```
+
+delaunay_posed_plots$posed_tri_comp1
+delaunay_spoken_plots$spoken_tri_comp1.1
+
+delaunay_posed_plots$posed_tri_comp2
+delaunay_spoken_plots$spoken_tri_comp2.1
+
+
+
+
 delaunay_posed_plots$posed_triang_ang_comp1
 delaunay_posed_plots$posed_triang_ang_comp2
 delaunay_posed_plots$posed_triang_ang_comp3
@@ -1980,10 +2009,22 @@ triangle_plots$delaunay_tri_comp1<-delaunay_posed_plots$posed_tri_comp1+  theme(
 triangle_plots$delaunay_tri_comp2<-delaunay_posed_plots$posed_tri_comp2+  theme(plot.background = element_rect(fill = "black"))
 
 triangle_plots$delaunay_tri_comp3 <- delaunay_posed_plots$posed_tri_comp3+ theme(plot.background = element_rect(fill = "black"))
+delaunay_posed_plots$posed_triang_ang_comp1
+delaunay_posed_plots$posed_triang_ang_comp1
+delaunay_posed_plots$posed_triang_happy_comp2
+delaunay_posed_plots$posed_triang_sad_comp3
+delaunay_posed_plots$posed_triang_happy_comp3
+delaunay_posed_plots$posed_triang_ang_comp3
+
+
+```
 
 triangle_plots$delaunay_tri_comp1
 triangle_plots$delaunay_tri_comp2
 triangle_plots$delaunay_tri_comp3
+
+
+triangle_plots$
 
 ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1.1,
        width = 700,

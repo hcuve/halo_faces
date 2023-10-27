@@ -881,8 +881,17 @@ do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang),
     theme(
                                        legend.position = "none")
 
-
+delaunay_posed_plots$posed_triang_ang_comp1
 delaunay_spoken_plots$spoken_triang_ang_comp1
+
+delaunay_posed_plots$posed_triang_ang_comp2
+delaunay_spoken_plots$spoken_triang_ang_comp2
+
+
+delaunay_posed_plots$posed_triang_ang_comp3
+delaunay_spoken_plots$spoken_triang_ang_comp3
+
+```
 
 
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 

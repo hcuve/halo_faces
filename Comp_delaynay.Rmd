@@ -1,0 +1,7 @@
+---
+title: "Components_delaunay"
+output: html_document
+date: "2023-10-27"
+---
+
+

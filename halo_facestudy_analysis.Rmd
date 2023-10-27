@@ -1199,17 +1199,7 @@ paper_plots$posed_comp_ts_hm
 
 
 ````{r}
-# chool_talk$AU_NM <- chool_talk$AU_NM +
-#   xlab("Component (K)")
-# 
-#   ggtitle("POSED EXPRESSIONS")
 
-# chool_talk$AU_NM 
-# paper_plots<- list()
-# 
-# chool_talk$AU_NM+
-#    theme(plot.background = element_rect(fill = "black"))
-# panel
 require(patchwork)
 
 paper_plots$NMF_panel_posed
@@ -1223,7 +1213,7 @@ test
 library(patchwork)
 # make sure to flip 1 to 3
 
- triangle_plots$delaunay_tri_comp1.1 <- triangle_plots$delaunay_tri_comp1+
+ triangle_plots$delaunay_tri_comp1.1 <- triangle_plots$delaunay_tri_comp1 +
 theme_void()+theme(legend.position = "none",
                      axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp1")
 
@@ -1246,6 +1236,10 @@ paper_plots$posed_comp_ts_hm
 ts_ts_hm_compns<- (paper_plots$posed_comp_ts/paper_plots$posed_comp_ts_hm)
 
 
+
+triangle_plots$delaunay_tri_comp
+
+comp1_2_3
 ```
 
 
@@ -1319,7 +1313,7 @@ require(tidyverse)
 
 require(patchwork)
 
-paper_plots$panel_NMF_posed<-
+paper_plots$panel_NMF_posed <-
 wrap_elements(full = test1) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))
    plot_annotation(tag_levels = 'A')
 
