@@ -460,8 +460,6 @@ correlation <- cor(acov)
 print(correlation)
 ```{r}
 
-
-
 df_OF_output_land_spoken_binned_select_alligned_eyes%>%
   group_by(lanmark_id)%>%
   summarise_if(is.numeric, mean, narm = TRUE)%>%
@@ -855,13 +853,14 @@ delaunay_spoken_data$anger_del$cor_comp1_land_cum_diff_fill_sq_max_norm
 #                           delaunay_spoken_data$anger_del$y_new_norm_rot2))
 
 # 
-# tri_angtest <- triang.list(deldir(delaunay_spoken_data$anger_del$x_new_norm_rot2, 
-#                           delaunay_spoken_data$anger_del$y_new_norm_rot2))
+library(deldir)
+tri_angtest <- triang.list(deldir(delaunay_spoken_data$anger_del$x_new_norm_rot2,
+                          delaunay_spoken_data$anger_del$y_new_norm_rot2))
 # 
 
 delaunay_spoken_data$tri_ang
 
-delaunay_spoken_plots$spoken_triang_ang_comp1 <-
+delaunay_spoken_plots$spoken_triang_ang_comp1
 
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_ang), 
                       function(x) {
@@ -1284,7 +1283,9 @@ spoken_tri_sad<- triang.list(deldir(delaunay_spoken_data$sad_del$x_new_norm_rot2
 
 
 
-delaunay_spoken_plots$spoken_triang_sad<-
+
+delaunay_spoken_plots$spoken_triang_sad
+
 do.call(rbind, lapply(seq_along(delaunay_spoken_data$tri_sad), 
                       function(x) {
   data.frame(x_new_norm_rot2 = delaunay_spoken_data$tri_sad[[x]]$x, 

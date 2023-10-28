@@ -1991,53 +1991,27 @@ data.frame(x_new_norm_rot2 = tri_comp1[[x]]$x, y_new_norm_rot2 = tri_comp1[[x]]$
         legend.position = "none")
 
 
-```{r}
-# triangle_plots$delaunay_tri_comp3
-# triangle_plots$delaunay_tri_comp3+theme_void()+theme(legend.position = "none")
-# triangle_plots$delaunay_tri_comp2+theme_void()+theme(legend.position = "none")
-# 
-# triangle_plots$delaunay_tri_comp1+theme_void()+theme(legend.position = "none")
-# triangle_plots$delaunay_tri_comp3
-# 
-# 
-# triangle_plots$delaunay_tri_comp3+theme(legend.position = "none")
-# triangle_plots$delaunay_tri_comp2+theme(legend.position = "none")
-# 
-# triangle_plots$delaunay_tri_comp1+theme(legend.position = "none")
-
-triangle_plots$delaunay_tri_comp1<-delaunay_posed_plots$posed_tri_comp1+  theme(plot.background = element_rect(fill = "black"))
-triangle_plots$delaunay_tri_comp2<-delaunay_posed_plots$posed_tri_comp2+  theme(plot.background = element_rect(fill = "black"))
-
-triangle_plots$delaunay_tri_comp3 <- delaunay_posed_plots$posed_tri_comp3+ theme(plot.background = element_rect(fill = "black"))
-delaunay_posed_plots$posed_triang_ang_comp1
-delaunay_posed_plots$posed_triang_ang_comp1
-delaunay_posed_plots$posed_triang_happy_comp2
-delaunay_posed_plots$posed_triang_sad_comp3
-delaunay_posed_plots$posed_triang_happy_comp3
-delaunay_posed_plots$posed_triang_ang_comp3
-
-
-```
 
 triangle_plots$delaunay_tri_comp1
 triangle_plots$delaunay_tri_comp2
 triangle_plots$delaunay_tri_comp3
 
+```
+store pngs for github
+```{r}
 
-triangle_plots$
-
-ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1.1,
+ggsave("comp1noct.png", device = "png", triangle_plots$delaunay_tri_comp1,
        width = 700,
        height = 700,
               units = 'px',
        dpi = 500)
 
-ggsave("comp2n.png", device = "png", triangle_plots$delaunay_tri_comp2,
+ggsave("comp2noct.png", device = "png", triangle_plots$delaunay_tri_comp2,
          width = 700,
        height = 700,
                      units = 'px',
        dpi = 500)
-ggsave("comp3n.png", device = "png", triangle_plots$delaunay_tri_comp3,
+ggsave("comp3noct.png", device = "png", triangle_plots$delaunay_tri_comp3,
            width = 700,
        height = 700,
                      units = 'px',
@@ -2064,25 +2038,25 @@ ggsave("sad.png", device = "png", triangle_plots$delaunay_tri_sad,
        dpi = 500)
 
 
-
-
-ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1.1,
-       width = 10,
-       height = 12,
-              # units = 'px',
-       dpi = 500)
-
-ggsave("comp2n.png", device = "png", triangle_plots$delaunay_tri_comp2.1,
-       width = 10,
-       height = 12,
-              # units = 'px',
-       dpi = 500)
-
-ggsave("comp3n.png", device = "png", triangle_plots$delaunay_tri_comp3.1,
-       width = 10,
-       height = 12,
-              # units = 'px',
-       dpi = 500)
+# 
+# 
+# ggsave("comp1n.png", device = "png", triangle_plots$delaunay_tri_comp1.1,
+#        width = 10,
+#        height = 12,
+#               # units = 'px',
+#        dpi = 500)
+# 
+# ggsave("comp2n.png", device = "png", triangle_plots$delaunay_tri_comp2.1,
+#        width = 10,
+#        height = 12,
+#               # units = 'px',
+#        dpi = 500)
+# 
+# ggsave("comp3n.png", device = "png", triangle_plots$delaunay_tri_comp3.1,
+#        width = 10,
+#        height = 12,
+#               # units = 'px',
+#        dpi = 500)
 ```
 conclusion = use raw displacement? or au
 

@@ -1,0 +1,96 @@
+---
+title: "Figure 2 - Posed NMF panel"
+output: html_document
+date: "2023-10-27"
+---
+
+
+
+START COMBINING
+
+
+
+```{r}
+ # install.packages("ggtext")
+# install.packages("matrixStats")
+library(patchwork)
+library(ggtext)
+
+test1 <- (wrap_elements(full = chool_talk$AU_NM)+ wrap_elements(full = comp1_2_3)+wrap_elements(ts_ts_hm_compns))+
+    plot_layout(ncol = 3, widths = c(1.2,.5,1))+ plot_annotation(tag_levels = 'A')+
+  theme(plot.tag = element_text(size = 20*(sf+.5)))
+ 
+ test1
+ 
+```
+
+
+```{r}
+triangle_plots$delaunay_tri_ang<-triangle_plots$delaunay_tri_ang+scale_x_continuous(limits = c(-.2,1.2))
+triangle_plots$delaunay_tri_happy<-triangle_plots$delaunay_tri_happy+scale_x_continuous(limits = c(-.2,1.2))
+
+triangle_plots$delaunay_tri_sad<-triangle_plots$delaunay_tri_sad+scale_x_continuous(limits = c(-.2,1.2))
+
+
+```
+
+
+
+
+```{r}
+patchwork::wrap_elements(test3)/test2
+
+
+# triangle_plots$delaunay_tri_ang+
+#   xlim(-10,110)
+triang_patch<- (triangle_plots$delaunay_tri_ang +
+                         triangle_plots$delaunay_tri_happy+
+                         triangle_plots$delaunay_tri_sad)
+
+test2 <-(chool_talk$ts_smooth/
+           patchwork::wrap_elements(triang_patch)/
+    chool_talk$ts_hm)+
+  plot_layout(nrow = 3, heights = c(1,1.5,1))+
+  plot_annotation(tag_levels = list(c('D', 'E','F')))+
+  theme(plot.tag = element_text(size =20*(sf+.5)))
+  
+
+test2
+
+
+```
+COMBINE ALL TOGETHER
+
+
+```{r} 
+ # (chool_talk$ts_smooth/chool_talk$ts_hm)+
+  # plot_layout(ncol = 2, widths = c(.7,2))
+# require(ggtext)
+# require(tidyverse)
+# 
+# require(patchwork)
+
+paper_plots$panel_NMF_posed <-
+wrap_elements(full = test1) + wrap_elements(full = test2) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))
+   # plot_annotation(tag_levels = 'A')
+
+
+paper_plots$panel_NMF_posed
+
+ggsave("panel_NMF_posed.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
+       width = 15,
+       height = 15,
+       dpi = 800)
+
+ggsave("panel_NMF_poseddpi300.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
+       width = 25,
+       height = 25,
+       dpi = 300)
+
+ggsave("panel_NMF_posed1.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
+       width = 25,
+       height = 25,
+       dpi = 800)
+
+```
+

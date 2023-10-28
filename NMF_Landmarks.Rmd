@@ -31,7 +31,7 @@ df_OF_output_landm<-df_OF_output_AU_andLand_unblind_spoken_binned[c(1,2:3,8:17:1
 colnames(df_OF_output_land)
 
 library(tidyverse)
-
+unique(df_OF_output_landm$filename)
 sample_landm<- df_OF_output_landm%>%
   subset(filename == "./cut_posed_angry_day1_p1.csv")
 
@@ -40,32 +40,3 @@ write_csv(sample_landm, "sample_landm.csv")
 ```
 
 normalise rotation translation and looming (procrustes analysis)
-
-````{r}
-install.packages("geomorph")
-library(geomorph)
-library(tidyr)
-
-# Convert wide format data to a 3D array: [nlandmarks, ndimensions, nsamples]
-colnames(sample_landm)
-nlandmarks <- ncol(sample_landm[13:148]) / 2
-
-nsamples <- nrow(df)
-
-landmarks_array <- array(NA, dim = c(nlandmarks, 2, nsamples))
-
-for (sample in 1:nsamples) {
-  landmarks_array[,,sample] <- matrix(df[sample, ], ncol = 2, byrow = TRUE)
-}
-
-# Perform Procrustes Analysis
-aligned_landmarks <- gpagen(landmarks_array)
-aligned_coords <- aligned_landmarks$coords
-
-
-
-
-```
-
-
-```{r}

@@ -5,3 +5,39 @@ date: "2023-10-27"
 ---
 
 
+```{r}
+
+
+# use the most dictive emotion to show each componet
+
+# triangle_plots$delaunay_tri_comp1<-delaunay_posed_plots$posed_tri_comp1_+  theme(plot.background = element_rect(fill = "black"))
+
+library(tidyverse)
+
+delaunay_posed_plots$posed_triang_ang_comp1
+delaunay_posed_plots$posed_triang_happy_comp2
+delaunay_posed_plots$posed_triang_sad_comp3
+
+triangle_plots$delaunay_tri_comp1 <- delaunay_posed_plots$posed_triang_ang_comp1+  theme(plot.background = element_rect(fill = "black"))
+
+
+triangle_plots$delaunay_tri_comp2<-delaunay_posed_plots$posed_triang_happy_comp2+  theme(plot.background = element_rect(fill = "black"))
+
+triangle_plots$delaunay_tri_comp3 <- delaunay_posed_plots$posed_triang_sad_comp3+ theme(plot.background = element_rect(fill = "black"))
+
+
+
+triangle_plots$delaunay_tri_comp3 
+triangle_plots$delaunay_tri_comp3 
+triangle_plots$delaunay_tri_comp3 
+# delaunay_posed_plots$posed_triang_ang_comp1
+# delaunay_posed_plots$posed_triang_ang_comp1
+# delaunay_posed_plots$posed_triang_happy_comp2
+# delaunay_posed_plots$posed_triang_sad_comp3
+# delaunay_posed_plots$posed_triang_happy_comp3
+# delaunay_posed_plots$posed_triang_ang_comp3
+
+
+```
+
+```

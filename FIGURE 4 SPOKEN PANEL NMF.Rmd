@@ -1,0 +1,539 @@
+---
+§title: "FIGURE 4 SPOKEN PANEL NMF"
+output: html_document
+date: "2023-10-27"
+---
+
+
+try to plot emotions separatelly
+
+
+```{r}
+df_OF_output_land_spoken_binned_select_alligned_eyes_agg
+
+colnames(df_OF_output_land_spoken_binned_select_alligned_eyes_agg)
+temp_df<- df_OF_output_land_spoken_binned_select_alligned_eyes_agg[,c()]
+df_OF_output_land_spoken_binned_select_alligned_eyes_agg%>%
+  group_by(expression,lanmark_id)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(x_new_norm_rot2, y_new_norm_rot2, colour = 1-cum_x_y_norm_abs_diff_mean_fill_norm))+
+  geom_point()+
+  ylim(1,0)+
+  facet_grid(~expression)
+    p$graphstyle_int
+  scale_fill_brewer(palette = "Dark2")
+   scale_color_viridis_d(option = "magma")
+  
+
+```
+delaunay_spoken_data[["anger_del"]]
+
+```{r}
+
+
+delaunay_spoken_plots$spoken_tri_comp1
+
+# black thememd components
+delaunay_spoken_plots$spoken_tri_comp1_black<-delaunay_spoken_plots$spoken_tri_comp1 +  theme(plot.background = element_rect(fill = "black"))
+
+delaunay_spoken_plots$spoken_tri_comp2_black<-delaunay_spoken_plots$spoken_tri_comp2+  theme(plot.background = element_rect(fill = "black"))
+
+delaunay_spoken_plots$spoken_tri_comp3_black <- delaunay_spoken_plots$spoken_tri_comp3+ theme(plot.background = element_rect(fill = "black"))
+
+# components with titles
+
+delaunay_spoken_plots$spoken_tri_comp1.1 <-delaunay_spoken_plots$spoken_tri_comp1+
+theme_void()+theme(legend.position = "none",
+                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp1")
+
+delaunay_spoken_plots$spoken_tri_comp2.1<- delaunay_spoken_plots$spoken_tri_comp2+
+theme_void()+theme(legend.position = "none",
+                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp2")
+ 
+delaunay_spoken_plots$spoken_tri_comp3.1<- delaunay_spoken_plots$spoken_tri_comp3 +
+theme_void()+theme(legend.position = "none",
+                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp3")
+
+
+# export components to be used as axis labels
+
+delaunay_spoken_plots$spoken_tri_comp1_black
+delaunay_spoken_plots$spoken_tri_comp2_black
+delaunay_spoken_plots$spoken_tri_comp3_black
+
+delaunay_spoken_plots$spoken_triang_sad_comp3
+
+ggsave("comp1_spoken_black.png", device = "png", delaunay_spoken_plots$spoken_tri_comp1_black,
+       width = 700,
+       height = 700,
+              units = 'px',
+       dpi = 500)
+ggsave("comp2_spoken_black.png", device = "png", delaunay_spoken_plots$spoken_tri_comp2_black,
+       width = 700,
+       height = 700,
+              units = 'px',
+       dpi = 500)
+
+
+ggsave("comp3_spoken_black.png", device = "png", delaunay_spoken_plots$spoken_tri_comp3_black,
+       width = 700,
+       height = 700,
+              units = 'px',
+       dpi = 500)
+
+delaunay_spoken_plots$spoken_tri_comp1.1
+
+```
+
+Now heatmap
+```{r}
+# chool_talk$AU_NM 
+paper_plots$spoken_NMF_hm <-
+
+as.data.frame(res_k3_spoken1@fit@H) %>%
+  mutate(component = c(1,3,2)) %>%
+  gather(AU, coef, -component)%>%
+  group_by(as.factor(component))%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )%>%
+  arrange(AU_code)%>%
+  ggplot(aes(as.factor(component),AU, fill = coef))+
+  geom_tile()+
+  theme_classic()+
+  # scale_fill_viridis_()
+   # scale_fill_()+#)+
+   scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  xlab("K")+
+  p$graphstyle_int +
+guides(fill=guide_colorbar(ticks.colour = NA))
+    # xlab("Component (K)")
+  # ggtitle("SPOKEN EXPRESSIONS")
+  
+
+paper_plots$spoken_NMF_hm
+
+
+#load component icons
+# https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/comp1_spoken_black.png
+labels_spoken <- c(
+  `1` = "<img src='https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/comp1_spoken_black.png'
+    width='100' /><br> 1",
+  `2` = "<img src='https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/comp2_spoken_black.png'
+    width='100' /><br> 2",
+  `3` = "<img src='https://raw.githubusercontent.com/hcuve/halo_faces/main/ggtextimgs/comp3_spoken_black.png'
+    width='100' /><br> 3"
+)
+# ggtext::
+
+require(ggtext)
+
+paper_plots$spoken_NMF_hm<-
+paper_plots$spoken_NMF_hm +
+  xlab("Component (K)")+
+    scale_x_discrete(
+      position = "top",
+    # name = NULL,
+    labels = labels_spoken
+  ) +
+  theme(
+     axis.text.x.top = element_markdown(color = "black", size = 16*(sf+.5)),
+     axis.title.x = element_text(size = 16*(sf+.5)),#update this,
+     axis.title.y = element_text(size = 16*(sf+.5)),#update this,
+     axis.text.x = element_text(size = 15*(sf+.5), colour = "black"),
+  axis.text.y = element_text(size = 15*(sf+.5), colour = "black"),
+  legend.key.height = unit(1, "cm"),
+  legend.key.width = unit(.7, "cm"),
+  legend.text = element_text(size = 16*(sf+.5)),
+  legend.title= element_text(size = 16*(sf+.5))
+    # axis.text.x = element_markdown(color = "black", size = 15),
+       # axis.text.x.top = element_markdown(size = 8, lineheight = 1.05)
+     # axis.title.x = element_markdown(color = "black", size = 20)
+  )
+
+
+paper_plots$spoken_NMF_hm
+
+
+
+```
+
+
+COMPONENTS PATCH
+
+```{R}
+
+delaunay_spoken_plots$COMP1_2_3_patch<- delaunay_spoken_plots$spoken_tri_comp1.1/
+  delaunay_spoken_plots$spoken_tri_comp2.1/
+  delaunay_spoken_plots$spoken_tri_comp3.1
+
+delaunay_spoken_plots$COMP1_2_3_patch
+
+
+```
+
+store components in the dataset
+```{r}
+# store nmftable in DF
+df_OF_output_AUsW_unblind_spoken1$NMFtable_k3<- as.data.frame(res_k3_spoken1@fit@W)$V1
+
+# store components
+df_OF_output_AUsW_unblind_spoken1_binned$k3_comp1 = as.data.frame(res_k3_spoken1@fit@W)$V1
+df_OF_output_AUsW_unblind_spoken1_binned$k3_comp2 = as.data.frame(res_k3_spoken1@fit@W)$V2
+df_OF_output_AUsW_unblind_spoken1_binned$k3_comp3 = as.data.frame(res_k3_spoken1@fit@W)$V3
+
+
+
+# visualisation based on time
+
+
+# chool_talk$ts_smooth<- 
+
+colnames(df_OF_output_AUsW_unblind_spoken1_binned)
+# colnames(  df_OF_output_AUsW_unblind_spoken1[,c(1,6:7,9:10,33:35)])
+  
+  
+  df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+  
+  
+  # ts by expression
+   df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = expression))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~component  )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+  
+  
+  # heatmap
+  
+  
+  # chool_talk$ts_hm<-
+df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  group_by(filename,component)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max)%>%
+  # mutate_at(c("coef"), scale)%>%
+  group_by(component, expression, bin_frame)%>%
+
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, component, fill= coef))+
+  geom_tile()+
+  xlab("time bin")+
+  scale_fill_viridis_c(option = "magma")+
+  # geom_smooth(se = F)+
+  facet_grid(~expression)+
+  theme_classic()+
+  p$graphstyle_int+
+  guides(fill=guide_colorbar(ticks.colour = NA))+
+  theme(panel.spacing = unit(1, "cm"))
+  
+
+
+
+
+library(patchwork)
+# 
+# chool_talk$ts_nmf_heat_NMF <- (chool_talk$ts_smooth/
+#   chool_talk$ts_hm)+
+#   plot_layout(heights = c(1,2))
+# 
+# chool_talk$ts_nmf_heat_NMF
+# 
+# ggsave("ts_nmf_heat_NMF.tiff", chool_talk$ts_nmf_heat_NMF, device = "tiff",
+#        width = 10, height = 7, dpi = 800)
+
+```
+
+
+
+timeseries and hetmap timesereis across emotions
+
+```{r}
+# bind_rows(posed_NMF, spoken_NMF)%>%
+paper_plots$spoken_ts_across_exp<-
+
+
+  spoken_NMF%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename,-posed_spoken)%>%
+  # subset(expression!= "neutral")%>%
+    mutate(component = substring(component,4,8))%>%
+  
+      group_by(filename,component,posed_spoken)%>%
+  mutate(coef_max = max(coef),
+         coef = maxnormalize(coef)) %>%
+  
+  group_by( component, bin_frame,posed_spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  # facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")+
+    scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+    # scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+  theme(panel.spacing.x = unit(1.5, "lines"))+
+  theme(legend.position = "top")
+
+  
+  paper_plots$spoken_ts_across_exp
+  
+  # heatmap ts
+  
+   paper_plots$spoken_NMF_ts_hm_across <- 
+  spoken_NMF%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename,-posed_spoken)%>%
+  # subset(expression!= "neutral")%>%
+    mutate(component = substring(component,4,8))%>%
+    mutate(expression = factor(expression, levels = c('angry', 'happy', 'sad', 'neutral')))%>%
+  
+      group_by(filename,component)%>%
+  mutate(coef_max = max(coef),
+         coef = maxnormalize(coef)) %>%
+  # 
+  # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  # group_by(filename,component)%>%
+  # mutate(coef_max = max(coef),
+  #        coef = coef/coef_max)%>%
+
+  group_by(component, bin_frame)%>%
+
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, component, fill= coef))+
+  geom_tile()+
+  xlab("time bin")+
+      scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  # scale_fill_viridis_c(option = "magma")+
+  # geom_smooth(se = F)+
+  # facet_grid(~expression)+
+  theme_classic()+
+  p$graphstyle_int+
+  guides(fill=guide_colorbar(ticks.colour = NA))+
+  # theme(panel.spacing = unit(1, "cm"))+
+    scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+  theme(panel.spacing.x = unit(1.5, "lines"))
+  
+   paper_plots$spoken_NMF_ts_hm_across 
+   
+   
+   
+spoken_ts_ts_hm_compns<- (   paper_plots$spoken_ts_across_exp/ paper_plots$spoken_NMF_ts_hm_across )
+
+spoken_ts_ts_hm_compns
+
+```
+combine spoken and posed
+
+```{r}
+
+spoken_NMF<- df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]
+
+posed_NMF<- 
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]
+
+df_OF_output_AUsW_unblind_spoken1_binned$k3_comp3
+
+posed_NMF$k3_comp1<- posed_NMF$comp1
+posed_NMF$k3_comp2<- posed_NMF$comp3
+posed_NMF$k3_comp3<- posed_NMF$comp2
+
+posed_NMF$comp1<- NULL
+posed_NMF$comp2<- NULL
+
+posed_NMF$comp3<- NULL
+
+posed_NMF$posed_spoken<- "posed"
+spoken_NMF$posed_spoken<- "spoken"
+
+
+# bind_rows(posed_NMF, spoken_NMF)%>%
+
+spoken_NMF
+paper_plots$spoken_NMF <-
+  spoken_NMF%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename,-posed_spoken)%>%
+  # subset(expression!= "neutral")%>%
+    mutate(component = substring(component,4,8))%>%
+  
+      group_by(filename,component,subject,expression,posed_spoken)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject,posed_spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+     mutate(expression = factor(expression, levels = c('angry', 'happy', 'sad', 'neutral')))%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")+
+    scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+    scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+  theme(panel.spacing.x = unit(1.5, "lines"))+
+  theme(legend.position = "top")
+  
+  paper_plots$spoken_NMF
+  
+  
+  
+  # ts heatmap
+  # df_OF_output_AUsW_unblind_spoken1_binned[,c(1,2:3,9:10,34:36)]%>%
+ paper_plots$spoken_NMF_ts_hm <- 
+  spoken_NMF%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename,-posed_spoken)%>%
+  # subset(expression!= "neutral")%>%
+    mutate(component = substring(component,4,8))%>%
+    mutate(expression = factor(expression, levels = c('angry', 'happy', 'sad', 'neutral')))%>%
+  
+      group_by(filename,component,subject,expression,posed_spoken)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  # 
+  # gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  # group_by(filename,component)%>%
+  # mutate(coef_max = max(coef),
+  #        coef = coef/coef_max)%>%
+
+  group_by(component, expression, bin_frame)%>%
+   mutate(expression = factor(expression, levels = c('angry', 'happy', 'sad', 'neutral')))%>%
+
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, component, fill= coef))+
+  geom_tile()+
+  xlab("time bin")+
+      scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  # scale_fill_viridis_c(option = "magma")+
+  # geom_smooth(se = F)+
+  facet_grid(~expression)+
+  theme_classic()+
+  p$graphstyle_int+
+  guides(fill=guide_colorbar(ticks.colour = NA))+
+  # theme(panel.spacing = unit(1, "cm"))+
+    scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+  theme(panel.spacing.x = unit(1.5, "lines"))
+
+  paper_plots$spoken_NMF_ts_hm
+  paper_plots$spoken_NMF
+  
+  
+  
+  # spoken_NMF$
+  
+```
+  
+ emotion triangles
+ 
+ 
+```{r}
+
+triang_patch_spoken
+
+triangle_plots$delaunay_tri_ang<-triangle_plots$delaunay_tri_ang+scale_x_continuous(limits = c(-.2,1.2))
+
+delaunay_spoken_plots$spoken_triang_ang<- delaunay_spoken_plots$spoken_triang_ang+
+  scale_x_continuous(limits = c(-.2,1.2))
+delaunay_spoken_plots$spoken_triang_happy<-delaunay_spoken_plots$spoken_triang_happy+
+    scale_x_continuous(limits = c(-.2,1.2))
+  
+delaunay_spoken_plots$spoken_triang_sad<-delaunay_spoken_plots$spoken_triang_sad+
+    scale_x_continuous(limits = c(-.2,1.2))
+
+delaunay_spoken_plots$spoken_triang_neutral<-delaunay_spoken_plots$spoken_triang_neutral+
+    scale_x_continuous(limits = c(-.2,1.2))
+
+triang_patch_spoken<- (delaunay_spoken_plots$spoken_triang_ang  +
+                         delaunay_spoken_plots$spoken_triang_happy +
+                         delaunay_spoken_plots$spoken_triang_sad+
+                         delaunay_spoken_plots$spoken_triang_neutral)+plot_layout(ncol = 4)
+
+ 
+```
+ 
+```{r}
+
+spoken_part1plot <- (wrap_elements(full = paper_plots$spoken_NMF_hm)+ 
+                       wrap_elements(full = delaunay_spoken_plots$COMP1_2_3_patch)+wrap_elements(spoken_ts_ts_hm_compns))+
+    plot_layout(ncol = 3, widths = c(1.2,.5,1))+ plot_annotation(tag_levels = 'A')+
+  theme(plot.tag = element_text(size = 20*(sf+.5)))
+ 
+ spoken_part1plot
+
+spoken_part2plot <-(paper_plots$spoken_NMF /
+           patchwork::wrap_elements(triang_patch_spoken)/
+    paper_plots$spoken_NMF_ts_hm)+
+  plot_layout(nrow = 3, heights = c(1,1.5,1))+
+  plot_annotation(tag_levels = list(c('D', 'E','F')))+
+  theme(plot.tag = element_text(size =20*(sf+.5)))
+  
+
+spoken_part2plot
+
+
+paper_plots$panel_NMF_spoken<-
+wrap_elements(full = spoken_part1plot) + wrap_elements(full = spoken_part2plot) + plot_layout(ncol = 1, nrow = 2, heights = c(1,1))
+   # plot_annotation(tag_levels = 'A')
+spoken_part1plot
+
+paper_plots$panel_NMF_spoken
+   
+   
+   
+ggsave("panel_NMF_spoken1.tiff",
+       device = 'tiff',    
+       paper_plots$panel_NMF_spoken,
+       width = 25,
+       height = 25,
+       dpi = 800)
+
+paper_plots$panel_NMF_spoken
+```
