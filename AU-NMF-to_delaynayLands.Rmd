@@ -1,0 +1,22 @@
+---
+title: "AU-NMF-to_delaynayLands"
+output: html_document
+date: "2023-11-21"
+---
+
+
+we need to map AUs to facial landmarks
+
+Steps
+1. Compute correlation between all landmarks (focus just on y coordinate and AU activation)
+- this will tells about which Y is active when a specific AU is present (but we have multiple combinations, what do we do with ) ultimately this should be regression or correlation and should be computed fro all the dataset - so it will be like a pre-trained modeld
+2 - Compute PCA or NMF of AUS
+3 - Recreate the AU patterns from PCA or NMF model
+4 - Based on reconstruct AU patterns colour landmarks with the average AU activation that matches each pattern
+
+- this needs to be validate with a dataset where AUS single AUs are produced
+
+
+```{r}
+
+```

@@ -245,6 +245,69 @@ guides(fill=guide_colorbar(ticks.colour = NA))
 probe NMF vs PCA
 
 ```{r}
+options(scipen = 999)
+res_k3_max_norm@fit@H
+
+
+# Assuming `df` is your dataframe
+values <- unname(df[1, ])
+values_string <- paste(values, collapse = ", ")
+
+res_k3_max_norm@fit@H
+unname((res_k3_max_norm@fit@H[1,]))
+colnames(res_k3_max_norm@fit@H)
+
+# Assuming `df` is your dataframe
+values <- unname(df[1, ])
+values_string <- paste(unname((res_k3_max_norm@fit@H[1,])), collapse = ", ")
+
+ # Below is a simple R code that would take two vectors: one from Py-Feat AUs and one from your dataset. It will merge them, setting the values for non-existent AUs in your dataset to zero, and keeping the values from your dataset for the AUs that are present in both.
+
+# Assuming res_k3_max_norm@fit@H is a matrix with AU activations,
+# where each column corresponds to an AU from your dataset
+
+# Vector of AU codes from Py-Feat
+pyfeat_aus <- c("AU01", "AU02", "AU04", "AU05", "AU06", "AU07", "AU09", "AU11", 
+                "AU12", "AU14", "AU15", "AU17", "AU20", "AU23", "AU24", "AU25", 
+                "AU26", "AU28", "AU43")
+
+# Vector of AU codes from your dataset with '_r' suffix
+my_aus <- c("AU01_r", "AU02_r", "AU04_r", "AU05_r", "AU06_r", "AU07_r", 
+            "AU09_r", "AU10_r", "AU12_r", "AU14_r", "AU15_r", "AU17_r", 
+            "AU20_r", "AU23_r", "AU25_r", "AU26_r", "AU45_r")
+
+# Extract the first row of H matrix from your NMF result
+# This is assuming that `res_k3_max_norm@fit@H` is accessible and the first row can be extracted like this
+myau_values <- as.numeric(res_k3_max_norm@fit@H[1, ])
+
+# Create a named vector with zeros for all Py-Feat AUs
+merged_au_values <- setNames(rep(0, length(pyfeat_aus)), pyfeat_aus)
+
+# Update the values with your dataset's AU values where they exist
+for (i in seq_along(my_aus)) {
+  au_code <- gsub("_r", "", my_aus[i]) # Remove the '_r' suffix
+  au_index <- match(au_code, pyfeat_aus) # Find the index of the AU code in Py-Feat AUs
+  if (!is.na(au_index)) { # If the AU code exists in Py-Feat AUs
+    merged_au_values[au_index] <- myau_values[i]
+  }
+}
+
+# Resulting vector with zeros for non-existent AUs in your set
+merged_au_values*100
+
+merged_au_values_1<-round(merged_au_values*10)
+
+merged_au_values_1
+
+paste(unname((merged_au_values_1)), collapse = ", ")
+
+amerged_au_values_1
+
+# comp2
+```
+
+
+```{r}
 res_k3_max_norm@fit@W
 
     bind_cols( df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10)],

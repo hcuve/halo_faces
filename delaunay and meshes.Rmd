@@ -6,9 +6,13 @@ output: html_document
 ---
 
 
+
+
 # landmarks and normalisation
 
 ```{r}
+
+
 require(data.table)
 require(ggforce)
 
@@ -102,6 +106,8 @@ for (f in 1:length(filename_unique)) {
 
 # unique(temp_df_bind$filename)
 unique(temp_df_bind$filename)
+
+temp_df
 ```
 
 after this we want to plot again the average landmark position for each expression

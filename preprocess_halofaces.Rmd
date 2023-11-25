@@ -74,7 +74,7 @@ tail(df_OF_output, n = 5) #last 5 rows
 ```{r}
 colnames(df_OF_output)
 
-df_OF_output_AUs<- df_OF_output[,c(1:5,680:715)]
+df_OF_output_AUs_land<- df_OF_output[,c(1:5,300:435,680:715)]
 # AU r = intensity c is presence
 colnames(df_OF_output_AUs)
 
@@ -95,7 +95,7 @@ AU_OF_codes_merged$AU_Code_OF_r<- paste0(AU_OF_codes_merged$AU_Code_OF,paste0("_
 AU_OF_codes_merged$AU_Code_OF_c<- paste0("AU",AU_OF_codes_merged$AU_CODE,paste0("_c_", AU_OF_codes_merged$FACS_name))
 
 
-colnames(df_OF_output_AUs)
+colnames(df_OF_output_AUs_land)
 
 # quick check
 df_OF_output_AUs%>%
@@ -110,9 +110,11 @@ df_OF_output_AUs%>%
 t(AU_OF_codes_merged$AU_Code_OF_r)
 t(AU_OF_codes_merged$AU_Code_OF_c)
 
-cnames1 <- colnames(df_OF_output_AUs)
+cnames1 <- colnames(df_OF_output_AUs_land)
 (17*2)+6
-cname2<-c(cnames1[1:5],t(AU_OF_codes_merged$AU_Code_OF_r),t(AU_OF_codes_merged$AU_Code_OF_c), "filename")
+
+
+cname2<-c(cnames1[1:141],t(AU_OF_codes_merged$AU_Code_OF_r),t(AU_OF_codes_merged$AU_Code_OF_c), "filename")
 # cnames1
 # t(AU_OF_codes_merged$AU_Code_OF_r)
 # note OF addded a new action fpr presence 28 (lipsuck) I will exclude this for now
@@ -154,6 +156,7 @@ names(Unblinding_BMI_drugday)<- make.names(names(Unblinding_BMI_drugday))
 Unblinding_BMI_drugday
 
 # merge
+colnames(df_OF_output_AUs)
 df_OF_output_AUs$subject<- as.factor(as.character( df_OF_output_AUs$subject))
 Unblinding_BMI_drugday$subject<-as.factor(as.character(Unblinding_BMI_drugday$subject))
 
@@ -283,7 +286,7 @@ df_OF_output_AUsW_unblind_posed%>%
  # = 100 bins
 # average is 250
 # 220/100
-
+colnames(df_OF_output_AUsW_unblind_posed)
 df_OF_output_AUsW_unblind_posed
 ?cut
 colnames(df_OF_output_AUsW_unblind_posed)

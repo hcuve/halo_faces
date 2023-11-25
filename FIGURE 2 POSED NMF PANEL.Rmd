@@ -4,7 +4,241 @@ output: html_document
 date: "2023-10-27"
 ---
 
+PyFeat Like approach
+noe train basd on AU rather then NMF AUS
 
+```{r}
+# Load necessary libraries
+library(pls)
+library(geometry)
+library(ggplot2)
+library(shapes)
+
+# Assuming `au_patterns` is your NMF-derived AU features (predictors)
+# Assuming `landmark_targets` is your known landmark coordinates (responses)
+# Assuming `neutral_face_landmarks` is a matrix of neutral face landmarks for alignment
+
+# Align Function
+align_landmarks <- function(landmarks, neutral_face_landmarks) {
+  # Perform Procrustes analysis to align to the neutral face
+  alignment <- procSym(landmarks, neutral_face_landmarks)
+  # Return the aligned coordinates
+  return(alignment$X)
+}
+
+# Step 1: Align your landmark data to the neutral face landmarks
+# This step assumes that your landmark_targets need to be aligned.
+# If they are already aligned, you can skip this step.
+aligned_landmarks <- t(apply(landmark_targets, 1, align_landmarks, neutral_face_landmarks))
+
+# Step 2: Train PLS Model on aligned landmarks
+pls_model <- plsr(aligned_landmarks ~ au_patterns, data = data.frame(aligned_landmarks, au_patterns), ncomp = 20)
+
+# Step 3: Predict Landmarks using the NMF AU patterns
+# Replace `au_patterns` with new data if you're making predictions on new observations
+predicted_landmarks <- predict(pls_model, newdata = data.frame(au_patterns))
+
+# Convert predicted landmarks into a matrix if not already
+predicted_landmarks <- as.matrix(predicted_landmarks)
+
+# Step 4: Align the predicted landmarks if they are not already aligned
+# If your predictions are based on landmarks that need to be aligned, use this step.
+predicted_aligned_landmarks <- t(apply(predicted_landmarks, 1, align_landmarks, neutral_face_landmarks))
+
+# Step 5: Perform Delaunay Triangulation on the predicted aligned landmarks
+triangles <- delaunayn(predicted_aligned_landmarks)
+
+# Step 6: Create Heatmap Values
+# Assume you have a vector `heatmap_values` that has the heatmap values for each landmark
+# You need to create this based on your specific data and the aspect you want to visualize.
+
+# Step 7: Create the plotting data and visualize
+plot_data <- data.frame(x = numeric(), y = numeric(), group = integer(), value = numeric())
+
+# Loop over the triangles to create plot data
+for (i in 1:nrow(triangles)) {
+  # Get the vertex indices for the triangle
+  vertices <- triangles[i, ]
+  
+  # Extract the landmark coordinates for the vertices
+  coords <- predicted_aligned_landmarks[vertices, ]
+  
+  # Calculate the heatmap value for the triangle
+  value <- mean(heatmap_values[vertices])
+  
+  # Create a dataframe for this triangle
+  triangle_df <- data.frame(x = coords[, 1], y = coords[, 2], group = i, value = value)
+  
+  # Combine with the main dataframe
+  plot_data <- rbind(plot_data, triangle_df)
+}
+
+# Plot the heatmap
+ggplot(plot_data, aes(x = x, y = y, group = group, fill = value)) +
+  geom_polygon(color = "black") +
+  scale_fill_gradient(low = "blue", high = "red") +
+  coord_fixed() +
+  theme_void()
+```
+
+
+PLS Model: Train a PLS model to understand the relationship between NMF AU patterns and landmark movements.
+
+Average Landmark Positions: Compute the average positions of each landmark.
+
+PLS Component Scores: For each landmark, use the PLS model to calculate component scores based on your NMF AU patterns. These scores represent how much each landmark is influenced by the NMF AU patterns.
+
+Delaunay Triangulation: Perform Delaunay triangulation on the average landmark positions.
+
+Color Triangles: Assign a color to each triangle based on the average component scores of its vertices.
+
+Visualize: Plot the triangulated mesh with colored triangles.
+```{r}
+# Load necessary libraries
+library(pls)
+library(geometry)
+library(ggplot2)
+
+# Assuming `au_patterns` is your matrix of NMF-derived AU features (predictors)
+# Assuming `landmark_movements` is your matrix of landmark movements (responses)
+
+# Step 1: Train PLS Model
+pls_model <- plsr(landmark_movements ~ au_patterns, data = data.frame(landmark_movements, au_patterns), ncomp = 20)
+
+# Assuming `average_landmarks` is a matrix with columns x, y representing the average landmark positions
+
+# Step 3: Calculate PLS Component Scores for each landmark based on NMF AU patterns
+pls_scores <- predict(pls_model, newdata = data.frame(au_patterns))
+
+# Step 4: Perform Delaunay Triangulation on the average landmark positions
+triangles <- delaunayn(average_landmarks)
+
+# Step 5 & 6: Create the plotting data and visualize
+plot_data <- data.frame(x = numeric(), y = numeric(), group = integer(), value = numeric())
+
+# Loop over the triangles to create plot data
+for (i in 1:nrow(triangles)) {
+  # Get the vertex indices for the triangle
+  vertices <- triangles[i, ]
+  
+  # Extract the landmark coordinates for the vertices
+  coords <- average_landmarks[vertices, ]
+  
+  # Calculate the color value for the triangle based on the PLS component scores of the vertices
+  value <- mean(rowMeans(pls_scores[vertices, ]))
+  
+  # Create a dataframe for this triangle
+  triangle_df <- data.frame(x = coords[, 1], y = coords[, 2], group = i, value = value)
+  
+  # Combine with the main dataframe
+  plot_data <- rbind(plot_data, triangle_df)
+}
+
+# Step 7: Plot the heatmap
+ggplot(plot_data, aes(x = x, y = y, group = group, fill = value)) +
+  geom_polygon(color = "black") +
+  scale_fill_gradient(low = "blue", high = "red") +
+  coord_fixed() +
+  theme_void()
+
+
+```{r}
+# Vector of AU codes from Py-Feat
+pyfeat_aus <- c("AU01", "AU02", "AU04", "AU05", "AU06", "AU07", "AU09", "AU11", 
+                "AU12", "AU14", "AU15", "AU17", "AU20", "AU23", "AU24", "AU25", 
+                "AU26", "AU28", "AU43")
+
+# Vector of AU codes from your dataset with '_r' suffix
+my_aus <- c("AU01_r", "AU02_r", "AU04_r", "AU05_r", "AU06_r", "AU07_r", 
+            "AU09_r", "AU10_r", "AU12_r", "AU14_r", "AU15_r", "AU17_r", 
+            "AU20_r", "AU23_r", "AU25_r", "AU26_r", "AU45_r")
+
+# Initialize a list to hold all merged AU values for each row
+all_rows_merged_au_values <- list()
+
+# Loop over each row in res_k3_max_norm@fit@H
+for (row_index in 1:nrow(res_k3_max_norm@fit@H)) {
+  
+  # Extract the current row of H matrix from your NMF result
+  current_row_values <- as.numeric(res_k3_max_norm@fit@H[row_index, ])
+  
+  # Create a named vector with zeros for all Py-Feat AUs for the current row
+  merged_au_values <- setNames(rep(0, length(pyfeat_aus)), pyfeat_aus)
+  
+  # Update the values with your dataset's AU values where they exist
+  for (i in seq_along(my_aus)) {
+    au_code <- gsub("_r", "", my_aus[i]) # Remove the '_r' suffix
+    au_index <- match(au_code, pyfeat_aus) # Find the index of the AU code in Py-Feat AUs
+    if (!is.na(au_index)) { # If the AU code exists in Py-Feat AUs
+      # Round the value to one digit and assign it
+      merged_au_values[au_index] <- round(current_row_values[i], digits = 1)
+    }
+  }
+  
+  # Add the merged AU values for the current row to the list
+  all_rows_merged_au_values[[row_index]] <- merged_au_values
+}
+
+# all_rows_merged_au_values now contains the merged AU values for each row
+
+# This will create a comma-separated string of the values in the first row,
+# with all values rounded to one digit and without the names.
+ paste(unname(all_rows_merged_au_values[[1]]*10), collapse = ", ")
+ paste(unname(all_rows_merged_au_values[[2]]*10), collapse = ", ")
+ paste(unname(all_rows_merged_au_values[[3]]*10), collapse = ", ")
+```
+
+
+
+Spoken
+
+
+```{r}
+res_k3_spoken1@fit@H
+
+# Vector of AU codes from Py-Feat
+pyfeat_aus_spoken <- c("AU01", "AU02", "AU04", "AU05", "AU06", "AU07", "AU09", "AU11", 
+                       "AU12", "AU14", "AU15", "AU17", "AU20", "AU23", "AU24", "AU25", 
+                       "AU26", "AU28", "AU43")
+
+# Vector of AU codes from your spoken expressions dataset with '_r' suffix
+my_spoken_aus <- c("AU01_r", "AU02_r", "AU04_r", "AU05_r", "AU06_r", "AU07_r", 
+                   "AU09_r", "AU10_r", "AU12_r", "AU14_r", "AU15_r", "AU17_r", 
+                   "AU20_r", "AU23_r", "AU25_r", "AU26_r", "AU45_r")
+
+# Initialize a list to hold all merged AU values for spoken expressions for each row
+all_rows_merged_au_values_spoken <- list()
+
+# Loop over each row in res_k3_spoken1@fit@H
+for (row_index in 1:nrow(res_k3_spoken1@fit@H)) {
+  
+  # Extract the current row of H matrix from your NMF result for spoken expressions
+  current_row_values_spoken <- as.numeric(res_k3_spoken1@fit@H[row_index, ])
+  
+  # Create a named vector with zeros for all Py-Feat AUs for the current row of spoken expressions
+  merged_au_values_spoken <- setNames(rep(0, length(pyfeat_aus_spoken)), pyfeat_aus_spoken)
+  
+  # Update the values with your spoken expressions dataset's AU values where they exist
+  for (i in seq_along(my_spoken_aus)) {
+    au_code_spoken <- gsub("_r", "", my_spoken_aus[i]) # Remove the '_r' suffix
+    au_index_spoken <- match(au_code_spoken, pyfeat_aus_spoken) # Find the index of the AU code in Py-Feat AUs
+    if (!is.na(au_index_spoken)) { # If the AU code exists in Py-Feat AUs
+      # Round the value to one digit and assign it
+      merged_au_values_spoken[au_index_spoken] <- round(current_row_values_spoken[i], digits = 1)
+    }
+  }
+  
+  # Add the merged AU values for the current row of spoken expressions to the list
+  all_rows_merged_au_values_spoken[[row_index]] <- merged_au_values_spoken
+}
+
+# This will create comma-separated strings of the values in each row for spoken expressions,
+# with all values rounded to one digit and multiplied by 10, and without the names.
+paste(unname(all_rows_merged_au_values_spoken[[1]]*20), collapse = ", ")
+paste(unname(all_rows_merged_au_values_spoken[[2]]*20), collapse = ", ")
+paste(unname(all_rows_merged_au_values_spoken[[3]]*10), collapse = ", ")
+
+```
 
 START COMBINING
 

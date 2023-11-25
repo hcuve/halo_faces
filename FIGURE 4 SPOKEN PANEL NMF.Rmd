@@ -1,11 +1,11 @@
 ---
-§title: "FIGURE 4 SPOKEN PANEL NMF"
+title: "FIGURE 4 SPOKEN PANEL NMF"
 output: html_document
 date: "2023-10-27"
 ---
 
 
-try to plot emotions separatelly
+try to plot emotions separately
 
 
 ```{r}
@@ -468,7 +468,9 @@ paper_plots$spoken_NMF <-
   
   
   # spoken_NMF$
+  res_k3_fit_H
   
+ write_csv(as.data.frame(res_k3_fit_H))
 ```
   
  emotion triangles
