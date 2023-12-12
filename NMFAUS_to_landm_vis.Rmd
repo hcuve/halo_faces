@@ -1,0 +1,90 @@
+---
+title: "NMFAUS_to_landm_vis"
+author: "Helio"
+date: "2023-12-12"
+output: html_document
+---
+
+
+
+fit a model with components directly
+to explore wether  the overlap we get for comp 1 is due to fiting AUS instead - but this should be the same same as fittingthe model with recreated AUS inetad.
+recreated AUS shoul be maximally disntinct, so the au to landmark visualisation should also be "landmarks that 
+maximally covary with AU activations?)
+- for this, do we need new downsampling? mapping AUS and Landmarks?
+A = probably, because the AUS from the NMF will have les rows
+
+so this would need tk be done separatelly.
+
+```{r}
+
+dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th
+
+# need to first match the nm components to the sample rate of the downsamnpled data
+
+
+nrow(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th)
+# 3008
+dta_W
+
+df_OF_output_AUsW_unblind_posed_binned$frame
+dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame+1
+
+dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame_plus1<-dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame+1
+
+
+
+tmp_test<- as.data.frame(dta_W) %>%
+  mutate(filename = df_OF_output_AUsW_unblind_posed_binned$filename,
+         frame = df_OF_output_AUsW_unblind_posed_binned$frame)
+
+round(tmp_test$frame_plus1)[1:60]
+round(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame)[1:15]
+
+# we don't have exact matches on frame due to preprocesing differences, so we'll try a fuzzy join
+install.packages("fuzzyjoin")
+
+library(fuzzyjoin)
+
+tmp_test1_nmf_comp 
+
+
+
+tmp_test$frame_plus1<- tmp_test$frame
+
+dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame_plus1
+tmp_test$frame_plus1
+
+tmp_test1_nmf_comp<- left_join(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th,tmp_test, by = c("filename","frame_plus1"))
+
+dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$filename
+
+tmp_test$filename<- str_replace(tmp_test$filename, ".csv", "")
+tmp_test$filename<- str_replace(tmp_test$filename, "./", "")
+
+dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame <- as.numeric(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame)
+tmp_test$frame <- as.numeric(tmp_test$frame)
+
+
+
+# Custom function to match the closest value
+match_closest <- function(x, y) {
+    abs(x - y) == min(abs(x - y))
+}
+
+tmp_test$filename<- as.factor(tmp_test$filename)
+unique(tmp_test$filename)
+
+dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$filename <- as.factor(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$filename)
+unique(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$filename)
+
+tmp_test1_nmf_comp<- fuzzyjoin::fuzzy_left_join(
+  dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th,
+  tmp_test,
+  by = c("filename", "frame"),
+  match_fun = list(`==`, match_closest)  # `==` for filename, custom for frame_plus1
+)
+
+
+
+```
