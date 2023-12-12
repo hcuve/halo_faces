@@ -1,0 +1,178 @@
+---
+title: "clustering_land_disp_id"
+author: "Helio"
+date: "2023-12-12"
+output: html_document
+---
+
+
+cluster y displacements along with the landmark ids using neiborhood clustering
+- this achieves that clusters are close together spatially (base don landmarkl id) and also have similar displacement values
+- we could use this to remove artefactual points in component plots
+```{r}
+
+
+# tmp_testk1$nmf_k<- 1
+# tmp_testk2$nmf_k<- 2
+# tmp_testk3$nmf_k<- 3
+
+
+dta_generated_1_pred1$nmf_k<- 1
+dta_generated_2_1_pred$nmf_k<- 2
+dta_generated_3_pred$nmf_k<- 3
+
+colnames(dta_generated_1_pred1)
+colnames(dta_generated_2_1_pred)   
+colnames(dta_generated_3_pred)  
+
+
+dta_generated_1_2_3_pred<-bind_rows(dta_generated_1_pred1,
+          dta_generated_2_1_pred,
+          dta_generated_3_pred)
+
+
+# now compute the displacements and average acrposs videos
+dta_generated_1_2_3_pred_disp<- dta_generated_1_2_3_pred%>%
+          # subset(as.numeric(as.factor(filename)) ==100)%>%
+       group_by(filename,nmf_k, bin_frame )%>%
+  summarise_if(is.numeric, mean,na.rm = T)%>%
+     pivot_longer(cols = c(-filename,-nmf_k, -bin_frame), 
+                  names_to = c(".value", "landmark"), 
+                names_pattern = "([xy])_(\\d+)") %>%
+       
+   group_by(filename,nmf_k )%>%
+  arrange(bin_frame, as.numeric(landmark))%>%
+    
+  # group so that displacement id computed within file name in each recreated data
+  group_by(filename, nmf_k, landmark) %>%
+  mutate(
+    x_displacement = x - lag(x, default = first(x)),
+    y_displacement = y - lag(y, default = first(y))) %>%
+   group_by(filename, nmf_k, landmark)%>%
+  summarise_if(is.numeric, mean,na.rm = T)%>%
+  mutate(x_sum = sum(x_displacement),
+         y_sum = sum(y_displacement)
+         )%>%
+  # not sure abpout this step. lets stary by normalising within component
+    group_by(nmf_k,landmark )%>%
+    mutate(x_sum_norm = normalize_between_0_and_1(x_displacement),
+         y_sum_norm = normalize_between_0_and_1(y_displacement)
+         )
+  
+ # check that this is sensible, plot the full changes, note that these full changes won't correspond to reduced NMF values, so perhaps the clustering might allow us to kind of reduce the dimensionality
+dta_generated_1_2_3_pred_disp%>%
+  group_by(nmf_k, landmark)%>%
+  summarise_if(is.nuemric, mean, na.rm = T)%>%
+  ggplot(aes(x,y, colour = y_sum_norm))+
+  geom_point()+
+    geom_delaunay_segment2(alpha = .2)+
+  scale_colour_viridis_c(option = "magma")+
+  scale_y_reverse()+
+  facet_grid(~nmf_k)
+
+```
+
+
+
+# just run the clustering here
+
+
+dta_generated_1_2_3_pred_disp_agg<- dta_generated_1_2_3_pred_disp%>%
+  group_by(landmark, nmf_k)%>%
+  summarise_if(is.numeric, mean, na.rm. =T)
+
+
+dta_generated_1_2_3_pred_disp_agg$clust_k4<- rslt_clusters$cluster
+
+ dta_generated_1_2_3_pred_disp
+
+ # just scale this here so that we don't need to scale it during clustering
+dta_generated_1_2_3_pred_disp$land_scale<- normalize_between_0_and_1(as.numeric(dta_generated_1_2_3_pred_disp$landmark))
+
+dta_generated_1_2_3_pred_disp$nmf_k<- as.character(dta_generated_1_2_3_pred_disp$nmf_k)
+
+ # setwd("/Users/pw22812/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/ExportedSets")
+write_csv(dta_generated_1_2_3_pred_disp, "dta_generated_1_2_3_pred_disp.csv")
+
+
+
+
+# Example data
+set.seed(123)
+colnames(dta_generated_1_2_3_pred_disp_agg)
+
+
+
+rslt_clusters <- kmeans(dta_generated_1_2_3_pred_disp_agg[,c(12,11)], centers=4)
+
+# Visualize the results
+
+dta_generated_1_2_3_pred_disp_agg%>%
+ggplot( aes(land_scale, y_sum_norm, color=factor(rslt_clusters$cluster))) +
+  geom_point() +
+  labs(color='Cluster')+
+  facet_grid(~nmf_k)
+
+rslt_clusters$cluster
+
+
+
+dta_generated_1_2_3_pred_disp_agg%>%
+  ggplot(aes(x,y, colour = factor(clust_k4)))+
+  geom_point()+
+  geom_text(aes(label = landmark))+
+  scale_y_reverse()+
+  facet_grid(~nmf_k)
+
+
+dta_generated_1_2_3_pred_disp_agg$clust_k4_fixed<- dta_generated_1_2_3_pred_disp_agg$clust_k4
+
+
+dta_generated_1_2_3_pred_disp_agg$clust_k4_fixed<- if_else(dta_generated_1_2_3_pred_disp_agg$landmark == 48,4,
+                                                           if_else(dta_generated_1_2_3_pred_disp_agg$landmark == 49, 4,dta_generated_1_2_3_pred_disp_agg$clust_k4_fixed))
+
+
+
+
+dta_generated_1_2_3_pred_disp_agg$clust_k4_fixed<- if_else(dta_generated_1_2_3_pred_disp_agg$landmark == 33,2,
+                                                           if_else(dta_generated_1_2_3_pred_disp_agg$landmark == 34, 2,
+                                                                   if_else(dta_generated_1_2_3_pred_disp_agg$landmark == 35, 2
+                                                                   
+                                                                ,dta_generated_1_2_3_pred_disp_agg$clust_k4_fixed)))
+
+
+
+dta_generated_1_2_3_pred_disp_agg$clust_k4_fixed<- if_else(dta_generated_1_2_3_pred_disp_agg$landmark == 16,3,
+dta_generated_1_2_3_pred_disp_agg$clust_k4_fixed)
+                                                                   
+                                                                
+
+dta_generated_1_2_3_pred_disp_agg%>%
+  # group_by(nm)%>%
+  # summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(x,y, colour = y_sum_norm))+
+    geom_point()+
+  # geom_point(aes(colour = factor(clust_k4_fixed)))+
+  # geom_text(aes(label = landmark))+
+  scale_y_reverse()+
+  facet_grid(~nmf_k)+
+  geom_delaunay_segment2(alpha = .2)
+
+
+
+dta_generated_1_2_3_pred_disp_agg%>%
+  group_by(nmf_k)%>%
+  mutate(y_norm2 = normalize_between_0_and_1(y_sum_norm))%>%
+  
+  # summarise_if(is.numeric, mean, na.rm = T)%>%
+  ggplot(aes(x,y, colour = y_norm2))+
+    geom_point()+
+  # geom_point(aes(colour = factor(clust_k4_fixed)))+
+  # geom_text(aes(label = landmark))+
+  scale_y_reverse()+
+  # facet_grid(~nmf_k)+
+  geom_delaunay_segment2(alpha = .2)+
+  scale_colour_viridis_c(option = "magma")+
+  facet_grid(nmf_k~clust_k4_fixed)
+
+```
