@@ -1676,8 +1676,10 @@ colnames(tmp_singleAU_pred1)
 # [13] "AU20_r_Lip_stretcher"        "AU23_r_Lip_tightener"        "AU25_r_Lips_part"           
 # [16] "AU26_r_Jaw_drop"             "AU45_r_Blink"    
 
+
+
 tmp_singleAU_pred1%>%
-  subset(activated_AU == "AU45_r_Blink")%>%
+  subset(activated_AU == "AU01_r_Inner_brow_raiser")%>%
   
   
    pivot_longer(cols = c(-time_step,-activated_AU), names_to = c(".value", "landmark"), 
@@ -1688,7 +1690,7 @@ tmp_singleAU_pred1%>%
     scale_y_reverse()+
     # geom_text(aes(label = frame_group))+
     ggtitle("approx")+
-       transition_time(time_step)  # Animate over the 'frame' variable
+       transition_time(time_step) + # Animate over the 'frame' variable
     ease_aes('linear')  # Use a lin
 # this shows that the AU to 
 
@@ -1913,9 +1915,9 @@ tmp_testk1<-      dta_generated_1_pred1%>%
    geom_smooth(method = 'lm')+
    ggpubr::stat_cor()
  
- ggcorrplot(rslt_au_correlation_matrix1, hc.order = FALSE, 
-           lab = TRUE, lab_size = 3, colors = c("blue", "white", "red"))
- 
+ # ggcorrplot(rslt_au_correlation_matrix1, hc.order = FALSE, 
+ #           lab = TRUE, lab_size = 3, colors = c("blue", "white", "red"))
+ # 
 ```
 
 
@@ -1936,17 +1938,13 @@ dta_generated_2_1$filename <- df_OF_output_AUsW_unblind_posed_binned$filename
 
 dta_generated_2_1_pred <- predict(mod_pls,dta_generated_2_1, ncomp=17)
 
-
-
-
 dta_generated_2_1_pred<- as.data.frame(dta_generated_2_1_pred)
 
 dta_generated_2_1_pred$filename<- dta_generated_2_1$filename
 
 dta_generated_2_1_pred$bin_frame<- df_OF_output_AUsW_unblind_posed_binned$bin_frame
 
-# visualisation
-
+# visualization
 dta_generated_1_pred1%>%
   subset(as.numeric(as.factor(filename)) == 150)%>%
   
@@ -1981,8 +1979,6 @@ dta_generated_1_pred1%>%
        transition_time(bin_frame)+
  
     ease_aes('linear')  
-    
-    
     
     
 # del
@@ -2068,9 +2064,6 @@ dta_generated_1_pred1%>%
 # k3
 
 ```{r}
-
-    
-    
     # And for the third component
 tmp_H3 <- dta_H
 tmp_H3[c(-3), ] <- 0
@@ -2182,30 +2175,13 @@ dta_generated_3_pred%>%
     # geom_text(aes(label = frame_group))+
     scale_y_reverse()
 
-
-tmp_testk1$nmf_k<- 1
-tmp_testk2$nmf_k<- 2
-tmp_testk3$nmf_k<- 3
-
-
-dta_nmf_au_to_land_ks<- bind_rows(tmp_testk1, 
-          tmp_testk2,
-          tmp_testk3)
-
-dta_nmf_au_to_land_ks$land_scale<- normalize_between_0_and_1(as.numeric(dta_nmf_au_to_land_ks$landmark))
-tmp_testk1$nmf_k<- as.character(tmp_testk1$nmf_k)
-write_csv(dta_nmf_au_to_land_ks, "dta_nmf_au_to_land_ks.csv")
-
-# thougfh i mightr need to do this for every single video rathert than aggregate top get a good cluster colution
-
-save.image("au_to_land_nm_vis.Rdata")
-
 ```
 
+compare turing test
 
 ```{r}
 dta_generated_1_pred1%>%
-  subset(as.numeric(as.factor(filename)) == 150)%>%
+  subset(as.numeric(as.factor(filename)) == 10) %>%
   
   
    pivot_longer(cols = c(-filename,-bin_frame), names_to = c(".value", "landmark"), 
@@ -2221,10 +2197,10 @@ dta_generated_1_pred1%>%
         
 
 
-    # K2
+ # K2
     
     dta_generated_2_1_pred%>%
-  subset(as.numeric(as.factor(filename)) == 150)%>%
+  subset(as.numeric(as.factor(filename)) == 10)%>%
   
   
    pivot_longer(cols = c(-filename,-bin_frame), names_to = c(".value", "landmark"), 
@@ -2239,7 +2215,7 @@ dta_generated_1_pred1%>%
  
     ease_aes('linear')  
     
-    
+```   
      # K3
     dta_generated_3_pred
     
@@ -2410,114 +2386,6 @@ dta_generated_all3_pred$bin_frame<- df_OF_output_AUsW_unblind_posed_binned$bin_f
         
 ```
 
-<!-- fit a model with compoennts directly -->
-
-```{r}
-
-dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th
-
-# need to first match the nm components to the sample rate of the downsamnpled data
-
-
-nrow(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th)
-# 3008
-dta_W
-
-res_k3@call
-
-df_OF_output_AUsW_unblind_posed_binned$frame
-dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame+1
-
-dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame_plus1<-dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame+1
-
-
-
-tmp_test<- as.data.frame(dta_W) %>%
-  mutate(filename = df_OF_output_AUsW_unblind_posed_binned$filename,
-         frame = df_OF_output_AUsW_unblind_posed_binned$frame)
-
-round(tmp_test$frame_plus1)[1:60]
-round(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame)[1:15]
-
-# we don't have exact matches on frame due to preprocesing differences, so we'll try a fuzzy join
-install.packages("fuzzyjoin")
-
-library(fuzzyjoin)
-
-tmp_test1_nmf_comp 
-
-
-
-tmp_test$frame_plus1<- tmp_test$frame
-
-dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame_plus1
-tmp_test$frame_plus1
-
-tmp_test1_nmf_comp<- left_join(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th,tmp_test, by = c("filename","frame_plus1"))
-
-dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$filename
-
-tmp_test$filename<- str_replace(tmp_test$filename, ".csv", "")
-tmp_test$filename<- str_replace(tmp_test$filename, "./", "")
-
-dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame <- as.numeric(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame)
-tmp_test$frame <- as.numeric(tmp_test$frame)
-
-
-
-# Custom function to match the closest value
-match_closest <- function(x, y) {
-    abs(x - y) == min(abs(x - y))
-}
-
-tmp_test$filename<- as.factor(tmp_test$filename)
-unique(tmp_test$filename)
-
-dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$filename <- as.factor(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$filename)
-unique(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$filename)
-
-tmp_test1_nmf_comp<- fuzzyjoin::fuzzy_left_join(
-  dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th,
-  tmp_test,
-  by = c("filename", "frame"),
-  match_fun = list(`==`, match_closest)  # `==` for filename, custom for frame_plus1
-)
-
-tmp_test1_nmf_comp%>%
-  subset(!is.na(V1))
-
-```
-tmp_test1_nmf_comp
-colnames(tmp_test1_nmf_comp)
-
-library(pls)
-
-paste("cbind(", paste(landmark_columns, collapse = ", "), ") ~ ", "V1+V2+V3")
-
-round(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th$frame_plus1)
-
-
-mod_pls <- plsr(as.formula(paste("cbind(", paste(landmark_columns, collapse = ", "), ") ~ ", paste(au_columns, collapse = " + "))),
-                  data = dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th,
-                  ncomp = 17,
-                  scale = FALSE,  # Standardize variables
-                  validation = "CV")
-
-colnames(tmp_test1_nmf_comp)
-nmf_comps_col<-  grep("V",colnames(tmp_test1_nmf_comp), value = TRUE)
-  
-  names(tmp_test1_nmf_comp[,158:160])
-  tmp_test1_nmf_comp$V3
-  
-  tmp_test1_nmf_comp$V1
-mod_pls_nmf_k <- plsr(as.formula(paste("cbind(", paste(landmark_columns, collapse = ", "), ") ~ ", paste(nmf_comps_col, collapse = " + "))),
-                  data = tmp_test1_nmf_comp,
-                  ncomp = 3,
-                  scale = FALSE,  # Standardize variables
-                  validation = "CV")
-
-
-```
 
 heatmap of AU landmark coeficients
 ```{r}
@@ -2622,29 +2490,6 @@ left_join(tmp_pls_au_coefClust, tmp_test%>%
   scale_y_reverse()
 
 ```
-to do
-try to cluster based on displacements of x and y separatellyt (of gathered data)  or based on PCA of components of wide data to see weather we can label regions of landmarks that 
-```{r}
-# predict the full dataset (this will overfit, but its fine) as we just want to visualise the patterns
-tmp_dta_full_pred <- predict(mod_pls,dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th , ncomp=17)
-tmp_dta_full_pred<- as.data.frame(tmp_dta_full_pred)
-```
-
-tmp_au_land_coef<- as.data.frame(mod_pls$coefficients)%>%
-  mutate(AU = row.names(as.data.frame(mod_pls$coefficients)))
-
-names(tmp_au_land_coef)<- gsub(" comps", "", names(tmp_au_land_coef))
-
-
-sub("\\..*$", "", tmp_au_land_coef$x_0.1)
-tmp_au_land_coef_agg<- tmp_au_land_coef%>%
-  
-gather(land, value,-AU)%>%
-  mutate(land_id = sub("\\..*$", "", land))%>%
-  group_by(AU,land_id )%>%
-  summarise_if(is.numeric, mean, na.rm = T)
-  
-
 
 
 write_csv(tmp_au_land_coef_agg, "tmp_au_land_coef_agg.csv")

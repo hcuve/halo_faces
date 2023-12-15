@@ -7,7 +7,7 @@ output: html_document
 
 
 cluster y displacements along with the landmark ids using neiborhood clustering
-- this achieves that clusters are close together spatially (base don landmarkl id) and also have similar displacement values
+- this achieves that clusters are close together spatially (based on landmark id) and also have similar displacement values
 - we could use this to remove artefactual points in component plots
 ```{r}
 
@@ -32,59 +32,559 @@ dta_generated_1_2_3_pred<-bind_rows(dta_generated_1_pred1,
 
 
 # now compute the displacements and average acrposs videos
-dta_generated_1_2_3_pred_disp<- dta_generated_1_2_3_pred%>%
+
+dta_generated_1_2_3_pred$expression<- str_extract(dta_generated_1_2_3_pred$filename, 
+                                                  "(?<=posed)_.*?(?=_day)")
+
+dta_generated_1_2_3_pred$filename
+
+dta_generated_1_2_3_pred
+
+dta_generated_1_2_3_pred_long<- dta_generated_1_2_3_pred%>%
           # subset(as.numeric(as.factor(filename)) ==100)%>%
-       group_by(filename,nmf_k, bin_frame )%>%
+       group_by(filename,expression,nmf_k, bin_frame )%>%
   summarise_if(is.numeric, mean,na.rm = T)%>%
-     pivot_longer(cols = c(-filename,-nmf_k, -bin_frame), 
+     pivot_longer(cols = c(-filename,-expression,-nmf_k, -bin_frame), 
                   names_to = c(".value", "landmark"), 
                 names_pattern = "([xy])_(\\d+)") %>%
-       
    group_by(filename,nmf_k )%>%
-  arrange(bin_frame, as.numeric(landmark))%>%
+  arrange(bin_frame, as.numeric(landmark))
     
+
+dta_generated_1_2_3_pred_long
+dta_generated_1_2_3_pred_long
+
+dta_generated_1_2_3_pred_long$landmark<- as.numeric(dta_generated_1_2_3_pred_long$landmark)
+
+
+dta_generated_1_2_3_pred_long$file_nmf<-paste0(dta_generated_1_2_3_pred_long$filename, paste0("_nmf",
+                                                                                              dta_generated_1_2_3_pred_long$nmf_k))
+
+
+dta_generated_1_2_3_pred_long_agg<- dta_generated_1_2_3_pred_long%>%
+    # subset(as.numeric(filename)<3 & bin_frame<3 & nmf_k<2)%>%
+  # subset(as.numeric(filename)<3 & bin_frame<3 & nmf_k<2)%>%
+     # group_by(filename )%>%
+    arrange(filename,nmf_k,bin_frame)%>%
+  ungroup()%>%#just for safety
   # group so that displacement id computed within file name in each recreated data
-  group_by(filename, nmf_k, landmark) %>%
+  group_by(file_nmf, landmark) %>%
   mutate(
     x_displacement = x - lag(x, default = first(x)),
     y_displacement = y - lag(y, default = first(y))) %>%
-   group_by(filename, nmf_k, landmark)%>%
-  summarise_if(is.numeric, mean,na.rm = T)%>%
-  mutate(x_sum = sum(x_displacement),
-         y_sum = sum(y_displacement)
-         )%>%
-  # not sure abpout this step. lets stary by normalising within component
-    group_by(nmf_k,landmark )%>%
+  ungroup()%>%
+   group_by(file_nmf,filename, expression, nmf_k, landmark,bin_frame)%>%
+  summarise_if(is.numeric, mean,na.rm = T)
+
+  # not sure about this step. lets stary by normalising within component
+# dta_generated_1_2_3_pred_long_agg$landmark <- as.numeric(dta_generated_1_2_3_pred_long_agg$landmark)
+
+#pay special attention to groupings, as a precaution, make sure to ungroup before any computations
+ dta_generated_1_2_3_pred_long_agg
+ 
+ dta_generated_1_2_3_pred_long_agg%>%
+  ungroup()%>%
+      # group_by(file_nmf)%>%
     mutate(x_sum_norm = normalize_between_0_and_1(x_displacement),
-         y_sum_norm = normalize_between_0_and_1(y_displacement)
-         )
+         y_sum_norm = normalize_between_0_and_1(y_displacement^2) #check this
+         )%>%
+    ungroup()%>%
+   subset(file_nmf == "./cut_posed_angry_day2_p5.csv_nmf1") %>%
+   ggplot(aes(x,y,colour = y_sum_norm))+
+   geom_point()+
+   geom_delaunay_segment2()+
+       scale_y_reverse()+
+      transition_time(bin_frame)  # Animate over the 'frame' variable
+    ease_aes('linear')  #
+
+    
+    
+    library(ggplot2)
+library(gganimate)
+library(ggforce)
+
+# Assuming dta_generated_1_2_3_pred_long_agg is your data frame
+# dta_optimized <- dta_generated_1_2_3_pred_long_agg %>%
+#    subset(file_nmf == "./cut_posed_angry_day2_p5.csv_nmf1")
+#   subset(bin_frame<15)
+
+  dta_generated_1_2_3_pred_long_agg$x_path<- dta_generated_1_2_3_pred_long_agg$x
+  dta_generated_1_2_3_pred_long_agg$y_path<-dta_generated_1_2_3_pred_long_agg$y
+   # 
+   # dta_generated_1_2_3_pred_long_agg$y_path<- if_else(landmark<17,
+   #                                                     dta_generated_1_2_3_pred_long_agg$y_path,
+   #                                                    landmark<17,
+   #                                                     dta_generated_1_2_3_pred_long_agg$y_path,
+   #                                                    
+   #                                                    
+   #                                                    
+   #                                                     )
+   # 
+   # Define segments to connect
+   
+   # Creating a boundary polygon
+dta_boundary <- dta_optimized[dta_optimized$bin_frame == 1, ] 
+
+
+# Function to generate segment data inline
+generate_segments <- function(df, indices) {
+  rbind(
+    data.frame(x = df$x[indices], y = df$y[indices],
+               xend = df$x[c(indices[-1], indices[1])],
+               yend = df$y[c(indices[-1], indices[1])]),
+    data.frame(x = df$x[c(indices[-1], indices[1])], y = df$y[c(indices[-1], indices[1])],
+               xend = df$x[indices],
+               yend = df$y[indices])
+  )
+}
+
+# for on the fly dsta subsetting = doesn't work
+generate_segments <- function(indices) {
+  data.frame(
+    x = .data$x[indices],
+    y = .data$y[indices],
+    xend = .data$x[c(indices[-1], indices[1])],
+    yend = .data$y[c(indices[-1], indices[1])]
+  )
+}
+
+# Define landmarks for each feature
+face_indices <- 0:16
+mouth_indices <- 48:67
+eyebrow_indices <- c(11:21, 22:26)
+nose_indices <- c(27:30, 31:35)
+eye_indices <- c(36:40, 42:47)
   
- # check that this is sensible, plot the full changes, note that these full changes won't correspond to reduced NMF values, so perhaps the clustering might allow us to kind of reduce the dimensionality
-dta_generated_1_2_3_pred_disp%>%
-  group_by(nmf_k, landmark)%>%
-  summarise_if(is.nuemric, mean, na.rm = T)%>%
-  ggplot(aes(x,y, colour = y_sum_norm))+
+
+
+
+dta_generated_1_2_3_pred_long_agg<-
+  
+  dta_generated_1_2_3_pred_long_agg%>%
+  mutate(landmark_group = case_when(
+    landmark %in% 0:16 ~ 'face',
+    landmark %in% 48:67 ~ 'mouth',
+    landmark %in% c(11:21) ~ 'eyebrows1',
+    landmark %in% c(22:26) ~ 'eyebrows2',
+    landmark %in% c(27:30) ~ 'nose1',
+     landmark %in% c(31:35) ~ 'nose2',
+    landmark %in% c(36:41) ~ 'eyes1',
+    landmark %in% c(42:47) ~ 'eyes2',
+    TRUE ~ 'other'  # for any points not in the specified ranges
+  ))
+
+dta_generated_1_2_3_pred_long_agg$landmark_group
+
+ dta_generated_1_2_3_pred_long_agg %>%
+   # subset(as.numeric(as.factor(file_nmf)) ==32)%>%
+  subset(file_nmf=="./cut_posed_angry_day1_p16.csv_nmf1")%>%
+     mutate(y_sum_norm = if_else(landmark_group == "face", 0,y_sum_norm))%>%
+ggplot(aes(x, y, fill =y_sum_norm)) +
+   geom_point(colour = "white") +
+   geom_voronoi_tile(alpha = .8) +
+  geom_voronoi_segment(alpha = .1,colour = "white") +
+   geom_path(aes(group = landmark_group),colour = "white")+
+    
+   scale_y_reverse() +
+    theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"),
+         legend.position = "none")+
+  
+    scale_fill_viridis_c(option = "magma")+
+   transition_time(bin_frame) +
+   ease_aes('linear')
+ 
+ 
+ t(as.data.frame(res_k3_fit_H))
+ 
+as.data.frame( coef(res_k3))%>%
+  mutate(comp = 1:n())%>%
+  gather(key,value, -comp)%>%
+  # group_by(key)%>%
+  mutate(value_norm1 = scale(value))%>%
+  ungroup()%>%
+  # group_by(comp) %>%
+  mutate(value_norm2 =normalize_between_0_and_1(value)) %>%
+  ggplot(aes(comp,key, fill = value))+
+  geom_tile()+
+  scale_fill_viridis_c(option = "inferno")
+```
+
+
+```{r}
+ dta_generated_1_2_3_pred_long_agg$landmark_group
+
+ unique(dta_generated_1_2_3_pred_long_agg$nmf_k)
+ 
+ dta_generated_1_2_3_pred_long_agg2<- dta_generated_1_2_3_pred_long_agg %>%
+   # subset(as.numeric(as.factor(file_nmf)) ==11)%>%
+   ungroup()%>%
+   group_by(nmf_k,landmark,landmark_group)%>%
+   summarise_if(is.numeric, mean, na.rm = T)%>%
+   ungroup()%>%
+   group_by(nmf_k)%>%
+        mutate(y_sum_norm = if_else(landmark_group == "face", 0,y_sum_norm))%>%
+   mutate(y_sum_norm = normalize_between_0_and_1(y_sum_norm))
+
+
+ 
+ dta_generated_1_2_3_pred_long_agg2%>%
+   
+
+ggplot(aes(x, y, fill = factor(nmf_k), colour = factor(nmf_k))) +
+      # geom_delaunay_tile(colour = "white")+
+   geom_voronoi_tile(aes(alpha = .1*y_sum_norm)) +
+  geom_voronoi_segment(alpha = .5,colour = "white") +
+   # geom_path(aes(group = landmark_group),colour = "white", alpha = .7)+
+     # geom_point(aes(alpha = .1*y_sum_norm)) +
+      geom_point(colour = "white") +
+   scale_y_reverse() +
+      facet_grid(~nmf_k)+
+    theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"),
+         legend.position = "none")+
+          scale_color_brewer(palette = "Dark2")
+ 
+ 
+ 
+ dta_generated_1_2_3_pred_long_agg2
+ 
+ 
+  dta_generated_1_2_3_pred_long_agg2%>%
+ ungroup()%>%
+    # group_by(nmf_k)%>%
+    # mutate(y_sum_norm = scale(y_sum_norm))%>%
+ggplot(aes(x, y, fill = y_sum_norm)) +
+   geom_voronoi_tile(aes(fill =y_sum_norm))+  
+    geom_voronoi_segment(alpha = .1,colour = "white") +
+   geom_path(aes(group = landmark_group),colour = "white", alpha = .7)+
+     # geom_point(aes(alpha = .1*y_sum_norm)) +
+      geom_point(colour = "white") +
+   scale_y_reverse() +
+      facet_grid(~nmf_k)+
+    theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"),
+         legend.position = "none")+
+    scale_fill_viridis_c(option = "inferno")
+
+
+  
+  dta_generated_1_2_3_pred_long_agg2%>%
+ ungroup()%>%
+    # group_by(nmf_k)%>%
+    # mutate(y_sum_norm = scale(y_sum_norm))%>%
+ggplot(aes(x, y, fill = y_sum_norm, colour = y_sum_norm)) +
+
+ geom_delaunay_tile()+
+        geom_voronoi_tile(aes(fill =y_sum_norm))+  
+     geom_delaunay_segment2()+
+   geom_path(aes(group = landmark_group),colour = "white", alpha = .7)+
+     # geom_point(aes(alpha = .1*y_sum_norm)) +
+      geom_point(colour = "white") +
+   scale_y_reverse() +
+      facet_grid(~nmf_k)+
+    theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"),
+         legend.position = "none")+
+    scale_fill_viridis_c(option = "inferno")+
+     scale_colour_viridis_c(option = "inferno")
+  
+  range(res_k3_fit_H)
+```
+
+due a linear change just so we can compute difference map
+
+
+```{r}
+res_k3_fit_H
+
+activations%>%
+  mutate(normalize_row())
+
+
+
+activations<- res_k3_fit_H
+
+activations
+
+
+# Assuming your original dataframe is named 'dta_original'
+# Extract only the AU columns (assuming they start from the second column)
+dta_AUs <- activations[, 2:ncol(activations)]
+
+
+
+
+
+# Sample data (replace with your dataset)
+# tmp_original <- data.frame(
+#   id = c("A", "B", "C"),
+#   col1 = c(10, 20, 30),
+#   col2 = c(40, 50, 60),
+#   col3 = c(70, 80, 90)
+# )
+
+# Create a sequence of 15 steps
+steps <- 1:10
+
+# Initialize a list to store the step dataframes
+list_step_dfs <- list()
+
+# Loop through each step and each row
+for (i in steps) {
+  # Calculate the proportion of the target value for this step
+  proportion <- i / max(steps)
+  
+  # Scale values for all rows at this step and retain identifiers
+  tmp_step_df <- cbind(activations[1], activations[-1] * proportion)
+  tmp_step_df$step <- i
+  
+  # Add the step dataframe to the list
+  list_step_dfs[[i + 1]] <- tmp_step_df
+}
+
+# Combine all step dataframes into one
+dta_steps <- do.call(rbind, list_step_dfs)
+
+# View the result
+print(head(dta_steps))
+
+
+dta_steps%>%
+  gather(key, value,- component,-step)%>%
+  group_by(key,component)%>%
+  summarise_if(is.numeric, max) %>%
+ggplot(aes(key, value))+
+  stat_summary(geom = "pointrange")+
+  facet_grid(~component)
+
+dta_steps
+# predict()
+
+# use this lienar animation to predict data\
+dta_lin_steps_pred <- predict(mod_pls,
+                              dta_steps , ncomp=17)
+
+dta_lin_steps_pred1<- as.data.frame(dta_lin_steps_pred)
+
+dta_lin_steps_pred1$component<- dta_steps$component
+dta_lin_steps_pred1$step<- dta_steps$step
+
+
+dta_lin_steps_pred1%>%
+  subset(component == 1)%>%
+  
+  
+   pivot_longer(cols = c(-step,-component), names_to = c(".value", "landmark"), 
+                names_pattern = "([xy])_(\\d+)") %>%
+  arrange(step, as.numeric(landmark))%>%
+  ggplot(aes(x,y))+
   geom_point()+
-    geom_delaunay_segment2(alpha = .2)+
-  scale_colour_viridis_c(option = "magma")+
-  scale_y_reverse()+
-  facet_grid(~nmf_k)
+    scale_y_reverse()+
+    # geom_text(aes(label = frame_group))+
+    ggtitle("approx")+
+       transition_time(step) + # Animate over the 'frame' variable
+    ease_aes('linear')  
+
+
+
+dta_lin_steps_pred1%>%
+  subset(component == 2)%>%
+  
+  
+   pivot_longer(cols = c(-step,-component), names_to = c(".value", "landmark"), 
+                names_pattern = "([xy])_(\\d+)") %>%
+  arrange(step, as.numeric(landmark))%>%
+  ggplot(aes(x,y))+
+  geom_point()+
+    scale_y_reverse()+
+    # geom_text(aes(label = frame_group))+
+    ggtitle("approx")+
+       transition_time(step) + # Animate over the 'frame' variable
+    ease_aes('linear')  
+
+
+dta_lin_steps_pred1%>%
+  subset(component == 3)%>%
+  
+  
+   pivot_longer(cols = c(-step,-component), names_to = c(".value", "landmark"), 
+                names_pattern = "([xy])_(\\d+)") %>%
+  arrange(step, as.numeric(landmark))%>%
+  ggplot(aes(x,y))+
+  geom_point()+
+    scale_y_reverse()+
+    # geom_text(aes(label = frame_group))+
+    ggtitle("approx")+
+       transition_time(step) + # Animate over the 'frame' variable
+    ease_aes('linear')  
+
+dta_lin_steps_pred1
+
+dta_lin_steps_pred1%>%
+  # subset(component == 2)%>%
+  
+  
+   pivot_longer(cols = c(-step,-component), names_to = c(".value", "landmark"), 
+                names_pattern = "([xy])_(\\d+)") %>%
+  mutate(landmark = as.numeric(landmark))%>%
+  arrange(component,landmark)%>%
+group_by(component, landmark) %>%
+  mutate(
+    x_displacement = x - lag(x, default = first(x)),
+    y_displacement = y - lag(y, default = first(y))) %>%
+  ungroup()%>%
+   # group_by(filename, expression, nmf_k, landmark,bin_frame)%>%
+  # summarise_if(is.numeric, mean,na.rm = T)
+   mutate(landmark_group = case_when(
+    landmark %in% 0:16 ~ 'face',
+    landmark %in% 48:67 ~ 'mouth',
+    landmark %in% c(11:21) ~ 'eyebrows1',
+    landmark %in% c(22:26) ~ 'eyebrows2',
+    landmark %in% c(27:30) ~ 'nose1',
+     landmark %in% c(31:35) ~ 'nose2',
+    landmark %in% c(36:41) ~ 'eyes1',
+    landmark %in% c(42:47) ~ 'eyes2',
+    TRUE ~ 'other'  # for any points not in the specified ranges
+  )) %>%
+
+group_by(component) %>%
+  mutate(y_displacement = if_else(landmark_group == "face", 0,y_displacement))%>%
+   # mutate(y_sum_norm = normalize_between_0_and_1(y_sum_norm))
+ mutate(x_sum_norm = normalize_between_0_and_1(x_displacement^2),
+         y_sum_norm = normalize_between_0_and_1(y_displacement^2) #check this
+         )%>%
+  group_by(component,landmark,landmark_group) %>%
+    summarise_if(is.numeric, mean,na.rm = T)%>%
+  # mutate(y_sum_norm = if_else(landmark_group == "face", 0,y_sum_norm))%>%
+   # mutate(y_sum_norm = normalize_between_0_and_1(y_sum_norm))
+  
+  group_by(component) %>%
+ mutate(x_sum_norm = normalize_between_0_and_1(x_sum_norm),
+         y_sum_norm = normalize_between_0_and_1(y_sum_norm) #check this
+         )%>%
+ #  
+ 
+  
+  ggplot(aes(x, y, fill =y_sum_norm)) +
+   geom_point(colour = "white") +
+   geom_voronoi_tile(alpha = .8) +
+  geom_voronoi_segment(alpha = 1,colour = "white") +
+  facet_grid(~component)+
+   geom_path(aes(group = landmark_group),colour = "white")+
+    
+   scale_y_reverse() +
+    theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"),
+  legend.position = "none")+
+  
+    scale_fill_viridis_c(option = "inferno")
+   # transition_time(step) +
+   # ease_aes('linear')
+  
+ mod_pls$loadings 
+ mod_pls$coefficients
+ 
 
 ```
 
 
+ # check that this is sensible, plot the full changes, note that these full changes won't correspond to reduced NMF values, so perhaps the clustering might allow us to kind of reduce the dimensionality
+    options(scipen = 999)
+
+
+original data
+
+
+```{r}
+colnames(dta_all_aligned_landmarks_posed_corrected_AUS_norm_downs_10th)
+```
+
+```{r}
+
+dta_lin_steps_pred1%>%
+  # subset(component == 2)%>%
+  
+  
+   pivot_longer(cols = c(-step,-component), names_to = c(".value", "landmark"), 
+                names_pattern = "([xy])_(\\d+)") %>%
+  mutate(landmark = as.numeric(landmark))%>%
+  arrange(component,landmark)%>%
+group_by(component, landmark) %>%
+  mutate(
+    x_displacement = x - lag(x, default = first(x)),
+    y_displacement = y - lag(y, default = first(y))) %>%
+  ungroup()%>%
+   # group_by(filename, expression, nmf_k, landmark,bin_frame)%>%
+  # summarise_if(is.numeric, mean,na.rm = T)
+   mutate(landmark_group = case_when(
+    landmark %in% 0:16 ~ 'face',
+    landmark %in% 48:67 ~ 'mouth',
+    landmark %in% c(11:21) ~ 'eyebrows1',
+    landmark %in% c(22:26) ~ 'eyebrows2',
+    landmark %in% c(27:30) ~ 'nose1',
+     landmark %in% c(31:35) ~ 'nose2',
+    landmark %in% c(36:41) ~ 'eyes1',
+    landmark %in% c(42:47) ~ 'eyes2',
+    TRUE ~ 'other'  # for any points not in the specified ranges
+  )) %>%
+
+group_by(component) %>%
+  mutate(y_displacement = if_else(landmark_group == "face", 0,y_displacement))%>%
+   # mutate(y_sum_norm = normalize_between_0_and_1(y_sum_norm))
+ mutate(x_sum_norm = normalize_between_0_and_1(x_displacement^2),
+         y_sum_norm = normalize_between_0_and_1(y_displacement^2) #check this
+         )%>%
+  group_by(component,landmark,landmark_group) %>%
+    summarise_if(is.numeric, mean,na.rm = T)%>%
+  # mutate(y_sum_norm = if_else(landmark_group == "face", 0,y_sum_norm))%>%
+   # mutate(y_sum_norm = normalize_between_0_and_1(y_sum_norm))
+  
+  group_by(component) %>%
+ mutate(x_sum_norm = normalize_between_0_and_1(x_sum_norm),
+         y_sum_norm = normalize_between_0_and_1(y_sum_norm) #check this
+         )%>%
+ #  
+ 
+  
+  ggplot(aes(x, y, fill =y_sum_norm)) +
+   geom_point(colour = "white") +
+   geom_voronoi_tile(alpha = .8) +
+  geom_voronoi_segment(alpha = .1,colour = "white") +
+  facet_grid(~component)+
+   geom_path(aes(group = landmark_group),colour = "white")+
+    
+   scale_y_reverse() +
+    theme_dark()+
+  theme_void()+
+  theme(plot.background = element_rect(fill = "black"),
+  legend.position = "none")+
+  
+    scale_fill_viridis_c(option = "inferno")
+   # transition_time(step) +
+   # ease_aes('linear')
+  
+ mod_pls$loadings 
+ mod_pls$coefficients
+
+
+```
 
 # just run the clustering here
 
-
+```{r}
+dta_generated_1_2_3_pred_long_agg2
 dta_generated_1_2_3_pred_disp_agg<- dta_generated_1_2_3_pred_disp%>%
   group_by(landmark, nmf_k)%>%
   summarise_if(is.numeric, mean, na.rm. =T)
 
 
-dta_generated_1_2_3_pred_disp_agg$clust_k4<- rslt_clusters$cluster
-
- dta_generated_1_2_3_pred_disp
+ dta_generated_1_2_3_pred_disp<- dta_generated_1_2_3_pred_long_agg2
 
  # just scale this here so that we don't need to scale it during clustering
 dta_generated_1_2_3_pred_disp$land_scale<- normalize_between_0_and_1(as.numeric(dta_generated_1_2_3_pred_disp$landmark))
@@ -102,8 +602,10 @@ set.seed(123)
 colnames(dta_generated_1_2_3_pred_disp_agg)
 
 
+dta_generated_1_2_3_pred_disp_agg<- dta_generated_1_2_3_pred_disp
+colnames(dta_generated_1_2_3_pred_disp_agg)
 
-rslt_clusters <- kmeans(dta_generated_1_2_3_pred_disp_agg[,c(12,11)], centers=4)
+rslt_clusters <- kmeans(dta_generated_1_2_3_pred_disp_agg[,c(13,10)], centers=3)
 
 # Visualize the results
 
@@ -113,7 +615,7 @@ ggplot( aes(land_scale, y_sum_norm, color=factor(rslt_clusters$cluster))) +
   labs(color='Cluster')+
   facet_grid(~nmf_k)
 
-rslt_clusters$cluster
+dta_generated_1_2_3_pred_disp_agg$clust_k4<- rslt_clusters$cluster
 
 
 
@@ -123,6 +625,9 @@ dta_generated_1_2_3_pred_disp_agg%>%
   geom_text(aes(label = landmark))+
   scale_y_reverse()+
   facet_grid(~nmf_k)
+
+
+```
 
 
 dta_generated_1_2_3_pred_disp_agg$clust_k4_fixed<- dta_generated_1_2_3_pred_disp_agg$clust_k4
@@ -148,6 +653,8 @@ dta_generated_1_2_3_pred_disp_agg$clust_k4_fixed)
                                                                 
 
 dta_generated_1_2_3_pred_disp_agg%>%
+  ungroup()%>%
+    mutate(y_norm2 = normalize_between_0_and_1(y_sum_norm))%>%
   # group_by(nm)%>%
   # summarise_if(is.numeric, mean, na.rm = T)%>%
   ggplot(aes(x,y, colour = y_sum_norm))+
