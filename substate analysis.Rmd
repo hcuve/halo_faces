@@ -4551,31 +4551,40 @@ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
     subset(expression!= "neutral")%>%
   mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
     group_by(subject)%>%
-  mutate(trans_entropy = maxnormalize(trans_entropy_perclust_use))%>%
+  mutate(trans_entropy = maxnormalize(log10(trans_entropy+.001)))%>%
       group_by(filename,subject,expression, posed_spoken, cluster)%>%
   summarise_if(is.numeric, mean, na.rm = T)%>%
   
-  ggplot(aes(cluster , trans_entropy, 
-             color = posed_spoken, shape =posed_spoken))+
-  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),alpha = .2) +
- stat_summary(aes(group = posed_spoken, colour =posed_spoken, linetype =posed_spoken),fun.y = mean,  geom = "line",
-               position = position_dodge(width = 1), size = 1.5)+
-   stat_summary(aes(group = posed_spoken, colour =posed_spoken),
-                fun.y = mean,  
-                geom = "point",
-                 position = position_dodge(width = 1),size = 1.5)+
-    # stat_summary(aes(group = posed_spoken, colour =posed_spoken),  geom = "pointrange")+
+  ggplot(aes(expression , trans_entropy, 
+             color = expression, shape =expression))+
+  stat_summary(geom = "pointrange")+
+  
+  # geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),alpha = .2) +
+    
+ # stat_summary(fun.y = mean,  geom = "line",
+ #               position = position_dodge(width = 1), size = 1.5)+
+
+   # 
+   # stat_summary(aes(group = expression, colour =expression),
+   #              fun.y = mean,  
+   #              geom = "point",
+   #               position = position_dodge(width = 1),size = 1.5)+
+
   stat_summary(fun.data = "mean_se", 
                geom = "errorbar",
                width  = .5,
                size = 1.5,
                position = position_dodge(width = 1))+
-    facet_grid(~expression)+
+
+
   xlab("Substate cluster")+
   ylab("entropy (bits)")+
+          facet_grid(~posed_spoken)
 
   
- ggside::geom_ysidedensity(aes(x=stat(density), color = posed_spoken,  fill = posed_spoken), alpha = .5)+
+ ggside::geom_ysidedensity(aes(x=stat(density), color = expression,  fill = expression), alpha = .5)+
+          facet_grid(~posed_spoken)
+
   ggside::geom_xsideboxplot(aes(group = cluster), alpha = .5, orientation = "x")+
   # ggside::geom_xsidepath()+
 
@@ -4583,7 +4592,7 @@ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
      # ggside(x.pos = "bottom", y.pos = "left") +
     scale_color_brewer(palette = "Dark2")+
     scale_fill_brewer(palette = "Dark2")+
-
+        facet_grid(~posed_spoken)
   theme_classic()+
   theme(legend.position = "top")+
   p$graphstyle_int+
@@ -4591,9 +4600,11 @@ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
     theme(ggside.panel.scale = .5,
           ggside.axis.text.y = element_blank())
 
+```
+
 plts_substate_entropy
 
-
+```{r}
 ggsave("plts_substate_entropy.tiff", plts_substate_entropy, device = "tiff",
        width = 14, height = 14, dpi = 800)
 
@@ -4612,7 +4623,7 @@ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
 
 spoken_posed_nmf1$subject<- as.factor(spoken_posed_nmf1$subject)
 
-rslt_trans_entropy<-lmer(trans_entropy~ expression*posed_spoken+
+rslt_trans_entropy<-lmer(log1p(trans_entropy)~ expression*posed_spoken+
                            # expression:posed_spoken+
                            # expression:cluster_label+
                            # posed_spoken:cluster_label +
@@ -4630,6 +4641,8 @@ summary(rslt_trans_entropy)
 
 emmeans::emmeans(rslt_trans_entropy, pairwise~expression, adjust = "bonf")
 emmeans::emmeans(rslt_trans_entropy, pairwise~posed_spoken,)
+
+emmeans::emmeans(rslt_trans_entropy, pairwise~expression*posed_spoken, adjust = "holm")
 report::report(rslt_trans_entropy)
 report::report(anova(rslt_trans_entropy))
 
@@ -4639,7 +4652,11 @@ report::report(anova(rslt_trans_entropy))
 
 ```{r}
 
+install.packages("entropy")
+
 unique(spoken_posed_nmf$filename)
+install.packages("GrpString")
+
  spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
     subset(expression!= "neutral")%>%
    # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%

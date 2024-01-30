@@ -381,6 +381,52 @@ write_csv(spoken_mts_no0Sd_no0Sd_dcast_2, "spoken_mts_no0Sd_no0Sd_dcast2.csv")
 
 ```
 
+```
+
+```{r}
+colnames(spoken_mts_no0Sd_no0Sd_dcast_2)
+
+mts_maxnorm_dcast_no0Sd_removed
+colnames(mts_maxnorm_dcast_no0Sd_removed)
+spoken_mts_no0Sd_no0Sd
+mts_maxnorm_dcast_no0Sd_removed_SCALE2$filename
+
+library(tidyverse)
+
+spoken_mts_no0Sd_no0Sd_dcast_2%>%
+  select(c(colnames(mts_maxnorm_dcast_no0Sd_removed)))
+
+spoken_mts_no0Sd_no0Sd_dcast_2$PC1
+
+mts_maxnorm_dcast_no0Sd_removed$PC1
+mts_maxnorm_dcast_no0Sd_removed$posed_spoken <- "posed"
+spoken_mts_no0Sd_no0Sd_dcast_2$posed_spoken <- "spoken"
+
+
+bind_rows(mts_maxnorm_dcast_no0Sd_removed[, c(1:4,69:72)],
+          spoken_mts_no0Sd_no0Sd_dcast_2[, c(1:4,63:66)])%>%
+  gather(comp,comp_value, -filename, -subject, -expression,-drug.placebo,
+         -posed_spoken)%>%
+  ggplot(aes(expression, comp_value))+
+  stat_summary(geom = "pointrange")+
+    facet_grid(~comp)
+
+
+dta_test_lmer<- bind_rows(mts_maxnorm_dcast_no0Sd_removed[, c(1:4,69:72)],
+          spoken_mts_no0Sd_no0Sd_dcast_2[, c(1:4,63:66)])%>%
+  gather(comp,comp_value, -filename, -subject, -expression,-drug.placebo,
+         -posed_spoken)
+colnames(dta_test_lmer)
+
+dta_test_lmer$subject<- as.factor(dta_test_lmer)
+lmer(comp_value ~ comp+expression+posed_spoken+
+       comp:expresion+
+       comp:posed_spoken+
+       (1|subject) REML = FALSE,
+     data = dta_test_lmer)
+
+```
+
 
 random forest analysys and plots
 
