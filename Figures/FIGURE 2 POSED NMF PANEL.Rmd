@@ -9,6 +9,9 @@ noe train basd on AU rather then NMF AUS
 
 ```{r}
 # Load necessary libraries
+install.packages("pls")
+install.packages("geometry")
+install.packages("shapes")
 library(pls)
 library(geometry)
 library(ggplot2)
@@ -140,6 +143,8 @@ ggplot(plot_data, aes(x = x, y = y, group = group, fill = value)) +
   scale_fill_gradient(low = "blue", high = "red") +
   coord_fixed() +
   theme_void()
+```
+
 
 
 ```{r}
@@ -325,6 +330,8 @@ ggsave("panel_NMF_posed1.tiff",device = 'tiff', paper_plots$panel_NMF_posed,
        width = 25,
        height = 25,
        dpi = 800)
+
+paper_plots$panel_NMF_posed
 
 ```
 

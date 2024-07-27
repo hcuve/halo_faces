@@ -74,6 +74,8 @@ coefmap(res_k3_spoken1) #hidden variables
 # access more info
 # res_k3_em
 
+NMF::consensusmap(res_k3_spoken1)
+
 ```
 face heatmaps for Spoje NMF
 

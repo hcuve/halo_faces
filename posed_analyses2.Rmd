@@ -233,87 +233,6 @@ scmfts
 
 
 
-since this approach  above works, we could derive temporal parameters that need not be super exhaustive
-but that will capture the main info in the timeseries
-e.g. peak speed, peak discplacement, RMSSD for eitehr speed or displcamenet
-
-```{r}
-posed_spoken_bindrows
-colnames(posed_spoken_bindrows_ts)
-
-range(posed_spoken_bindrows_ts$k3_comp1_abs_diff, na.rm = T)
-options(scipen = 999)
-range(posed_spoken_bindrows_ts$k3_comp1, na.rm = T)
-posed_spoken_bindrows_ts<- posed_spoken_bindrows_ts%>%
-  group_by(filename)%>%
-
-   mutate(k3_comp1_abs_diff = as.numeric(diff(zoo::zoo(k3_comp1), na.pad = TRUE)),
-         k3_comp2_abs_diff= as.numeric(diff(zoo::zoo(k3_comp2), na.pad = TRUE)),
-         k3_comp3_abs_diff=as.numeric(diff(zoo::zoo(k3_comp3), na.pad = TRUE)))%>%
-  
-     mutate(k3_comp1_abs_diff_sum = sum(abs(k3_comp1_abs_diff), na.rm = T),
-         k3_comp2_abs_diff_sum= sum(abs(k3_comp2_abs_diff),na.rm = T),
-         k3_comp3_abs_diff_sum=sum(abs(k3_comp3_abs_diff),na.rm = T))%>%
-           
-          # speed calculations
-  mutate(k3_comp1_speed = (abs(lag(k3_comp1) -k3_comp1))/(abs(lead(bin_frame)-bin_frame)),
-         k3_comp2_speed = (abs(lag(k3_comp2) -k3_comp2))/(abs(lead(bin_frame)-bin_frame)),
-         k3_comp3_speed = (abs(lag(k3_comp3) -k3_comp3))/(abs(lead(bin_frame)-bin_frame)))%>%
-         
-        mutate(k3_comp1_speed_sum = sum(k3_comp1_speed, na.rm = T),
-         k3_comp2_speed_sum = sum(k3_comp2_speed, na.rm = T),
-         k3_comp3_speed_sum = sum(k3_comp3_speed, na.rm = T))%>%
-    mutate(
-        RMSSD_speed_k1 = sqrt(mean(((lead(k3_comp1_speed ) - k3_comp1_speed )^2),na.rm = TRUE)),
-        RMSSD_speed_k2 = sqrt(mean(((lead(k3_comp2_speed ) - k3_comp2_speed )^2),na.rm = TRUE)),
-        RMSSD_speed_k3 = sqrt(mean(((lead(k3_comp3_speed ) - k3_comp3_speed )^2),na.rm = TRUE)))%>%
-   mutate(
-        RMSSD_disp_k1 = sqrt(mean(((lead(k3_comp1_abs_diff ) - k3_comp1_abs_diff )^2),na.rm = TRUE)),
-        RMSSD_disp_k2 = sqrt(mean(((lead(k3_comp2_abs_diff ) - k3_comp2_abs_diff )^2),na.rm = TRUE)),
-        RMSSD_disp_k3 = sqrt(mean(((lead(k3_comp3_abs_diff ) - k3_comp3_abs_diff )^2),na.rm = TRUE)))
-
-
-unique(posed_spoken_bindrows_ts$filename)
-
-posed_spoken_bindrows_ts$k3_comp1_abs_diff_sum
-posed_spoken_bindrows_ts$k3_comp1_abs_diff
-
-posed_spoken_bindrows_ts$k3_comp1_speed
-posed_spoken_bindrows_ts$k3_comp1_speed_sum
-posed_spoken_bindrows_ts$RMSSD_speed_k1
-posed_spoken_bindrows_ts$RMSSD_disp_k1
-
-posed_spoken_bindrows_ts%>%
-  subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
-  ggplot(aes(bin_frame, k3_comp1_abs_diff))+
-  geom_line()+
-  geom_line(aes(y = k3_comp1_abs_diff_sum), color = "red")+
-  geom_line(aes(y = k3_comp1_speed), color = "blue")+
-  geom_line(aes(y = k3_comp1_speed_sum), color = "green")+
-  geom_line(aes(y = RMSSD_speed_k1), linetype = "dashed")+
-    geom_line(aes(y = RMSSD_disp_k1), linetype = "dotted")
-
-
-posed_spoken_bindrows_ts%>%
-  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
-  ggplot(aes(RMSSD_speed_k3, RMSSD_disp_k3))+
-  geom_point()
-  geom_line()+
-  geom_line(aes(y = k3_comp1_abs_diff_sum), color = "red")+
-  geom_line(aes(y = k3_comp1_speed), color = "blue")+
-  geom_line(aes(y = k3_comp1_speed_sum), color = "green")+
-  geom_line(aes(y = RMSSD_speed_k1), linetype = "dashed")+
-    geom_line(aes(y = RMSSD_disp_k1), linetype = "dotted")
-  
-  colnames(posed_spoken_bindrows_ts)
- posed_spoken_bindrows_ts_agg<- posed_spoken_bindrows_ts%>%
-    group_by(filename, posed_spoken, expression, drug.placebo, subject)%>%
-    summarise_if(is.numeric, mean, na.rm = T)
-  
- # aggregated wirth kiematic features
- 
-```
-
 pcatest
 colnames(test_ts_dcast)
 test_ts_dcast
@@ -627,12 +546,14 @@ train_set <- train_test_split(permuted_labels)[[1]]
                 method = "rf",
                 ntree = 30)
   
-  r.forest_tr
-  
-r.forest_tr$finalModel 
+#   r.forest_tr
+#   
+# r.forest_tr$finalModel 
 
   test_set$prediction <- predict(r.forest_mts, test_set)
   r.forest_mts
+  
+  nbprediction = predict(rocmod, test_set)
   
   #create confusion matrix and calculate metrics related to confusion matrix
 confusionMatrix(pred, actual, mode = "everything", positive="1")
@@ -679,8 +600,16 @@ Acc_unshuff<- sum(test_set$prediction == test_set$expression)/length(test_set$ex
 # we can get acuracy p value and uper lower bounds ysing a binomial test
 # https://rdrr.io/cran/caret/man/confusionMatrix.html
 
-# get evaluation metris with SD
-confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "everything", positive="1")
+
+# install.packages("randomForest")
+# library(randomForest)
+
+# install.packages("confusionMatrix")
+# install.packages("caret")
+con_mat_posed<- caret::confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "everything", positive="1")
+
+
+ caret::confusionMatrix(as.factor(test_set$expression), as.factor(test_set$prediction), mode = "everything", positive="1")
 
 # some idea about boostraping on repeated measures
 # https://colauttilab.github.io/EcologyTutorials/bootstrap.html
@@ -688,8 +617,334 @@ confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "ev
 # i think this is what I did for my other paper on autonomic coherence
 
 
+con_mat_posed$overall
+con_mat_posed
 
 
+
+result.roc <- pROC::roc(as.numeric(as.character(test_set$expression)), as.numeric(test_set$prediction)) # Draw ROC curve.
+
+plot(result.roc, print.thres="best", print.thres.best.method="closest.topleft")
+
+result.coords <- coords(result.roc, "best", best.method="closest.topleft", ret=c("threshold", "accuracy"))
+print(result.coords)#to get threshold and accuracy
+
+```
+
+
+```{r}
+
+permutation_test_accuracy <- function(predictions, actual_labels, num_permutations = 1000) {
+  observed_accuracy <- sum(predictions == actual_labels) / length(actual_labels)
+  
+  permuted_accuracies <- numeric(num_permutations)
+  for (i in 1:num_permutations) {
+    permuted_labels <- sample(actual_labels)
+    permuted_accuracy <- sum(predictions == permuted_labels) / length(permuted_labels)
+    permuted_accuracies[i] <- permuted_accuracy
+  }
+  
+  p_value <- sum(permuted_accuracies >= observed_accuracy) / num_permutations
+  return(p_value)
+}
+
+
+
+# Calculate p-value using permutation test
+
+con_mat_posed
+permutation_test_accuracy(test_set$prediction, test_set$expression)
+print(p_value)
+
+```
+
+# compute chi sqyare tests for pairwise compartisosn, cpompute wethe the clases are sufficiantly different and 2 which confusions are signficiant
+
+# 
+
+options(scipen  =999 )
+
+
+```{r}
+install.packages("rcompanion")
+
+con_mat_posed$table
+
+
+?rcompanion::pairwiseNominalIndependence
+# Create the confusion matrix in one line
+test_cm <- matrix(c(7, 7, 0, 5, 9, 0, 0, 0, 14), 
+                           nrow = 3, 
+                           byrow = TRUE,
+                           dimnames = list("Reference" = c("angry", "happy", "sad"),
+                                           "Prediction" = c("angry", "happy", "sad")))
+
+# Print the confusion matrix
+print(confusion_matrix)
+
+test_cm
+
+test_csq_pw<-rcompanion::pairwiseNominalIndependence(con_mat_posed$table,
+                                        compare = "row",
+                                        fisher = TRUE)
+
+
+test_csq_pw$Comparison
+test_csq_pw
+test_csq_pw$p.adj.Fisher
+
+
+```
+
+testn<-RVAideMemoire::chisq.multcomp(as.numeric(con_mat_posed$table+1))
+testn$data.name
+
+testn$p.value
+test_ts_dcast_no0Sdpairwise_chisq(con_mat_posed$table+1)
+
+print(pairwise_results)
+install.packages("rmngb")
+pairwise.chisq.test
+
+
+which(testn$p.value < 0.05, arr.ind = TRUE)
+
+con_mat_posed$table+1
+
+
+
+
+```
+
+"angry : happy" "angry : sad"   "happy : sad"  
+[1] 0.0000000493 0.0000105000 0.0000000493
+
+Show in New Window
+   row col
+13   6   1
+15   7   1
+16   8   1
+13   6   2
+15   7   2
+16   8   2
+13   6   3
+15   7   3
+16   8   3
+13   6   4
+15   7   4
+16   8   4
+13   6   5
+15   7   5
+16   8   5
+15   7   6
+16   8   6
+          Reference
+Prediction angry happy sad
+     angry    13     1   1
+     happy     1    16   2
+     sad       4     1  15
+install.packages("RVAideMemoire")
+
+```{r}
+con_mat_posed$table+1
+
+as.numeric(con_mat_posed$table+1)
+
+?RVAideMemoire::chisq.multcomp
+RVAideMemoire::chisq.multcomp(as.numeric(con_mat_posed$table+1))
+
+
+counts <- as.numeric(con_mat_posed$table+1)
+# Perform pairwise comparisons using chisq.multcomp
+pairwise_results <- chisq.multcomp(counts, p.method = "fdr")
+
+# Perform pairwise comparisons using chisq.multcomp
+pairwise_results <- chisq.multcomp(counts, p.method = "fdr")
+
+# Print the results with interpretation
+pairwise_results$p.value <- matrix(pairwise_results$p.value, nrow = length(counts), dimnames = list(as.character(counts), as.character(counts)))
+
+
+print(pairwise_results)
+
+
+
+# Perform pairwise comparisons using chisq.multcomp
+pairwise_results <- chisq.multcomp(counts, p.method = "fdr")
+
+# Format the p-values into a matrix
+num_categories <- length(con_mat_posed$table)
+
+p_values_matrix <- matrix(pairwise_results$p.value, nrow = num_categories, byrow = TRUE,
+                          dimnames = list(paste("Row", 1:num_categories), paste("Column", 1:num_categories)))
+
+# Print the results
+print(pairwise_results)
+print(p_values_matrix)
+
+
+test_cm
+```
+```{r}
+# Install and load necessary package
+if(!require(RVAideMemoire)) install.packages("RVAideMemoire")
+library(RVAideMemoire)
+
+# Define the confusion matrix and add 1 to each element to avoid zero counts
+con_mat_posed <- matrix(c(12, 0, 0,
+                          0, 15, 1,
+                          3, 0, 14) + 1, 
+                        nrow = 3, 
+                        byrow = TRUE,
+                        dimnames = list("Prediction" = c("angry", "happy", "sad"),
+                                        "Reference" = c("angry", "happy", "sad")))
+
+# Function to perform pairwise chi-squared tests
+pairwise_chisq <- function(matrix) {
+  categories <- colnames(matrix)
+  results <- data.frame(Comparison = character(), p.value = numeric(), stringsAsFactors = FALSE)
+  
+  for (i in 1:nrow(matrix)) {
+    for (j in 1:ncol(matrix)) {
+      if (i != j) {
+        # Create a 2x2 table for the chi-squared test
+        observed <- matrix[c(i, j), c(i, j)]
+        test_result <- chisq.test(observed)
+        
+        # Store the result
+        comparison <- paste(categories[i], "vs", categories[j])
+        results <- rbind(results, data.frame(Comparison = comparison, p.value = test_result$p.value))
+      }
+    }
+  }
+  
+  # Adjust p-values for multiple comparisons
+  results$p.adj <- p.adjust(results$p.value, method = "fdr")
+  
+  return(results)
+}
+
+
+pairwise_chisq <- function(matrix) {
+  categories <- colnames(matrix)
+  results <- data.frame(Comparison = character(), p.value = numeric(), stringsAsFactors = FALSE)
+  
+  for (i in 1:nrow(matrix)) {
+    for (j in 1:ncol(matrix)) {
+      # Create a 2x2 table for the chi-squared test
+      observed <- matrix[c(i, j), c(i, j)]
+      test_result <- chisq.test(observed)
+      
+      # Store the result
+      comparison <- paste(categories[i], "vs", categories[j])
+      results <- rbind(results, data.frame(Comparison = comparison, p.value = test_result$p.value))
+    }
+  }
+  
+  # Adjust p-values for multiple comparisons
+  results$p.adj <- p.adjust(results$p.value, method = "fdr")
+  
+  return(results)
+}
+
+
+
+
+pairwise_chisq(con_mat_posed$table+1)
+
+```
+
+# also same categoruy comparison
+pairwise_chisq <- function(matrix) {
+  categories <- colnames(matrix)
+  results <- data.frame(Comparison = character(), p.value = numeric(), stringsAsFactors = FALSE)
+  
+  for (i in 1:(nrow(matrix)-1)) {  # Adjusted loop to avoid redundant comparisons
+    for (j in (i+1):ncol(matrix)) {  # Adjusted loop to avoid redundant comparisons
+      # Create a 2x2 table for the chi-squared test
+      observed <- matrix[c(i, j), c(i, j)]
+      test_result <- chisq.test(observed)
+      
+      # Store the result
+      comparison <- paste(categories[i], "vs", categories[j])
+      results <- rbind(results, data.frame(Comparison = comparison, p.value = test_result$p.value))
+    }
+  }
+  
+  # Adjust p-values for multiple comparisons
+  results$p.adj <- p.adjust(results$p.value, method = "fdr")
+  
+  return(results)
+}
+
+
+# Perform the pairwise chi-squared tests
+pairwise_results <- pairwise_chisq(con_mat_posed$table)
+
+# Print the results
+print(pairwise_results)
+
+
+# Create the confusion matrix in one line
+test_cm <- matrix(c(7, 7, 0, 7, 7, 0, 0, 0, 14), 
+                           nrow = 3, 
+                           byrow = TRUE,
+                           dimnames = list("Reference" = c("angry", "happy", "sad"),
+                                           "Prediction" = c("angry", "happy", "sad")))
+
+pairwise_chisq(test_cm)
+test_cm
+
+
+
+
+pairwise_chisq(con_mat_posed$table+1)
+
+
+```
+
+counts <- c(49,30,63,59)
+chisq.test(counts)
+
+as.vector(test_cm)
+
+test_cm<- matrix(c(7, 7, 1, 5, 9, 1, 1, 1, 14), ncol = 9)
+
+
+# Define the categories for Reference and Prediction
+categories <- list("Reference" = c("angry", "happy", "sad"),
+                   "Prediction" = c("angry", "happy", "sad"))
+
+# Create all possible pairs with Reference going vertically
+all_pairs <- expand.grid(Prediction = categories$Prediction, Reference = categories$Reference)
+
+# Create a vector with the format "Reference-Prediction"
+names <- paste(all_pairs$Reference, all_pairs$Prediction, sep = "-")
+
+# Print the vector
+print(names)
+
+colnames(test_cm) <- names
+test_cm<- as.table(test_cm)
+
+RVAideMemoire::chisq.multcomp(test_cm, p.method = "none")
+
+race <- matrix(c(7, 7, 0, 5, 9, 0, 0, 0, 14),ncol=9)
+colnames(race) <- c(1:9)
+race<-as.table(race)
+race
+
+#run chisq
+chi_res <- chisq.test(race)
+
+#check results
+chi_res
+library(RVAideMemoire)
+chisq.multcomp(race+1, p.method = "none")
+
+```
+rcompanion::pairwiseNominalIndependence(con_mat_posed$table,
+                                        fisher = TRUE)
 
 ```
 
@@ -698,9 +953,10 @@ confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "ev
 # now results are much closer
 # can i have more trees than rows random forest?
 
+pvalue
 
+tehre is a mistake ejre with the expression shuffle
 ```{r}
-boundary(r.forest_tr, x, class = "Species", main = "Random Forest")
 
 test_set_tem
 i = 1
@@ -818,17 +1074,23 @@ acc_test <- acc_test%>%
   # geom_histogram(bins = 100)
   
   
+  # pvalue
+mean(acc_test$acc_temp >= Acc_unshuff)
+``` 
   
-  conf_mat_df_perm%>%
+```{r}
+conf_mat_df_perm%>%
     ggplot(aes(Prediction, Reference, fill = Freq/15))+
     geom_tile()+
        # scale_fill_viridis_c(option = "magma")
     scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
-                       limits =c(0,1))+
+                       limits =c(0,1))
     
-  
+```
+
+
 require(caret)
-  
+```{r}
 paper_plots$conf_mat_posed <-
 as.data.frame(confusionMatrix(test_set$prediction , as.factor(test_set$expression), mode = "everything", positive="1")[["table"]])%>%
   mutate(prop = Freq/15)%>%
@@ -1070,20 +1332,6 @@ install.packages("ggRandomForests")
 library(ggRandomForests)
 # ?ggRandomForests::calc_auc()
 
-
-## Taken from the gg_roc example
-rfsrc_iris <- rfsrc(Species ~ ., data = iris)
-
-## Not run: 
-gg_dta <- gg_roc(rfsrc_iris, which_outcome=1)
-
-calc_auc(gg_dta)
-plot.gg_roc(gg_dta)
-
-data(rfsrc_iris, package="ggRandomForests")
-
-# ROC for setosa
-gg_dta <- gg_roc(rfsrc_iris, which_outcome=1)
 
 
 
@@ -2290,12 +2538,12 @@ library(klaR)
      bty='n')
  for (type.id in 1:3) {
    
-  train_set$type = as.factor(train_set$expression == lvls[type.id])
-   rocmod<-train(type ~ PC1 + PC2 + PC3,
-                 data = train_set,
-                method = "rf",
-                type = "raw",
-                ntree = 30)
+  # train_set$type = as.factor(train_set$expression == lvls[type.id])
+  #  rocmod<-train(type ~ PC1 + PC2 + PC3,
+  #                data = train_set,
+  #               method = "rf",
+  #               type = "raw",
+  #               ntree = 30)
 
    
    rocmod
@@ -2305,11 +2553,19 @@ test_set$type<- as.factor(test_set$expression == lvls[type.id])
 
 
 
-
+  # test_set$prediction <- predict(r.forest_mts, test_set)
+  # r.forest_mts
+  # 
+  # nbprediction = predict(rocmod, test_set)
   
-nbprediction = predict(rocmod, test_set)
+nbprediction = predict(r.forest_mts, test_set)
+
+
+
+
+
 # klaR::
-score=   predict(rocmod, test_set, type = 'prob')
+# score=   predict(rocmod, test_set, type = 'prob')
 
 
   # score$dots
@@ -2328,7 +2584,9 @@ score=   predict(rocmod, test_set, type = 'prob')
   aucs[type.id] = nbauc
  }
  
- 
+ install.packages("ROCR")
+ library(ROCR)
+ pred
  # predict test set, get probs instead of response
 predictions <- as.data.frame(predict(r.forest_mts, test_set, type = "prob"))
 
@@ -2395,7 +2653,7 @@ ggplot()+
 
 
 ```{r}
-
+paper_plots$ROC_posed
 paper_plots$ROC_posed<-
 
 roc_combined%>%
@@ -2475,10 +2733,16 @@ head(longtest)
  library(ROCR)
 
  
- 
+```{r}
  
  score<-as.numeric(predict(r.forest_mts, test_set))
+
+
+install.packages("plotROC")
 plotROC::calculate_multi_roc(test_set$prediction)
+
+
+```
 
 
 set.seed(2529)
@@ -3108,6 +3372,8 @@ acc_test<- acc_test%>%
   
   
   rf_confusion_ci
+  
+  
  acc_test_ci%>%
         mutate(perc_5 = quantile(acc_temp,.025, na.rm = TRUE), 
          perc_95 = quantile(acc_temp,.975, na.rm = TRUE))%>%

@@ -1,0 +1,92 @@
+---
+title: "Untitled"
+author: "Helio"
+date: "2024-07-26"
+output: html_document
+---
+
+les strict multivariate timeseries features classication
+
+
+
+
+since this approach  above works, we could derive temporal parameters that need not be super exhaustive
+but that will capture the main info in the timeseries
+e.g. peak speed, peak discplacement, RMSSD for eitehr speed or displcamenet
+
+```{r}
+posed_spoken_bindrows
+colnames(posed_spoken_bindrows_ts)
+
+range(posed_spoken_bindrows_ts$k3_comp1_abs_diff, na.rm = T)
+options(scipen = 999)
+range(posed_spoken_bindrows_ts$k3_comp1, na.rm = T)
+posed_spoken_bindrows_ts<- posed_spoken_bindrows_ts%>%
+  group_by(filename)%>%
+
+   mutate(k3_comp1_abs_diff = as.numeric(diff(zoo::zoo(k3_comp1), na.pad = TRUE)),
+         k3_comp2_abs_diff= as.numeric(diff(zoo::zoo(k3_comp2), na.pad = TRUE)),
+         k3_comp3_abs_diff=as.numeric(diff(zoo::zoo(k3_comp3), na.pad = TRUE)))%>%
+  
+     mutate(k3_comp1_abs_diff_sum = sum(abs(k3_comp1_abs_diff), na.rm = T),
+         k3_comp2_abs_diff_sum= sum(abs(k3_comp2_abs_diff),na.rm = T),
+         k3_comp3_abs_diff_sum=sum(abs(k3_comp3_abs_diff),na.rm = T))%>%
+           
+          # speed calculations
+  mutate(k3_comp1_speed = (abs(lag(k3_comp1) -k3_comp1))/(abs(lead(bin_frame)-bin_frame)),
+         k3_comp2_speed = (abs(lag(k3_comp2) -k3_comp2))/(abs(lead(bin_frame)-bin_frame)),
+         k3_comp3_speed = (abs(lag(k3_comp3) -k3_comp3))/(abs(lead(bin_frame)-bin_frame)))%>%
+         
+        mutate(k3_comp1_speed_sum = sum(k3_comp1_speed, na.rm = T),
+         k3_comp2_speed_sum = sum(k3_comp2_speed, na.rm = T),
+         k3_comp3_speed_sum = sum(k3_comp3_speed, na.rm = T))%>%
+    mutate(
+        RMSSD_speed_k1 = sqrt(mean(((lead(k3_comp1_speed ) - k3_comp1_speed )^2),na.rm = TRUE)),
+        RMSSD_speed_k2 = sqrt(mean(((lead(k3_comp2_speed ) - k3_comp2_speed )^2),na.rm = TRUE)),
+        RMSSD_speed_k3 = sqrt(mean(((lead(k3_comp3_speed ) - k3_comp3_speed )^2),na.rm = TRUE)))%>%
+   mutate(
+        RMSSD_disp_k1 = sqrt(mean(((lead(k3_comp1_abs_diff ) - k3_comp1_abs_diff )^2),na.rm = TRUE)),
+        RMSSD_disp_k2 = sqrt(mean(((lead(k3_comp2_abs_diff ) - k3_comp2_abs_diff )^2),na.rm = TRUE)),
+        RMSSD_disp_k3 = sqrt(mean(((lead(k3_comp3_abs_diff ) - k3_comp3_abs_diff )^2),na.rm = TRUE)))
+
+
+unique(posed_spoken_bindrows_ts$filename)
+
+posed_spoken_bindrows_ts$k3_comp1_abs_diff_sum
+posed_spoken_bindrows_ts$k3_comp1_abs_diff
+
+posed_spoken_bindrows_ts$k3_comp1_speed
+posed_spoken_bindrows_ts$k3_comp1_speed_sum
+posed_spoken_bindrows_ts$RMSSD_speed_k1
+posed_spoken_bindrows_ts$RMSSD_disp_k1
+
+posed_spoken_bindrows_ts%>%
+  subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  ggplot(aes(bin_frame, k3_comp1_abs_diff))+
+  geom_line()+
+  geom_line(aes(y = k3_comp1_abs_diff_sum), color = "red")+
+  geom_line(aes(y = k3_comp1_speed), color = "blue")+
+  geom_line(aes(y = k3_comp1_speed_sum), color = "green")+
+  geom_line(aes(y = RMSSD_speed_k1), linetype = "dashed")+
+    geom_line(aes(y = RMSSD_disp_k1), linetype = "dotted")
+
+
+posed_spoken_bindrows_ts%>%
+  # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
+  ggplot(aes(RMSSD_speed_k3, RMSSD_disp_k3))+
+  geom_point()
+  geom_line()+
+  geom_line(aes(y = k3_comp1_abs_diff_sum), color = "red")+
+  geom_line(aes(y = k3_comp1_speed), color = "blue")+
+  geom_line(aes(y = k3_comp1_speed_sum), color = "green")+
+  geom_line(aes(y = RMSSD_speed_k1), linetype = "dashed")+
+    geom_line(aes(y = RMSSD_disp_k1), linetype = "dotted")
+  
+  colnames(posed_spoken_bindrows_ts)
+ posed_spoken_bindrows_ts_agg<- posed_spoken_bindrows_ts%>%
+    group_by(filename, posed_spoken, expression, drug.placebo, subject)%>%
+    summarise_if(is.numeric, mean, na.rm = T)
+  
+ # aggregated wirth kiematic features
+ 
+```

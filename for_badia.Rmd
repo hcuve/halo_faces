@@ -1,0 +1,137 @@
+---
+title: "bada"
+author: "Helio"
+date: "2024-07-25"
+output: html_document
+---
+
+
+
+before we do for classification and clustering
+let's do BADIA
+
+```{r}
+# start with the dimensions
+colnames(nmfk4_agg_no_ts)
+# drug no drug
+
+bada_models<-list()
+bada_models$drug_nodrug<- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,24:27], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts$drug.placebo),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+# based on emotion
+bada_models$emotion <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,24:27], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+
+# based on AUS
+colnames(nmfk4_agg_no_ts)
+bada_models$drug_nodrug_fromAUS<- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,4:20], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts$drug.placebo),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+
+bada_models$emotion_fromAUS <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts[,4:20], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+
+
+# do placebo vs  drug separately
+nmfk4_agg_no_ts_drug<-subset(nmfk4_agg_no_ts, drug.placebo == "drug")
+nmfk4_agg_no_ts_plac<-subset(nmfk4_agg_no_ts, drug.placebo != "drug")
+
+colnames(nmfk4_agg_no_ts_drug)
+bada_models$drug_emotion_NMF <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts_drug[,24:27], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts_drug$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+# lacebo
+
+bada_models$placebo_emotion_NMF <- TInPosition::tepBADA.inference.battery(nmfk4_agg_no_ts_plac[,24:27], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(nmfk4_agg_no_ts_plac$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 1000, 
+                                                       critical.value = 2)
+
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+
+df_OF_output_AUsW_unblind_posed_binned_drug<-subset(df_OF_output_AUsW_unblind_posed_binned, drug.placebo  =="drug")
+
+bada_models$ts_drug<- TInPosition::tepBADA.inference.battery(df_OF_output_AUsW_unblind_posed_binned_drug[,38:41], 
+                                                       scale = FALSE, 
+                                                       center = FALSE, 
+                                                       DESIGN = as.factor(df_OF_output_AUsW_unblind_posed_binned_drug$expression),
+                                                       make_design_nominal = TRUE,
+                                                       group.masses = NULL, 
+                                                       weights = NULL, 
+                                                       graphs = TRUE, 
+                                                       k = 0, 
+                                                       test.iters = 100, 
+                                                       critical.value = 2)
+
+df_OF_output_AUsW_unblind_posed_binned$subject<- as.factor(df_OF_output_AUsW_unblind_posed_binned$subject)
+
+summary(lmer(k4_comp3 ~ 1 + expression*drug.placebo +(1+drug.placebo|subject),
+             REML = FALSE,
+     data  =df_OF_output_AUsW_unblind_posed_binned))
+
+df_OF_output_AUsW_unblind_posed_binned%>%
+  group_by(subject, expression, drug.placebo)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  ggplot(aes(drug.placebo, k4_comp4))+
+  geom_boxplot(alpha = .1)+
+  stat_summary(geom = "pointrange")+
+  geom_smooth(aes(group =subject), method = "lm", se  =F, sie = 1, alpha = .1)+
+  facet_grid(~expression)
+
+
+```

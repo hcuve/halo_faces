@@ -1,0 +1,222 @@
+---
+title: "rocs, AUC and p values"
+author: "Helio"
+date: "2024-07-27"
+output: html_document
+---
+
+```{r}
+# Load necessary libraries
+# install.packages("pROC")
+library(pROC)
+library(caret)
+library(randomForest)
+library(dplyr)
+
+# Assuming nmf_results contains the NMF components and a multiclass label `expression`
+
+# Split the dataset into training and testing sets
+# set.seed(1234)
+
+# Train the Random Forest model on the full dataset
+r.forest_mts <- train(expression ~ PC1 + PC2 + PC3, 
+                      data = train_set, 
+                      method = "rf",
+                      ntree = 30)
+
+
+
+test_set$prediction<- predict(r.forest_mts, test_set)
+con_mat_posed<- caret::confusionMatrix(as.factor(test_set$prediction) , as.factor(test_set$expression), mode = "everything", positive="1")
+
+con_mat_posed
+
+caret::confusionMatrix(as.factor(test_set$prediction) , as.factor(test_set$expression))
+
+```
+
+AUC
+
+
+```{r}
+# Load necessary libraries
+library(caret)
+library(pROC)
+library(randomForest)
+
+# Assuming you have already split your data into train_set and test_set
+
+# Train the Random Forest model
+r.forest_mts <- train(expression ~ PC1 + PC2 + PC3, 
+                      data = train_set, 
+                      method = "rf",
+                      ntree = 30)
+
+# Predict probabilities on the test set
+pred_prob <- predict(r.forest_mts, test_set, type = "prob")
+
+# Convert the test set labels to factors
+actual_labels <- factor(test_set$expression)
+
+# Calculate the AUC for each class
+auc_list <- sapply(levels(actual_labels), function(cls) {
+  # One-vs-all setup
+  binary_actual <- as.numeric(actual_labels == cls)
+  roc_curve <- roc(binary_actual, pred_prob[, cls])
+  auc(roc_curve)
+})
+
+# Print AUC for each class
+auc_list
+
+# Compute the overall AUC (macro-average)
+overall_auc_macro <- mean(auc_list)
+print(paste("Overall AUC (Macro-average):", overall_auc_macro))
+
+# Compute the overall AUC (micro-average)
+roc_curve_micro <- multiclass.roc(actual_labels, pred_prob)
+overall_auc_micro <- auc(roc_curve_micro)
+print(paste("Overall AUC (Micro-average):", overall_auc_micro))
+
+
+```
+
+P value overall
+
+
+p values by classs
+
+ binomial 
+
+```{r}
+
+# Assuming you have your confusion matrix stored in a variable called 'conf_mat'
+conf_mat <- table(test_set$prediction, test_set$expression)
+
+# Function to calculate balanced accuracy
+calculate_balanced_accuracy <- function(binary_mat) {
+  sensitivity <- binary_mat[1, 1] / (binary_mat[1, 1] + binary_mat[1, 2])
+  specificity <- binary_mat[2, 2] / (binary_mat[2, 1] + binary_mat[2, 2])
+  balanced_accuracy <- (sensitivity + specificity) / 2
+  return(list(sensitivity = sensitivity, specificity = specificity, balanced_accuracy = balanced_accuracy))
+}
+
+# Function to calculate metrics and p-value for one class vs all others
+calculate_class_metrics_and_p_value <- function(conf_mat, class_name) {
+  class_index <- which(colnames(conf_mat) == class_name)
+  binary_mat <- matrix(c(conf_mat[class_index, class_index],
+                         sum(conf_mat[class_index, -class_index]),
+                         sum(conf_mat[-class_index, class_index]),
+                         sum(conf_mat[-class_index, -class_index])),
+                       nrow = 2)
+  
+  # Calculate observed balanced accuracy
+  metrics <- calculate_balanced_accuracy(binary_mat)
+  observed_balanced_accuracy <- metrics$balanced_accuracy
+  
+  # Number of instances
+  total_instances <- sum(binary_mat)
+  
+  # Z-test for balanced accuracy against 0.5
+  z_score <- (observed_balanced_accuracy - 0.5) / sqrt(0.25 / total_instances)
+  p_value <- 1 - pnorm(z_score)
+  
+  return(list(
+    sensitivity = metrics$sensitivity,
+    specificity = metrics$specificity,
+    balanced_accuracy = observed_balanced_accuracy,
+    p_value = p_value
+  ))
+}
+
+# Calculate metrics and p-value for each class
+class_results <- lapply(colnames(conf_mat), function(class_name) {
+  calculate_class_metrics_and_p_value(conf_mat, class_name)
+})
+
+names(class_results) <- colnames(conf_mat)
+
+# Convert results to data frame for better readability
+results_df <- do.call(rbind, lapply(class_results, as.data.frame))
+results_df$Class <- rownames(results_df)
+rownames(results_df) <- NULL
+
+# Print results
+print(results_df)
+
+```
+
+
+
+con_mat_posed
+print(results_df)
+
+permutation basd
+
+```{r}
+# Assuming you have your confusion matrix stored in a variable called 'conf_mat'
+conf_mat <- table(test_set$prediction, test_set$expression)
+
+# Function to calculate balanced accuracy
+calculate_balanced_accuracy <- function(binary_mat) {
+  sensitivity <- binary_mat[1, 1] / (binary_mat[1, 1] + binary_mat[1, 2])
+  specificity <- binary_mat[2, 2] / (binary_mat[2, 1] + binary_mat[2, 2])
+  balanced_accuracy <- (sensitivity + specificity) / 2
+  return(balanced_accuracy)
+}
+
+# Function to calculate metrics and p-value for one class vs all others using permutation test
+calculate_class_metrics_and_p_value <- function(conf_mat, class_name, num_permutations = 1000) {
+  class_index <- which(colnames(conf_mat) == class_name)
+  binary_mat <- matrix(c(conf_mat[class_index, class_index],
+                         sum(conf_mat[class_index, -class_index]),
+                         sum(conf_mat[-class_index, class_index]),
+                         sum(conf_mat[-class_index, -class_index])),
+                       nrow = 2)
+  
+  # Calculate observed balanced accuracy
+  observed_balanced_accuracy <- calculate_balanced_accuracy(binary_mat)
+  
+  # Perform permutation test
+  permuted_balanced_accuracies <- numeric(num_permutations)
+  total_instances <- sum(binary_mat)
+  
+  for (i in 1:num_permutations) {
+    permuted_labels <- sample(rep(1:0, times = c(sum(binary_mat[1, ]), sum(binary_mat[2, ]))))
+    permuted_binary_mat <- table(permuted_labels, rep(1:0, times = c(sum(binary_mat[, 1]), sum(binary_mat[, 2]))))
+    if (length(permuted_binary_mat) == 4) {
+      permuted_balanced_accuracies[i] <- calculate_balanced_accuracy(permuted_binary_mat)
+    } else {
+      permuted_balanced_accuracies[i] <- 0.5  # In case of any issue, we assume random guessing
+    }
+  }
+  
+  # Calculate p-value
+  p_value <- mean(permuted_balanced_accuracies >= observed_balanced_accuracy)
+  
+  return(list(
+    sensitivity = binary_mat[1, 1] / (binary_mat[1, 1] + binary_mat[1, 2]),
+    specificity = binary_mat[2, 2] / (binary_mat[2, 1] + binary_mat[2, 2]),
+    balanced_accuracy = observed_balanced_accuracy,
+    p_value = p_value
+  ))
+}
+
+# Calculate metrics and p-value for each class
+class_results <- lapply(colnames(conf_mat), function(class_name) {
+  calculate_class_metrics_and_p_value(conf_mat, class_name)
+})
+
+names(class_results) <- colnames(conf_mat)
+
+# Convert results to data frame for better readability
+results_df <- do.call(rbind, lapply(class_results, as.data.frame))
+results_df$Class <- rownames(results_df)
+rownames(results_df) <- NULL
+
+# Print results
+print(results_df)
+
+
+```
+permutation and binomial p values give the same
