@@ -470,13 +470,67 @@ spoken_r.forest <- train(expression ~ comp1_maxnorm + comp2_maxnorm + comp3_maxn
 #    
 spoken_test_set$prediction <- predict(spoken_r.forest, spoken_test_set)
    
+
+# 
 spoken_test_set_res<- confusionMatrix(spoken_test_set$prediction , as.factor(spoken_test_set$expression), mode = "everything", positive="1")
    
    
-
+options(scipen = 999)
+spoken_test_set_res
 ```
 
 
+Confusion Matrix and Statistics
+
+          Reference
+Prediction angry happy neutral sad
+   angry      10     0       1   2
+   happy       0    14       0   2
+   neutral     0     1       9   4
+   sad         5     0       5   7
+
+Overall Statistics
+                                          
+               Accuracy : 0.6667          
+                 95% CI : (0.5331, 0.7831)
+    No Information Rate : 0.25            
+    P-Value [Acc > NIR] : 0.0000000000131 
+                                          
+                  Kappa : 0.5556          
+                                          
+ Mcnemar's Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: angry Class: happy Class: neutral
+Sensitivity                0.6667       0.9333         0.6000
+Specificity                0.9333       0.9556         0.8889
+Pos Pred Value             0.7692       0.8750         0.6429
+Neg Pred Value             0.8936       0.9773         0.8696
+Precision                  0.7692       0.8750         0.6429
+Recall                     0.6667       0.9333         0.6000
+F1                         0.7143       0.9032         0.6207
+Prevalence                 0.2500       0.2500         0.2500
+Detection Rate             0.1667       0.2333         0.1500
+Detection Prevalence       0.2167       0.2667         0.2333
+Balanced Accuracy          0.8000       0.9444         0.7444
+                     Class: sad
+Sensitivity              0.4667
+Specificity              0.7778
+Pos Pred Value           0.4118
+Neg Pred Value           0.8140
+Precision                0.4118
+Recall                   0.4667
+F1                       0.4375
+Prevalence               0.2500
+Detection Rate           0.1167
+Detection Prevalence     0.2833
+Balanced Accuracy        0.6222
+
+
+overall bal;amced accuracy = (0.8000    +   0.9444       +  0.7444+ 0.6222)/4
+
+0.77775
 boundary plots
 
 ```{r}
@@ -487,14 +541,6 @@ spoken_rf <-randomForest::randomForest(as.factor(expression) ~ PC1 + PC2 + PC3,
                    ntree = 73
                    # mtry = 2
                    )
-
-spoken_rf <-randomForest::randomForest(as.factor(expression) ~ PC1 + PC2 + PC3,
-                                       data = spoken_mts_no0Sd_no0Sd_dcast_2,
-                   proximity = TRUE,
-                   ntree = 73
-                   # mtry = 2
-                   )
-
 
   
   # spoken_rf_2 <- train(expression ~ PC1 + PC2 + PC3, 
