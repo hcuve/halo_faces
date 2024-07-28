@@ -166,7 +166,7 @@ calculate_balanced_accuracy <- function(binary_mat) {
 }
 
 # Function to calculate metrics and p-value for one class vs all others using permutation test
-calculate_class_metrics_and_p_value <- function(conf_mat, class_name, num_permutations = 1000) {
+calculate_class_metrics_and_p_value_perm <- function(conf_mat, class_name, num_permutations = 1000) {
   class_index <- which(colnames(conf_mat) == class_name)
   binary_mat <- matrix(c(conf_mat[class_index, class_index],
                          sum(conf_mat[class_index, -class_index]),
@@ -185,7 +185,7 @@ calculate_class_metrics_and_p_value <- function(conf_mat, class_name, num_permut
     permuted_labels <- sample(rep(1:0, times = c(sum(binary_mat[1, ]), sum(binary_mat[2, ]))))
     permuted_binary_mat <- table(permuted_labels, rep(1:0, times = c(sum(binary_mat[, 1]), sum(binary_mat[, 2]))))
     if (length(permuted_binary_mat) == 4) {
-      permuted_balanced_accuracies[i] <- calculate_balanced_accuracy(permuted_binary_mat)
+      permuted_balanced_accuracies[i] <- calculate_balanced_accuracy_perm(permuted_binary_mat)
     } else {
       permuted_balanced_accuracies[i] <- 0.5  # In case of any issue, we assume random guessing
     }
@@ -217,6 +217,154 @@ rownames(results_df) <- NULL
 # Print results
 print(results_df)
 
+# overall balanded accuracy
+mean(results_df$balanced_accuracy)
+
 
 ```
 permutation and binomial p values give the same
+
+
+SPOKEN
+
+```{r}
+spoken_test_set_res<- confusionMatrix(spoken_test_set$prediction , as.factor(spoken_test_set$expression), mode = "everything", positive="1")
+
+spoken_test_set$prediction <- predict(spoken_r.forest, spoken_test_set)
+   
+
+# Predict probabilities on the test set
+pred_prob_spk <- predict(spoken_r.forest, spoken_test_set, type = "prob")
+
+# Convert the test set labels to factors
+actual_labels_spk <- factor(spoken_test_set$expression)
+
+# Calculate the AUC for each class
+auc_list_spk <- sapply(levels(actual_labels_spk), function(cls) {
+  # One-vs-all setup
+  binary_actual_spk <- as.numeric(actual_labels_spk == cls)
+  roc_curve_spk <- roc(binary_actual_spk, pred_prob_spk[, cls])
+  auc(roc_curve_spk)
+})
+
+# Print AUC for each class
+auc_list_spk
+
+# Compute the overall AUC (macro-average)
+overall_auc_macro_spk <- mean(auc_list_spk)
+overall_auc_macro_spk
+
+# Compute the overall AUC (micro-average)
+# roc_curve_micro_spk <- multiclass.roc(actual_labels_spk, pred_prob_spk)
+# overall_auc_micro_spk <- auc(roc_curve_micro_spk)
+# overall_auc_micro_spk
+
+
+
+```
+
+p values
+
+
+```{r}
+# Calculate metrics and p-value for each class
+
+conf_mat_spk <- table(spoken_test_set$prediction, spoken_test_set$expression)
+class_results_spk <- lapply(colnames(conf_mat_spk), function(class_name) {
+  calculate_class_metrics_and_p_value(conf_mat_spk, class_name)
+})
+
+names(class_results_spk) <- colnames(conf_mat_spk)
+
+# Convert results to data frame for better readability
+results_df_spk <- do.call(rbind, lapply(class_results_spk, as.data.frame))
+results_df_spk$Class <- rownames(results_df_spk)
+rownames(results_df_spk) <- NULL
+
+# Print results
+print(results_df_spk)
+
+
+```
+
+permutation based
+
+
+```{r}
+
+# Calculate metrics and p-value for each class
+class_results_spk_perm <- lapply(colnames(conf_mat_spk), function(class_name) {
+  calculate_class_metrics_and_p_value_perm(conf_mat_spk, class_name)
+})
+
+names(class_results_spk_perm) <- colnames(conf_mat_spk)
+
+# Convert results to data frame for better readability
+results_df_spk_perm <- do.call(rbind, lapply(class_results_spk_perm, as.data.frame))
+
+results_df_spk_perm$Class <- rownames(results_df_spk_perm)
+
+results_df_spk_perm
+rownames(results_df_spk_perm) <- NULL
+
+# Print results
+print(results_df)
+
+# overall balanded accuracy
+mean(results_df$balanced_accuracy)
+
+```
+
+
+CIs
+
+```{r}
+library(boot)
+
+# Function to calculate balanced accuracy for bootstrap
+boot_balanced_accuracy <- function(data, indices) {
+  resampled_data <- data[indices, ]
+  conf_mat <- table(resampled_data$prediction, resampled_data$expression)
+  class_results <- lapply(colnames(conf_mat), function(class_name) {
+    calculate_class_metrics_and_p_value_perm(conf_mat, class_name, num_permutations = 0)
+  })
+  sapply(class_results, function(x) x$balanced_accuracy)
+}
+
+# Perform bootstrap
+set.seed(123)  # for reproducibility
+boot_results_spk <- boot(data = spoken_test_set, statistic = boot_balanced_accuracy, R = 1000)
+
+# Calculate confidence intervals
+ci_results_spk <- t(sapply(1:ncol(boot_results_spk$t), function(i) {
+  boot.ci(boot_results_spk, type = "bca", index = i)$bca[4:5]
+}))
+
+# Add confidence intervals to results_df
+results_df_spk_perm$CI_lower <- ci_results_spk[, 1]
+results_df_spk_perm$CI_upper <- ci_results_spk[, 2]
+
+# Print updated results
+print(results_df_spk_perm)
+
+# Overall balanced accuracy with confidence interval
+overall_boot_spk <- boot(data = results_df_spk_perm$balanced_accuracy, 
+                     statistic = function(data, indices) mean(data[indices]), 
+                     R = 1000)
+overall_ci_spk <- boot.ci(overall_boot_spk, type = "bca")$bca[4:5]
+
+cat("Overall balanced accuracy:", 
+    mean(results_df_spk_perm$balanced_accuracy), 
+    "(95% CI:", overall_ci_spk[1], "-", overall_ci_spk[2], ")\n")
+
+```
+
+Chi quare
+```{r}
+rcompanion::pairwiseNominalIndependence(spoken_test_set_res$table,
+                                        compare = "row",
+                                        fisher = TRUE)
+
+??rcompanion::pairwiseNominalIndependence
+
+```
