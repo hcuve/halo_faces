@@ -62,13 +62,23 @@ res_k3_spoken1 <- NMF::nmf(df_OF_output_AUsW_unblind_spoken1_binned[,17:33], r =
                  .options = list( 'v')) #verbose
 
 range(df_OF_output_AUsW_unblind_spoken1_binned$bin_frame)
+df_OF_output_AUsW_unblind_spoken1_binned$AU25_r_Lips_part
 
-
-
-res_spoken1_findk <- nmf(df_OF_output_AUsW_unblind_spoken1_binned[,17:33], 2:6, 
+require(NMF)
+res_spoken1_find_k <- nmf(df_OF_output_AUsW_unblind_spoken1_binned[,17:33]+.0001, 2:6, 
                       seed=123456,
                       nrun = 100,
                        .options = 'v')
+
+install.packages("RcppML")
+library(RcppML)
+?RcppML::nmf
+
+RcppML::
+res_spoken1_find_k <- RcppML::nmf(df_OF_output_AUsW_unblind_spoken1_binned[,17:33]+.01, 
+                                  k = 2, 
+                                  seed = 123456, 
+                                  maxit = 100)
 
 
 # plot(res_k3_spoken1) - this only work for multyiple fits with multiple ks
@@ -86,11 +96,49 @@ NMF::coefmap(res_k3_spoken1) #hidden variables
 
 NMF::consensusmap(res_k3_spoken1)
 
+res_spoken1_find_k
+
 ```
 face heatmaps for Spoje NMF
 
 
+library(RcppML)
+find k
+```{r}
 
+# Function to run NMF for a specific rank
+run_nmf <- function(data, rank, seed, maxit) {
+  tryCatch({
+    RcppML::nmf(data, k = rank, seed = seed, maxit = maxit)
+  }, error = function(e) {
+    message("Error in NMF computation for rank ", rank, ": ", e$message)
+    NULL
+  })
+}
+
+# Data preparation
+data <- df_OF_output_AUsW_unblind_spoken1_binned[, 17:33] + 0.01
+
+# Parameters
+seed <- 123456
+maxit <- 100
+
+# Run NMF for ranks 2 to 6
+res_spoken1_find_k <- list()
+for (rank in 2:6) {
+  res <- run_nmf(data, rank, seed, maxit)
+  if (!is.null(res)) {
+    res_spoken1_find_k[[paste0("rank_", rank)]] <- res
+  }
+}
+
+# Check results
+if (length(res_spoken1_find_k) == 0) {
+  message("All NMF computations failed.")
+} else {
+  message("NMF computations completed successfully for ranks: ", paste(names(res_spoken1_find_k), collapse = ", "))
+}
+```
 
 some custom visualisations
 
@@ -1240,7 +1288,7 @@ ggplot(aes(x =  specificities, y = sensitivities, group = expression, colour = e
   plot_style+
   theme(legend.position = c(.75,.2))
 
-
+save.image("~/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/halofacestudyOCT2023.RData")
 ```
 
 

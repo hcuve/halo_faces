@@ -3929,45 +3929,71 @@ spoken_posed_nmf
  
  
 
- compute frequency entropy, etc
-```{r}
-library(data.table)
- 
-spoken_posed_nmf<- spoken_posed_nmf%>%
- mutate(freq_clus = n())%>% # compute frequency of each state
-  group_by(filename)%>%
-  mutate(freq_clus_perc = freq_clus/n())%>% # compute percentage of each state e.g. duration
-  group_by(filename, expression, subject)%>%
-mutate(cluster_count_group = rleid(cluster_label))%>%
-  group_by(filename, cluster_label, expression, subject,drug.placebo)%>%
-    mutate(speed_avg =  mean(speed, na.rm = TRUE),
-           displacement_avg = mean(displacement, na.rm = TRUE),
-acceleration_avg = mean(acceleration, na.rm = TRUE))%>%
-   group_by(subject)%>%
-  
-  mutate(speed_avg_norm =  maxnorm(speed_avg),
-displacement_avg_norm =  maxnorm(displacement_avg),
-acceleration_avg_norm =  maxnorm(acceleration_avg))%>%
-  # compute entropy
-  # shanon entropy
-  group_by(filename)%>%
-  mutate(entropy_clust = entropy::entropy(table(cluster_label)),
-         trans_entropy = GrpString::TransEntro(cluster_label),
-         trans_entropy_perclust = GrpString::TransEntropy(cluster_label),
-         )%>%
-  group_by(filename, cluster_label)%>%
-  
-  # now transition entropy
-  mutate(clust_dur_count = n())%>%
-  group_by(filename)%>%
-  mutate(clust_dur_count_perc = clust_dur_count/n())
 
+
+
+spoken_posed_nmf_filtered_agg%>%
+  subset(expression!= "sad")%>%
+  mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
+  group_by(subject,expression,cluster_label,cluster, posed_spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  # ggplot(aes( expression , trans_entropy, 
+  #            color = posed_spoken, shape =posed_spoken))+
+  
+    ggplot(aes( expression , trans_entropy, 
+             color = posed_spoken, shape =posed_spoken))+
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),alpha = .2) +
+ stat_summary(aes(group = posed_spoken, colour =posed_spoken, linetype =posed_spoken),fun.y = mean,  geom = "line",
+               position = position_dodge(width = 1), size = 1.5)+
+   stat_summary(aes(group = posed_spoken, colour =posed_spoken),
+                fun.y = mean,  
+                geom = "point",
+                 position = position_dodge(width = 1),size = 1.5)+
+    # stat_summary(aes(group = posed_spoken, colour =posed_spoken),  geom = "pointrange")+
+  stat_summary(fun.data = "mean_se", 
+               geom = "errorbar",
+               width  = .5,
+               size = 1.5,
+               position = position_dodge(width = 1)
+    # fun.y = mean,
+               # fun.ymin = function(x) mean(x) - sd(x), 
+               # fun.ymax = function(x) mean(x) + sd(x), 
+               # geom = "pointrange"
+    # geom = "errorbar"
+    ) +
+    # facet_grid(~expression)+
+  xlab("Substate cluster")+
+  scale_color_brewer(palette = "Dark2")+
+      scale_fill_brewer(palette = "Dark2")+
+ggside::geom_ysidedensity(aes(x=stat(density), color = posed_spoken,  fill = posed_spoken), alpha = .5)+
+  ggside::geom_xsideboxplot(aes(group = cluster), alpha = .5, orientation = "x")+
+   # ggside::geom_xsideboxplot(aes(group = cluster), alpha = .5)+
+
+  theme_classic()+
+  theme(legend.position = "top")+
+  p$graphstyle_int+
+    theme(legend.title = element_blank())+
+      theme(ggside.panel.scale = .5,
+          ggside.axis.text.y = element_blank())
+
+
+spoken_posed_nmf_entr
+# Print the updated data frame to verify the changes
+print(spoken_posed_nmf)
+
+
+
+
+```{r}
+# spoken_posed_nmf_backup<- spoken_posed_nmf
+
+spoken_posed_nmf<- spoken_posed_nmf_entr
 # store transition entropy
 spoken_posed_nmf$trans_entropy_perclust_use<-spoken_posed_nmf$trans_entropy_perclust$Entropy
 
+spoken_posed_nmf$cluster_label
 
-
-spoken_posed_nmf
+spoken_posed_nmf$trans_entropy_perclust
 # 
 # colnames(spoken_posed_nmf)
 # spoken_posed_nmf$sp_avg
@@ -3990,7 +4016,7 @@ spoken_posed_nmf_filtered_agg<- spoken_posed_nmf_filtered%>%
   summarise_if(is.numeric,mean, na.rm = T)
 
 
-spoken_posed_nmf_filtered$trans_entropy_perclust<-NULL
+# spoken_posed_nmf_filtered$trans_entropy_perclust<-NULL
 write_csv(spoken_posed_nmf_filtered_agg, "spoken_posed_nmf_filtered_agg.csv")
 
 
@@ -4373,7 +4399,7 @@ spoken_posed_nmf_filtered%>%
   # summarise_if(is.numeric, mean, na.rm = T)%>%
   ggplot(aes(posed_spoken, entropy_clust))+
   # geom_jitter(width = .2,alpha = .1)+
-  stat_summary(geom = "pointrange")
+  stat_summary(geom = "pointrange")+
   facet_grid(~expression)
   
   
@@ -4396,6 +4422,8 @@ Plots
 
 # speed
 plts_substate_speed_avg<-
+
+
 spoken_posed_nmf_filtered_agg%>%
   mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
   group_by(subject,expression,cluster_label,cluster, posed_spoken)%>%
@@ -4423,6 +4451,7 @@ spoken_posed_nmf_filtered_agg%>%
     ) +
     facet_grid(~expression)+
   xlab("Substate cluster")+
+    xlab("Speed (au)")+
   scale_color_brewer(palette = "Dark2")+
       scale_fill_brewer(palette = "Dark2")+
 ggside::geom_ysidedensity(aes(x=stat(density), color = posed_spoken,  fill = posed_spoken), alpha = .5)+
@@ -4492,6 +4521,8 @@ ggside::geom_ysidedensity(aes(x=stat(density), color = posed_spoken,  fill = pos
     theme(legend.title = element_blank())+
       theme(ggside.panel.scale = .5,
           ggside.axis.text.y = element_blank())
+
+
 plts_substate_freq
 
 tmp_freq<- spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
@@ -4542,67 +4573,183 @@ ggplot(aes( cluster_label , clust_dur_count,
 
 # entropy
 
+
+
+
 ```{r}
-plts_substate_entropy
+library(data.table)
 
-# spoken_posed_nmf$trans_entropy
 
-spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
+spoken_posed_nmf_filtered
+spoken_posed_nmf_filtered_agg
+ 
+
+# fixing issue tps://github.com/hcuve/halo_faces/issues/1
+
+
+library(dplyr)
+library(data.table)  # for rleid
+library(entropy)
+library(GrpString)
+
+# Assuming spoken_posed_nmf is your data frame
+unique(spoken_posed_nmf$cluster_label)
+library(dplyr)
+library(data.table)  # for rleid
+library(entropy)
+library(GrpString)
+
+
+
+
+
+# tes
+
+
+# CORRECT entropy
+
+
+# stationary entropy
+spoken_posed_nmf
+spoken_posed_nmf_entropy<- spoken_posed_nmf_filtered%>%
+   
+  group_by(filename) %>%
+  mutate(entropy_clust = entropy::entropy(table(cluster_label))) %>%
+    mutate(entropy_clust_norm =entropy_clust/(log2(3)))
+  spoken_posed_nmf_entropy$entropy_clust_norm
+  
+plts_substate_entropy_stat<-
+  
+spoken_posed_nmf_entropy%>%
     subset(expression!= "neutral")%>%
-  mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
-    group_by(subject)%>%
-  mutate(trans_entropy = maxnormalize(log10(trans_entropy+.001)))%>%
-      group_by(filename,subject,expression, posed_spoken, cluster)%>%
+  group_by(subject,expression,posed_spoken)%>%
   summarise_if(is.numeric, mean, na.rm = T)%>%
-  
-  ggplot(aes(expression , trans_entropy, 
-             color = expression, shape =expression))+
-  stat_summary(geom = "pointrange")+
-  
-  # geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),alpha = .2) +
-    
- # stat_summary(fun.y = mean,  geom = "line",
- #               position = position_dodge(width = 1), size = 1.5)+
 
-   # 
-   # stat_summary(aes(group = expression, colour =expression),
-   #              fun.y = mean,  
-   #              geom = "point",
-   #               position = position_dodge(width = 1),size = 1.5)+
-
+   ggplot(aes( expression , entropy_clust_norm, 
+             color = posed_spoken, shape =posed_spoken))+
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),alpha = .2) +
+ stat_summary(aes(group = posed_spoken, colour =posed_spoken, linetype =posed_spoken),fun.y = mean,  geom = "line",
+               position = position_dodge(width = 1), size = 1.5)+
+   stat_summary(aes(group = posed_spoken, colour =posed_spoken),
+                fun.y = mean,  
+                geom = "point",
+                 position = position_dodge(width = 1),size = 1.5)+
+    # stat_summary(aes(group = posed_spoken, colour =posed_spoken),  geom = "pointrange")+
   stat_summary(fun.data = "mean_se", 
                geom = "errorbar",
                width  = .5,
                size = 1.5,
-               position = position_dodge(width = 1))+
+               position = position_dodge(width = 1)
 
-
+    ) +
+    # facet_grid(~expression)+
   xlab("Substate cluster")+
-  ylab("entropy (bits)")+
-          facet_grid(~posed_spoken)
+   ylab("Stationary entropy (bits)")+
+  scale_color_brewer(palette = "Dark2")+
+      scale_fill_brewer(palette = "Dark2")+
+ggside::geom_ysidedensity(aes(x=stat(density), color = posed_spoken,  fill = posed_spoken), alpha = .5)+
+    ggside::geom_xsideboxplot(aes(group = expression), alpha = .5, orientation = "x")+
 
-  
- ggside::geom_ysidedensity(aes(x=stat(density), color = expression,  fill = expression), alpha = .5)+
-          facet_grid(~posed_spoken)
-
-  ggside::geom_xsideboxplot(aes(group = cluster), alpha = .5, orientation = "x")+
-  # ggside::geom_xsidepath()+
-
-  
-     # ggside(x.pos = "bottom", y.pos = "left") +
-    scale_color_brewer(palette = "Dark2")+
-    scale_fill_brewer(palette = "Dark2")+
-        facet_grid(~posed_spoken)
   theme_classic()+
   theme(legend.position = "top")+
   p$graphstyle_int+
     theme(legend.title = element_blank())+
-    theme(ggside.panel.scale = .5,
+      theme(ggside.panel.scale = .5,
           ggside.axis.text.y = element_blank())
+
+plts_substate_entropy_stat
+```
+spoken_posed_nmf_entropy
+# transition entropy correct
+```{r}
+max_transition_entropy <- function(n) {
+  if (n > 1) {
+    return(log2(n * n))
+  } else {
+    return(0)  # If there's only one state, entropy is zero
+  }
+}
+
+log2(9)
+log2(3)
+max_transition_entropy(3)
+
+# Function to normalize transition entropy
+normalize_transition_entropy <- function(entropy, n_states) {
+  return(entropy / max_transition_entropy(n_states))
+}
+n_states = 3
+
+
+spoken_posed_nmf_trans_entropy<- spoken_posed_nmf_filtered%>%
+    subset(expression!= "neutral")%>%
+      group_by(filename, expression, subject,posed_spoken) %>%
+      # keep just the initial of the cluster label, to avoid the actual words affecting entropy calculation
+      summarise(cluster_label_combined = paste(substr(cluster_label, 1, 1), collapse = ""), .groups = 'drop')%>%
+  group_by(filename)%>%
+      # Compute transition entropy
+      mutate(trans_entropy = GrpString::TransEntro(cluster_label_combined),
+             trans_entropy_perclust_res = GrpString::TransEntropy(cluster_label_combined),
+             trans_entropy_perclust_vec = GrpString::TransEntropy(cluster_label_combined)[,2]
+         )%>%
+  mutate(trans_entropy_norm=normalize_transition_entropy(trans_entropy, n_states))%>%
+  ungroup()
+
+
+
+plts_substate_entropy_stat
+
 
 ```
 
-plts_substate_entropy
+
+
+```{r}
+
+plts_substate_entropy_trans<-
+spoken_posed_nmf_trans_entropy%>%
+  subset(expression != "neutral")%>%
+
+  group_by(subject,expression,posed_spoken)%>%
+  summarise_if(is.numeric, mean, na.rm = T)%>%
+  
+   ggplot(aes( expression , trans_entropy_norm, 
+             color = posed_spoken, shape =posed_spoken))+
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),alpha = .2) +
+ stat_summary(aes(group = posed_spoken, colour =posed_spoken, linetype =posed_spoken),fun.y = mean,  geom = "line",
+               position = position_dodge(width = 1), size = 1.5)+
+   stat_summary(aes(group = posed_spoken, colour =posed_spoken),
+                fun.y = mean,  
+                geom = "point",
+                 position = position_dodge(width = 1),size = 1.5)+
+    # stat_summary(aes(group = posed_spoken, colour =posed_spoken),  geom = "pointrange")+
+  stat_summary(fun.data = "mean_se", 
+               geom = "errorbar",
+               width  = .5,
+               size = 1.5,
+               position = position_dodge(width = 1)
+
+    ) +
+    # facet_grid(~expression)+
+  xlab("Substate cluster")+
+     ylab("Transition entropy (bits)")+
+  scale_color_brewer(palette = "Dark2")+
+      scale_fill_brewer(palette = "Dark2")+
+ggside::geom_ysidedensity(aes(x=stat(density), color = posed_spoken,  fill = posed_spoken), alpha = .5)+
+  ggside::geom_xsideboxplot(aes(group = expression), alpha = .5, orientation = "x")+
+
+  theme_classic()+
+  theme(legend.position = "top")+
+  p$graphstyle_int+
+    theme(legend.title = element_blank())+
+      theme(ggside.panel.scale = .5,
+          ggside.axis.text.y = element_blank())
+
+
+plts_substate_entropy_trans
+```
+
+
 
 ```{r}
 ggsave("plts_substate_entropy.tiff", plts_substate_entropy, device = "tiff",
@@ -4610,41 +4757,36 @@ ggsave("plts_substate_entropy.tiff", plts_substate_entropy, device = "tiff",
 
 
 
-spoken_posed_nmf1<-
-spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
-    subset(expression!= "neutral")%>%
-  mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
-  group_by(subject)%>%
-  
-    group_by(subject)%>%
-  # mutate(trans_entropy = maxnormalize(trans_entropy))%>%
-      group_by(filename,subject,expression, posed_spoken,drug.placebo, cluster,cluster_label)%>%
-  summarise_if(is.numeric, mean, na.rm = T)
+
 
 spoken_posed_nmf1$subject<- as.factor(spoken_posed_nmf1$subject)
+install.packages("lmerTest")
+library(lmerTest)
 
-rslt_trans_entropy<-lmer(log1p(trans_entropy)~ expression*posed_spoken+
+rslt_trans_entropy<-lmer(trans_entropy_norm~ expression*posed_spoken+
                            # expression:posed_spoken+
                            # expression:cluster_label+
                            # posed_spoken:cluster_label +
                            (1+posed_spoken|subject),
      REML =FALSE,
-     data = spoken_posed_nmf1%>%
-       group_by(filename, subject, posed_spoken, drug.placebo, expression)%>%
-       summarise_if(is.numeric, mean, na.rm = T))
-summary(rslt_trans_entropy)
-emmeans::emmeans(rslt_trans_entropy, pairwise~cluster_label)
-
-anova(rslt_trans_entropy)
+     data = spoken_posed_nmf_trans_entropy%>%
+       subset(expression!= "neutral"))
 
 summary(rslt_trans_entropy)
+emmeans::emmeans(rslt_trans_entropy, pairwise~expression)
+emmeans::emmeans(rslt_trans_entropy, pairwise~expression|posed_spoken)
+
+
 
 emmeans::emmeans(rslt_trans_entropy, pairwise~expression, adjust = "bonf")
-emmeans::emmeans(rslt_trans_entropy, pairwise~posed_spoken,)
+emmeans::emmeans(rslt_trans_entropy, pairwise~posed_spoken)
 
 emmeans::emmeans(rslt_trans_entropy, pairwise~expression*posed_spoken, adjust = "holm")
+install.packages("report")
 report::report(rslt_trans_entropy)
 report::report(anova(rslt_trans_entropy))
+
+
 
 ```
 
@@ -4652,26 +4794,34 @@ report::report(anova(rslt_trans_entropy))
 
 ```{r}
 
+# stationary
+
+rslt_stat_entropy<-lmer(entropy_clust_norm~ expression*posed_spoken+
+                           # expression:posed_spoken+
+                           # expression:cluster_label+
+                           # posed_spoken:cluster_label +
+                           (1+posed_spoken|subject),
+     REML =FALSE,
+     data =  spoken_posed_nmf_entropy%>%
+       subset(expression!= "neutral"))
+
+anova(rslt_stat_entropy)
+emmeans::emmeans(rslt_stat_entropy, pairwise~expression)
+emmeans::emmeans(rslt_stat_entropy, pairwise~expression|posed_spoken)
+
+
+
+emmeans::emmeans(rslt_stat_entropy, pairwise~expression, adjust = "bonf")
+emmeans::emmeans(rslt_stat_entropy, pairwise~posed_spoken)
+
+emmeans::emmeans(rslt_stat_entropy, pairwise~posed_spoken|expression, adjust = "bonf")
+# install.packages("report")
+report::report(rslt_stat_entropy)
+report::report(anova(rslt_stat_entropy))
+
+
 install.packages("entropy")
 
-unique(spoken_posed_nmf$filename)
-install.packages("GrpString")
-
- spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
-    subset(expression!= "neutral")%>%
-   # subset(filename == "./cut_posed_angry_day1_p1.csv")%>%
-  mutate(cluster = recode(cluster_label, "relaxed" = "1", "sustain" = "2", "transition" = "3"))%>%
-  group_by(filename)%>%
-  mutate(entropy_clust = entropy::entropy(table(cluster_label)),
-         trans_entropy_overall = GrpString::TransEntro(cluster_label),
-         trans_entropy_within = GrpString::TransEntropy(cluster_label)[,2])%>%
-   group_by(filename, subject, expression, posed_spoken, drug.placebo, cluster,cluster_label)%>%
-   summarise_if(is.numeric, mean, na.rm = T)%>%
- # mutate(testnew = sum(trans_entropy_within))%>%
-   ggplot(aes( cluster_label, trans_entropy_within, color = posed_spoken))+
-   geom_jitter(width = .1)+
-   stat_summary(geom = "pointrange")+
-   facet_grid(~expression)
 
 ```
 
@@ -4684,14 +4834,14 @@ plts_substate_entropy))+
    plot_layout(guides = "collect")+
   plot_layout(nrow = 2,widths = c(2.5,1.5))
 
-plts_substate_speed_entropy<-
-(plts_substate_speed_avg/plts_substate_entropy)+
-   plot_layout(guides = "collect")& theme(legend.position = "top")
-  plot_layout(nrow = 2,widths = c(2.5,1.5))
+# plts_substate_speed_entropy<-
+# (plts_substate_speed_avg/plts_substate_entropy_stat)+
+#    plot_layout(guides = "collect")& theme(legend.position = "top")
+#   plot_layout(nrow = 2,widths = c(2.5,1.5))
   
-  
+  require(patchwork)
   plts_substate_speed_entropy<-
-((plts_substate_speed_avg+theme(axis.title.x = element_blank()))/plts_substate_entropy)+
+((plts_substate_speed_avg+theme(axis.title.x = element_blank()))/(plts_substate_entropy_stat|plts_substate_entropy_trans))+
    plot_layout(guides = "collect")& theme(legend.position = "top")
 
   
@@ -4700,7 +4850,7 @@ plts_substate_speed_entropy<-
 ((plts_substate_speed_avg+theme(axis.title.x = element_blank()))/(plts_substate_entropy+theme(axis.title.x = element_blank()))/plts_substate_freq)+
    plot_layout(guides = "collect")+ plot_annotation(tag_levels = 'A') & theme(legend.position = "top")
   
-  
+  plts_substate_speed_entropy
   
 ggsave("plts_substate_speed_entropy.tiff", plts_substate_speed_entropy, device = "tiff",
        width = 12, height = 10, dpi = 800)
@@ -4915,4 +5065,6 @@ spoken_posed_nmf[!spoken_posed_nmf$subject %in% tmp_subj_to_remove, ]%>%
   p$graphstyle_int
 
 ```
+
+save.image("~/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/halofacestudyOCT2023.RData")
 

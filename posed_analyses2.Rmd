@@ -707,6 +707,7 @@ tehre is a mistake ejre with the expression shuffle
 
   
 ```{r}
+library(tidyverse)
 conf_mat_df_perm%>%
     ggplot(aes(Prediction, Reference, fill = Freq/15))+
     geom_tile()+
@@ -789,7 +790,7 @@ r.forest_mts$finalModel$confusion
 # p value will be the number of time acc in shuffled dataset is greater than observed accuracy
 ```
 
-boostraping CIs
+boostraping CIs - we can do thsi at test stage
 
 ```{r}
 rf_results_df_ci<- data.frame()
@@ -820,10 +821,7 @@ ci_data_resamp_test
 
 ```
 
-
-# options(scipen = 999)
-# mean(abs(ci_data_resamp_test$aproximation_entropyk3_comp2))
-# mean(abs(mts_maxnorm_dcast_no0Sd_removed_SCALE2$aproximation_entropyk3_comp2))
+not needed - we can do this at test stage
 
 ```{r}
 
@@ -2495,7 +2493,7 @@ boundaryplots$pc1_3+
     
 
 ?  guide_area()
-```
+
 
 JASP fucntions
 ```{r}

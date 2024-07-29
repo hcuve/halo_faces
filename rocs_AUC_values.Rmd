@@ -368,3 +368,5 @@ rcompanion::pairwiseNominalIndependence(spoken_test_set_res$table,
 ??rcompanion::pairwiseNominalIndependence
 
 ```
+
+save.image("~/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/halofacestudyOCT2023.RData")

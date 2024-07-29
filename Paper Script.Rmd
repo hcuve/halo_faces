@@ -1,0 +1,11 @@
+---
+title: "Paper script"
+author: "Helio"
+date: "2024-07-28"
+output: html_document
+---
+
+
+Spoken
+1 - NMF 
+2 - classification
