@@ -54,12 +54,22 @@ df_OF_output_AUsW_unblind_spoken1_binned<- subset(df_OF_output_AUsW_unblind_spok
 colnames(df_OF_output_AUsW_unblind_spoken1_binned)
 unique(df_OF_output_AUsW_unblind_spoken1_binned$bin_frame)
 # df_OF_output_AUsW_unblind_spoken1_binned
+
+unique(df_OF_output_AUsW_unblind_spoken1_binned$expression)
 res_k3_spoken1 <- NMF::nmf(df_OF_output_AUsW_unblind_spoken1_binned[,17:33], r = 3, 
                   nrun = 200, #number of runs to try and update for
                   seed=123456, #specific seed for reproducibility
                  .options = list( 'v')) #verbose
 
 range(df_OF_output_AUsW_unblind_spoken1_binned$bin_frame)
+
+
+
+res_spoken1_findk <- nmf(df_OF_output_AUsW_unblind_spoken1_binned[,17:33], 2:6, 
+                      seed=123456,
+                      nrun = 100,
+                       .options = 'v')
+
 
 # plot(res_k3_spoken1) - this only work for multyiple fits with multiple ks
 # summary(res_k3_spoken1) #dont run
@@ -69,7 +79,7 @@ NMF::basismap(res_k3_spoken1) # weights/ amplitudes
 # memory exhaust - takes a lot of time
 
 # mixture coefficients 
-coefmap(res_k3_spoken1) #hidden variables
+NMF::coefmap(res_k3_spoken1) #hidden variables
 
 # access more info
 # res_k3_em
