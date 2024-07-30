@@ -1900,7 +1900,6 @@ df_with_clusters3_agg<-  df_with_clusters3%>%
 write_csv(df_with_clusters3_agg, "df_with_clusters3_agg.csv")
   
 
-```
 
 COMPUTE THE HEURISTIC BASED CLUSTERS AND PUT TO THE DATAFRAME
 
@@ -4697,7 +4696,7 @@ spoken_posed_nmf_trans_entropy
 
 spoken_posed_nmf_entropy$subject <- as.factor(spoken_posed_nmf_entropy$subject)
 
-rslt_stat_entropy<-lmer(log1p(entropy_clust_norm+.1)~ expression*posed_spoken +(1+posed_spoken+expression|subject),
+rslt_stat_entropy<-lmer(log1p(entropy_clust_norm+.01)~ expression*posed_spoken +(1+posed_spoken+expression|subject),
      REML =FALSE,
      data = spoken_posed_nmf_entropy%>%
        subset(expression!= "neutral"))
@@ -4716,6 +4715,7 @@ emmeans::emmeans(rslt_stat_entropy, pairwise~posed_spoken)
 
 emmeans::emmeans(rslt_stat_entropy, pairwise~expression|posed_spoken, adjust = "holm")
 # install.packages("report")
+options(scipen = 999)
 report::report(rslt_stat_entropy)
 report::report(anova(rslt_stat_entropy))
 
@@ -4723,16 +4723,46 @@ report::report(anova(rslt_stat_entropy))
 ```
 
 
+We fitted a linear mixed model (estimated using ML and nloptwrap optimizer) to predict entropy_clust_norm with expression and posed_spoken (formula:
+sqrt(entropy_clust_norm + 0.1) ~ expression * posed_spoken). The model included posed_spoken as random effects (formula: ~1 + posed_spoken | subject).
+The model's total explanatory power is substantial (conditional R2 = 0.44) and the part related to the fixed effects alone (marginal R2) is of 0.27.
+The model's intercept, corresponding to expression = angry and posed_spoken = posed, is at 0.81 (95% CI [0.81, 0.82], t(40739) = 276.12, p < .001).
+Within this model:
+
+  - The effect of expression [happy] is statistically significant and negative (beta = -3.39e-03, 95% CI [-4.46e-03, -2.32e-03], t(40739) = -6.19, p <
+.001; Std. beta = -0.02, 95% CI [-0.03, -0.02])
+  - The effect of expression [sad] is statistically significant and negative (beta = -4.48e-03, 95% CI [-5.55e-03, -3.40e-03], t(40739) = -8.18, p <
+.001; Std. beta = -0.02, 95% CI [-0.03, -0.02])
+  - The effect of posed spoken [spoken] is statistically significant and positive (beta = 0.04, 95% CI [0.03, 0.05], t(40739) = 10.22, p < .001; Std.
+beta = 0.23, 95% CI [0.18, 0.28])
+  - The effect of expression [happy] × posed spoken [spoken] is statistically significant and negative (beta = -7.82e-03, 95% CI [-9.34e-03, -6.30e-03],
+t(40739) = -10.09, p < .001; Std. beta = -0.03, 95% CI [-0.04, -0.02])
+  - The effect of expression [sad] × posed spoken [spoken] is statistically significant and positive (beta = 9.50e-03, 95% CI [7.98e-03, 0.01], t(40739)
+= 12.26, p < .001; Std. beta = 0.05, 95% CI [0.05, 0.06])
+
+Standardized parameters were obtained by fitting the model on a standardized version of the dataset. 95% Confidence Intervals (CIs) and p-values were
+computed using a Wald t-distribution approximation.
+
+The ANOVA suggests that:
+
+  - The main effect of expression is statistically significant and large (F(2) = 3.29, p = 0.049; Eta2 (partial) = 0.16, 95% CI [2.30e-04, 1.00])
+  - The main effect of posed_spoken is statistically significant and large (F(1) = 110.07, p < .001; Eta2 (partial) = 0.76, 95% CI [0.64, 1.00])
+  - The interaction between expression and posed_spoken is statistically significant and small (F(2) = 315.65, p < .001; Eta2 (partial) = 0.02, 95% CI
+[0.01, 1.00])
 transition lmer
 
 ```{r}
-rslt_trans_entropy<-lmer(trans_entropy_norm~ expression*posed_spoken +(1+posed_spoken|subject),
+rslt_trans_entropy<-lmer(log1p(trans_entropy_norm+.01)~ expression*posed_spoken +(1+posed_spoken|subject),
      REML =FALSE,
      data = spoken_posed_nmf_trans_entropy%>%
        subset(expression!= "neutral"))
 
+
+
+
 plot(rslt_trans_entropy)
 qqnorm(resid(rslt_trans_entropy))
+qqline(resid(rslt_trans_entropy))
 summary(rslt_trans_entropy)
 anova(rslt_trans_entropy)
 
@@ -4754,6 +4784,65 @@ report::report(anova(rslt_trans_entropy))
 
 ```
 
+We fitted a linear mixed model (estimated using ML and nloptwrap optimizer) to predict trans_entropy_norm with expression and posed_spoken (formula:
+log1p(trans_entropy_norm + 0.01) ~ expression * posed_spoken). The model included posed_spoken as random effects (formula: ~1 + posed_spoken |
+subject). The model's total explanatory power is substantial (conditional R2 = 0.63) and the part related to the fixed effects alone (marginal R2) is
+of 0.57. The model's intercept, corresponding to expression = angry and posed_spoken = posed, is at 0.43 (95% CI [0.42, 0.44], t(398) = 65.64, p <
+.001). Within this model:
+
+  - The effect of expression [happy] is statistically non-significant and negative (beta = -9.76e-03, 95% CI [-0.03, 5.49e-03], t(398) = -1.26, p =
+0.209; Std. beta = -0.03, 95% CI [-0.08, 0.01])
+  - The effect of expression [sad] is statistically significant and positive (beta = 0.02, 95% CI [1.81e-03, 0.03], t(398) = 2.20, p = 0.028; Std. beta =
+0.05, 95% CI [8.09e-03, 0.10])
+  - The effect of posed spoken [spoken] is statistically significant and positive (beta = 0.11, 95% CI [0.10, 0.13], t(398) = 13.53, p < .001; Std. beta
+= 0.33, 95% CI [0.28, 0.38])
+  - The effect of expression [happy] × posed spoken [spoken] is statistically non-significant and negative (beta = -2.51e-03, 95% CI [-0.02, 0.02],
+t(398) = -0.23, p = 0.819; Std. beta = 2.98e-03, 95% CI [-0.06, 0.07])
+  - The effect of expression [sad] × posed spoken [spoken] is statistically non-significant and negative (beta = -2.10e-03, 95% CI [-0.02, 0.02], t(398)
+= -0.19, p = 0.848; Std. beta = -0.01, 95% CI [-0.08, 0.05])
+
+
+
+
+
+
+The ANOVA suggests that:
+
+  - The main effect of expression is statistically significant and medium (F(2) = 12.27, p < .001; Eta2 (partial) = 0.07, 95% CI [0.03, 1.00])
+  
+  
+  - The main effect of posed_spoken is statistically significant and large 
+  (F(1) = 429.10, p < .001; Eta2 (partial) = 0.93, 95% CI [0.89, 1.00])
+  
+  - The interaction between expression and posed_spoken is statistically not significant and very small (F(2) = 0.03, p = 0.970; Eta2 (partial) =
+1.77e-04, 95% CI [0.00, 1.00])
+
+Standardized parameters were obtained by fitting the model on a standardized version of the dataset. 95% Confidence Intervals (CIs) and p-values were
+computed using a Wald t-distribution approximation.
+
+
+
+$emmeans
+ expression emmean      SE  df lower.CL upper.CL
+ angry       0.486 0.00478 108    0.476    0.495
+ happy       0.475 0.00478 108    0.465    0.484
+ sad         0.502 0.00478 108    0.492    0.511
+
+Results are averaged over the levels of: posed_spoken 
+Degrees-of-freedom method: kenward-roger 
+Results are given on the log1p(mu + 0.01) (not the response) scale. 
+Confidence level used: 0.95 
+
+$contrasts
+ contrast      estimate      SE  df t.ratio p.value
+ angry - happy    0.011 0.00552 344   1.996  0.1401
+ angry - sad     -0.016 0.00552 344  -2.901  0.0119
+ happy - sad     -0.027 0.00552 344  -4.897  <.0001
+
+Results are averaged over the levels of: posed_spoken 
+Note: contrasts are still on the log1p(mu + 0.01) scale 
+Degrees-of-freedom method: kenward-roger 
+P value adjustment: bonferroni method for 3 tests 
 eigen(rslt_trans_entropy)
 
   

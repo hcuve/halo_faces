@@ -202,11 +202,11 @@ for (rank in 2:6) {
   }
 }
 
-range(dta_spk_4nmf[,1])
+# range(dta_spk_4nmf[,1])
 
 
 
-res
+
 # Check results
 if (length(res_spoken1_find_k) == 0) {
   message("All NMF computations failed.")
@@ -221,7 +221,7 @@ run_nmf_with_consensus <- function(data, rank, seed, maxit, nrun = 30) {
   consensus_matrix <- matrix(0, nrow = nrow(data), ncol = nrow(data))
   for (i in 1:nrun) {
     res <- tryCatch({
-      RcppML::nmf(data, k = rank, seed = seed , maxit = maxit)
+      RcppML::nmf(data, k = rank, seed = seed+i , maxit = maxit)
     }, error = function(e) {
       message("Error in NMF computation for rank ", rank, " run ", i, ": ", e$message)
       NULL

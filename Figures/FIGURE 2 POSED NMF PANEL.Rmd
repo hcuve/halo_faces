@@ -17,6 +17,7 @@ library(geometry)
 library(ggplot2)
 library(shapes)
 
+chool_talk
 # Assuming `au_patterns` is your NMF-derived AU features (predictors)
 # Assuming `landmark_targets` is your known landmark coordinates (responses)
 # Assuming `neutral_face_landmarks` is a matrix of neutral face landmarks for alignment

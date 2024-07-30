@@ -455,31 +455,21 @@ estim_posed_random_2 <- NMF::nmf(dta_posed_subs_a_rnd_2[,1:17], 2:6, nrun=10, se
 plot(res_find_k_1)
 
 
-plot(res_find_k_1, estim_posed_random_1)+
+plot(res_find_k_1, estim_posed_random_1,estim_posed_random_2)+
   geom_vline(xintercept = 3)
 
 ?NMF::consensusmap
 NMF::consensusmap(res_find_k_1)
 
-NMF::consensusmap(estim_posed_random_1)
+NMF::consensusmap(estim_posed_random_2)
 
 
 
-# Compare components
-res_find_k_1[,1]
-
-
-original_components<- NMF::basis(res_find_k_1$fit$`3`)
-original_components
-
-random_components<- NMF::basis(estim_posed_random_1$fit$`3`)  
-
-
-mean(abs(cor(original_components, random_components)))
-mean(abs(cor(NMF::basis(res_find_k_1$fit$`2`), NMF::basis(estim_posed_random_1$fit$`2`) )))
-mean(abs(cor(NMF::basis(res_find_k_1$fit$`4`), NMF::basis(estim_posed_random_1$fit$`4`) )))
-mean(abs(cor(NMF::basis(res_find_k_1$fit$`5`), NMF::basis(estim_posed_random_1$fit$`5`) )))
-mean(abs(cor(NMF::basis(res_find_k_1$fit$`6`), NMF::basis(estim_posed_random_1$fit$`6`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`2`), NMF::basis(estim_posed_random_2$fit$`2`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`3`), NMF::basis(estim_posed_random_2$fit$`3`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`4`), NMF::basis(estim_posed_random_2$fit$`4`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`5`), NMF::basis(estim_posed_random_2$fit$`5`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`6`), NMF::basis(estim_posed_random_2$fit$`6`) )))
 
 
 dta_posed_subs_a_rnd[,1:17]
