@@ -185,7 +185,9 @@ It's a more conservative approach, making your results more robust if you find d
 # Function to create a fully randomised dataset
 # Function to create a fully randomised dataset
 
-fn_spatiotemporal_randomize <- function(X, groups, time_block_size = 10, space_block_size = 5) {
+fn_spatiotemporal_randomize <- function(X, groups, 
+                                        time_block_size = 10, 
+                                        space_block_size = 5) {
   X_randomised <- X
   unique_groups <- unique(groups)
   n_features <- ncol(X)
@@ -201,23 +203,23 @@ fn_spatiotemporal_randomize <- function(X, groups, time_block_size = 10, space_b
       shuffled_time_blocks <- sample(time_block_indices)
       new_time_indices <- unlist(shuffled_time_blocks)
       X_randomised[indices, ] <- X[new_time_indices, ]
-    }
+    
     
     # Spatial block permutation
-    n_space_blocks <- floor(n_features / space_block_size)
-    if (n_space_blocks > 1) {
-      for (i in 1:n_time_blocks) {
-        block_start <- (i - 1) * time_block_size + 1
-        block_end <- min(i * time_block_size, n_samples)
-        
-        space_block_indices <- split(1:n_features, rep(1:n_space_blocks, each = space_block_size, length.out = n_features))
-        shuffled_space_blocks <- sample(space_block_indices)
-        new_space_indices <- unlist(shuffled_space_blocks)
-        
-        X_randomised[indices[block_start:block_end], ] <- X_randomised[indices[block_start:block_end], new_space_indices]
+    # n_space_blocks <- floor(n_features / space_block_size)
+    # if (n_space_blocks > 1) {
+    #   for (i in 1:n_time_blocks) {
+    #     block_start <- (i - 1) * time_block_size + 1
+    #     block_end <- min(i * time_block_size, n_samples)
+    #     
+    #     space_block_indices <- split(1:n_features, rep(1:n_space_blocks, each = space_block_size, length.out = n_features))
+    #     shuffled_space_blocks <- sample(space_block_indices)
+    #     new_space_indices <- unlist(shuffled_space_blocks)
+    #     
+        # X_randomised[indices[block_start:block_end], ] <- X_randomised[indices[block_start:block_end], new_space_indices]
       }
     }
-  }
+  
   
   return(X_randomised)
 }
@@ -295,7 +297,12 @@ mean(abs(cor(NMF::basis(res_find_k_1$fit$`6`), NMF::basis(estim_posed_random_1$f
 
 
 dta_posed_subs_a_rnd[,1:17]
+
+
 ```
+
+
+
 
 Max-normalizing before fitting NMF:
 
@@ -339,143 +346,256 @@ auto size
 
 library(stats)
 
-# Function to determine appropriate block sizes based on ACF and CCF thresholds
-auto_block_size <- function(X, groups, max_lag = 50, acf_threshold = 0.2, ccf_threshold = 0.2) {
-  unique_groups <- unique(groups)
-  
-  # Determine time block size
-  acf_results <- lapply(unique_groups, function(group) {
-    indices <- which(groups == group)
-    group_data <- X[indices, ]
-    acf_mean <- colMeans(apply(group_data, 2, function(col) acf(col, lag.max = max_lag, plot = FALSE)$acf))
-    block_size <- which(acf_mean < acf_threshold)[1]
-    if (is.na(block_size)) max_lag else block_size
-  })
-  
-  time_block_size <- max(unlist(acf_results), na.rm = TRUE)
-  if (is.infinite(time_block_size) || is.na(time_block_size)) {
-    time_block_size <- max_lag
-  }
-  
-  # Determine space block size
-  n_features <- ncol(X)
-  ccf_matrix <- cor(X)
-  diag(ccf_matrix) <- 0
-  ccf_sorted <- sort(abs(ccf_matrix), decreasing = TRUE)
-  space_block_size <- which(ccf_sorted < ccf_threshold)[1]
-  if (is.na(space_block_size)) {
-    space_block_size <- n_features
-  }
-  
-  return(list(time_block_size = time_block_size, space_block_size = space_block_size))
-}
+# Function to determine appropriate time block size based on ACF threshold
+acf_threshold = .3
+# tgis is potentiall problemayic as it doesnt shuffle the dataa enough asits too data centric
+# auto_time_block_size <- function(X, groups, max_lag = 15, acf_threshold = .3) {
+#   unique_groups <- unique(groups)
+#   
+#   acf_results <- lapply(unique_groups, function(group) {
+#     indices <- which(groups == group)
+#     group_data <- X[indices, ]
+#     acf_mean <- colMeans(apply(group_data, 2, function(col) acf(col, lag.max = max_lag, plot = FALSE)$acf))
+#     block_size <- which(acf_mean < acf_threshold)[1]
+#     if (is.na(block_size)) max_lag else block_size
+#   })
+#   
+#   time_block_size <- max(unlist(acf_results), na.rm = TRUE)
+#   if (is.infinite(time_block_size) || is.na(time_block_size)) {
+#     time_block_size <- max_lag
+#   }
+#   
+#   return(time_block_size)
+# }
+# 
+# # Function for temporal block permutation
+# fn_temporal_block_permute <- function(X, groups, time_block_size = NULL) {
+#   if (is.null(time_block_size)) {
+#     time_block_size <- auto_time_block_size(X, groups)
+#   }
+#   
+#   X_permuted <- X
+#   unique_groups <- unique(groups)
+#   
+#   for (group in unique_groups) {
+#     indices <- which(groups == group)
+#     n_samples <- length(indices)
+#     
+#     if (n_samples > 1) {
+#       # Perform block permutation
+#       n_blocks <- floor(n_samples / time_block_size)
+#       if (n_blocks > 1) {
+#         block_indices <- split(1:n_samples, rep(1:n_blocks, each = time_block_size, length.out = n_samples))
+#         permuted_order <- unlist(sample(block_indices))
+#         X_permuted[indices, ] <- X[indices[permuted_order], ]
+#       } else {
+#         # If only one block, permute all time points
+#         X_permuted[indices, ] <- X[indices[sample(n_samples)], ]
+#       }
+#     }
+#   }
+#   
+#   return(X_permuted)
+# }
 
-# Function for spatiotemporal randomisation
-fn_spatiotemporal_randomize_2 <- function(X, groups, time_block_size = NULL, space_block_size = NULL) {
-  if (is.null(time_block_size) || is.null(space_block_size)) {
-    block_sizes <- auto_block_size(X, groups)
-    time_block_size <- block_sizes$time_block_size
-    space_block_size <- block_sizes$space_block_size
-  }
-  
-  X_randomised <- X
+
+library(stats)
+
+library(stats)
+
+# Function for temporal block permutation with fixed block size
+fn_temporal_block_permute <- function(X, groups, time_block_size) {
+  X_permuted <- X
   unique_groups <- unique(groups)
-  n_features <- ncol(X)
   
   for (group in unique_groups) {
     indices <- which(groups == group)
     n_samples <- length(indices)
     
-    # Temporal block permutation
-    n_time_blocks <- floor(n_samples / time_block_size)
-    if (n_time_blocks > 1) {
-      time_block_indices <- split(indices, rep(1:n_time_blocks, each = time_block_size, length.out = n_samples))
-      shuffled_time_blocks <- sample(time_block_indices)
-      new_time_indices <- unlist(shuffled_time_blocks)
-      X_randomised[indices, ] <- X[new_time_indices, ]
-    }
-    
-    # Spatial block permutation
-    n_space_blocks <- floor(n_features / space_block_size)
-    if (n_space_blocks > 1) {
-      for (i in 1:n_time_blocks) {
-        block_start <- (i - 1) * time_block_size + 1
-        block_end <- min(i * time_block_size, n_samples)
-        
-        space_block_indices <- split(1:n_features, rep(1:n_space_blocks, each = space_block_size, length.out = n_features))
-        shuffled_space_blocks <- sample(space_block_indices)
-        new_space_indices <- unlist(shuffled_space_blocks)
-        
-        X_randomised[indices[block_start:block_end], ] <- X_randomised[indices[block_start:block_end], new_space_indices]
+    if (n_samples > 1) {
+      # Perform block permutation for each column independently
+      n_blocks <- floor(n_samples / time_block_size)
+      if (n_blocks > 1) {
+        for (col in 1:ncol(X)) {
+          block_indices <- split(1:n_samples, rep(1:n_blocks, each = time_block_size, length.out = n_samples))
+          permuted_order <- unlist(sample(block_indices))
+          X_permuted[indices, col] <- X[indices[permuted_order], col]
+        }
+      } else {
+        # If only one block, permute all time points for each column
+        for (col in 1:ncol(X)) {
+          X_permuted[indices, col] <- X[indices[sample(n_samples)], col]
+        }
       }
     }
   }
   
-  return(X_randomised)
+  return(X_permuted)
 }
 
+# Function to run permutation test with different block sizes
+# permutation_sensitivity <- function(X, groups, block_sizes = c(1, 5, 10, 15, 20), n_permutations = 100) {
+#   results <- lapply(block_sizes, function(size) {
+#     perms <- replicate(n_permutations, fn_temporal_block_permute(X, groups, size), simplify = FALSE)
+#     
+#     # Calculate your test statistic for each permutation
+#     # This is a placeholder - replace with your actual test statistic calculation
+#     test_stats <- sapply(perms, function(perm) apply(perm, 2, sum))
+#     
+#     # Calculate observed test statistic
+#     observed_stats <- apply(X, 2, sum)
+#     
+#     # Calculate p-values for each column
+#     p_values <- rowMeans(abs(test_stats) >= abs(observed_stats))
+#     
+#     return(list(block_size = size, p_values = p_values))
+#   })
+#   
+#   return(results)
+# }
 
 
-# Usage
-dta_posed_subs_a_rnd_2 <- fn_spatiotemporal_randomize_2(
-  dta_subs_a[,16:32],
-  dta_subs_a$filename
-)
+# Example usage:
 
 
 
-dta_posed_subs_a_rnd_2$filename <- dta_subs_a$filename
-dta_posed_subs_a_rnd_2$expression <- dta_subs_a$expression
-dta_posed_subs_a_rnd_2$timestamp <- dta_subs_a$timestamp
+# Example usage:
+# dta_subs_a <- matrix(rnorm(1000), ncol = 10)
+# groups <- rep(1:5, each = 20)
+# time_block_size_sensitivity_rs <- permutation_sensitivity(dta_subs_a, groups)
+# for (result in time_block_size_sensitivity_rs) {
+#   cat("Block size:", result$block_size, "- p-value:", result$p_value, "\n")
+# }
+
+
+colnames(dta_subs_a)
+fn_temporal_block_permute()
+
+
+ dta_posed_subs_a_rnd_2_tbs_5<- fn_temporal_block_permute(dta_subs_a[,16:32], 
+                                                          dta_subs_a$filename,
+                                                     time_block_size = 5)
+ 
+dta_posed_subs_a_rnd_2_tbs_10<- fn_temporal_block_permute(dta_subs_a[,16:32], 
+                                                          dta_subs_a$filename,
+                                                     time_block_size = 10)
+  
+  
+  dta_posed_subs_a_rnd_2_tbs_15<- fn_temporal_block_permute(dta_subs_a[,16:32], 
+                                                          dta_subs_a$filename,
+                                                     time_block_size = 15)
 
 
 
 
-dta_posed_subs_a_rnd_2%>%
+
+
+dta_posed_subs_a_rnd_2_tbs_5$filename <- dta_subs_a$filename
+dta_posed_subs_a_rnd_2_tbs_5$expression <- dta_subs_a$expression
+dta_posed_subs_a_rnd_2_tbs_5$timestamp <- dta_subs_a$timestamp
+
+
+dta_posed_subs_a_rnd_2_tbs_10$filename <- dta_subs_a$filename
+dta_posed_subs_a_rnd_2_tbs_10$expression <- dta_subs_a$expression
+dta_posed_subs_a_rnd_2_tbs_10$timestamp <- dta_subs_a$timestamp
+
+dta_posed_subs_a_rnd_2_tbs_15$filename <- dta_subs_a$filename
+dta_posed_subs_a_rnd_2_tbs_15$expression <- dta_subs_a$expression
+dta_posed_subs_a_rnd_2_tbs_15$timestamp <- dta_subs_a$timestamp
+
+
+
+
+
+dta_subs_a%>%
   ggplot(aes(timestamp,AU06_r_Cheek_raiser, group = filename))+
   geom_line(colour = "blue", alpha = .5)+
   geom_line(aes(y = AU01_r_Inner_brow_raiser), colour = "red", alpha = .1)+
   facet_grid(~expression)
 
-
-
-dta_posed_subs_a_rnd_2%>%
+dta_posed_subs_a_rnd_2_tbs_5%>%
   ggplot(aes(timestamp,AU06_r_Cheek_raiser, group = filename))+
   geom_line(colour = "blue", alpha = .5)+
   geom_line(aes(y = AU01_r_Inner_brow_raiser), colour = "red", alpha = .1)+
   facet_grid(~expression)
 
+dta_posed_subs_a_rnd_2_tbs_10%>%
+  ggplot(aes(timestamp,AU06_r_Cheek_raiser, group = filename))+
+  geom_line(colour = "blue", alpha = .5)+
+  geom_line(aes(y = AU01_r_Inner_brow_raiser), colour = "red", alpha = .1)+
+  facet_grid(~expression)
+
+dta_posed_subs_a_rnd_2_tbs_15%>%
+  ggplot(aes(timestamp,AU06_r_Cheek_raiser, group = filename))+
+  geom_line(colour = "blue", alpha = .5)+
+  geom_line(aes(y = AU01_r_Inner_brow_raiser), colour = "red", alpha = .1)+
+  facet_grid(~expression)
+
+```
 
 
 
+```{r}
 # estimate quality measures from the shuffled data (use default NMF algorithm)
-estim_posed_random_2 <- NMF::nmf(dta_posed_subs_a_rnd_2[,1:17], 2:6, nrun=10, seed=123456)
+estim_posed_random_2_tbs_10 <- NMF::nmf(dta_posed_subs_a_rnd_2_tbs_10[,1:17], 
+                                 2:6, nrun=10, seed=123456)
+
+estim_posed_random_2_tbs_5 <- NMF::nmf(dta_posed_subs_a_rnd_2_tbs_5[,1:17], 
+                                 2:6, nrun=10, seed=123456)
+
+
+estim_posed_random_2_tbs_15 <- NMF::nmf(dta_posed_subs_a_rnd_2_tbs_15[,1:17], 
+                                 2:6, nrun=10, seed=123456)
 
 
 plot(res_find_k_1)
 
-
-plot(res_find_k_1, estim_posed_random_1,estim_posed_random_2)+
+plot(res_find_k_1,estim_posed_random_2_tbs_5)+
   geom_vline(xintercept = 3)
 
-?NMF::consensusmap
+plot(res_find_k_1,estim_posed_random_2_tbs_10)+
+  geom_vline(xintercept = 3)
+
+plot(res_find_k_1,estim_posed_random_2_tbs_15)+
+  geom_vline(xintercept = 3)
+
+
+
+?NMF::randomize()
+
 NMF::consensusmap(res_find_k_1)
-
 NMF::consensusmap(estim_posed_random_2)
+?NMF::consensusmap
+
+cons<-NMF::consensusmap(res_find_k_1)
+NMF::consensusmap(estim_posed_random_2_tbs_10)
 
 
-
-mean(abs(cor(NMF::basis(res_find_k_1$fit$`2`), NMF::basis(estim_posed_random_2$fit$`2`) )))
-mean(abs(cor(NMF::basis(res_find_k_1$fit$`3`), NMF::basis(estim_posed_random_2$fit$`3`) )))
-mean(abs(cor(NMF::basis(res_find_k_1$fit$`4`), NMF::basis(estim_posed_random_2$fit$`4`) )))
-mean(abs(cor(NMF::basis(res_find_k_1$fit$`5`), NMF::basis(estim_posed_random_2$fit$`5`) )))
-mean(abs(cor(NMF::basis(res_find_k_1$fit$`6`), NMF::basis(estim_posed_random_2$fit$`6`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`2`), NMF::basis(estim_posed_random_2_tbs_10$fit$`2`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`3`), NMF::basis(estim_posed_random_2_tbs_10$fit$`3`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`4`), NMF::basis(estim_posed_random_2_tbs_10$fit$`4`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`5`), NMF::basis(estim_posed_random_2_tbs_10$fit$`5`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`6`), NMF::basis(estim_posed_random_2_tbs_10$fit$`6`) )))
 
 
 dta_posed_subs_a_rnd[,1:17]
 
+# ALL GOOD
+
 ```
 
+
+
+
+# Note: This randomisation still stores enough information for the NMF, 
+# and since it's not a true spatiotemporal NMF, the metrics still fit.
+# Therefore, the auto-sizing may not work that well.
+#
+# Also, consider just applying NMF randomisation functions directly per group,
+# as it would destroy the spatiotemporal structure.
+# The effect of the randomisation on the spatiotemporal structure is only likely visible
+# at a later stage when you take the features for classification.
+# This model likely won't be able to classify things based on spatiotemporal features.
 We select values of k where the magnitude of the cophenetic correlation coefficient begins to fall (see below).
 so now we can fit the final model
 
