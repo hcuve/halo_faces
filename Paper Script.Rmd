@@ -6,6 +6,905 @@ output: html_document
 ---
 
 
-Spoken
-1 - NMF 
-2 - classification
+
+preprocessign script - preprocess_halofacestudy.Rmd (keep separate)
+
+Spatiotemporal components
+posed: halo_facestudy_analysis.Rmd
+- fit NMF
+
+Spatiotemporal components
+
+
+for the actual analyses we want
+1- learn spatiotemporal structure suing NMF
+2 - does drug vs no drug differ in NMF metrics?
+3- can we separate groups based on NMF components using BADIA
+
+spatiotemporal dynamics
+- movement substates (initiation, sustainement, etc)
+- if we use kmean clustering, do we have differences into how many substaes are there
+- or if we use a fixed number of substaes, are there significant temporal differences (e.g. duration, reccurence)
+
+preferences
+
+load("~/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/halofacestudyOCT2023.RData")
+```{r}
+library(tidyverse)
+library(data.table)
+library(NMF)
+# install.packages("ggforce")
+require(ggforce)
+
+library(magick)
+# install.packages('imager')
+# library(imager)
+
+# library(png)
+# library(grid)
+
+
+require(ggtext)
+library(caret)
+
+```
+
+
+Steps and decision
+initialisation = random seed
+find k
+set iterations
+fit final
+# Initialise and find k
+```{r}
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+
+
+df_OF_output_AUsW_unblind_posed_binned
+
+# single run and single numeric seed for reproducibility
+res_find_k <- nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], 2:6, 
+                      seed=123456,
+                      nrun = 100,
+                       .options = 'v')
+
+# plot quality measures by rank (k)
+library(tidyverse)
+test<- NMF::plot(res_find_k)
+  geom_vline(xintercept = 3)
+
+test$data
+  
+# ?NMF::consensusmap
+NMF::consensusmap(res_find_k)
+
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+```
+
+We select values of k where the magnitude of the cophenetic correlation coefficient begins to fall (see below).
+so now we can fit the final model
+
+between 3 and 4
+
+Check for overfiting by reshufling the ata and refitting the NMF on simulated data
+SHUFFLING to avoid overfiting to noise
+
+```{r}
+# shuffle original data 
+colnames(df_OF_output_AUsW_unblind_posed_binned[,16:32])
+
+V.random <- randomize(df_OF_output_AUsW_unblind_posed_binned[,16:32]) 
+
+# estimate quality measures from the shuffled data (use default NMF algorithm) 
+estim.k.random <- nmf(V.random, 2:6, nrun=100, seed=123456,
+                      .option = 'v') 
+
+
+
+# then we can assess the quality of random estimation to our estimation
+
+# plot measures on same graph (x, y) 
+plot(res_k3, estim.k.random) + 
+  geom_vline(xintercept = 3)
+
+
+
+# exhausting memory so try on a subset
+
+# Set seed for reproducibility
+set.seed(123456)
+
+# Define the size of the subset (e.g., 50% of the original data)
+subset_size <- 0.5
+
+
+
+# Create a vector of unique timeseries IDs
+unique_timeseries_ids <- unique(df_OF_output_AUsW_unblind_posed_binned$filename)
+
+# Helper function to perform stratified sampling
+stratified_sampling <- function(data, group_col, size) {
+  data %>%
+    group_by(!!sym(group_col)) %>%
+    sample_frac(size = size / n(), replace = FALSE) %>%
+    ungroup()
+}
+
+# Perform stratified sampling to select unique timeseries IDs based on the 'expression' column
+stratified_ids <- df_OF_output_AUsW_unblind_posed_binned %>%
+  group_by(expression) %>%
+  summarise(filename = list(unique(filename))) %>%
+  unnest(filename) %>%
+  group_by(expression) %>%
+  mutate(sample_id = row_number()) %>%
+  ungroup() %>%
+  filter(sample_id <= subset_size * n() / length(unique(expression))) %>%
+  pull(filename)
+
+# Split the data based on the selected timeseries IDs
+dta_subs_a <- df_OF_output_AUsW_unblind_posed_binned %>%
+  filter(filename %in% stratified_ids)
+
+table(dta_subs_a$expression)
+
+dta_subs_b <- df_OF_output_AUsW_unblind_posed_binned %>%
+  filter(!filename %in% stratified_ids)
+
+
+
+colnames(dta_subs_a)
+
+res_find_k_1 <- NMF::nmf(dta_subs_a[,16:32], 2:6, 
+                      seed=123456,
+                      nrun = 10,
+                       .options = 'v')
+
+
+
+```
+
+# oprtion 1 - compleetly destroy tenmporal spartiotemporal dependencies in the data but within each timeseries
+
+# Randomising Temporal Structure:
+# 
+# Completely shuffle the time series data within each group to destroy temporal dependencies.
+# Randomising Spatial Structure:
+# 
+# Shuffle the spatial features independently to destroy spatial dependencies.
+For spatiotemporal NMF analysis, the block permutation method is more appropriate because:
+
+It creates a null model that still has some spatiotemporal structure, but with disrupted larger-scale patterns.
+It allows you to test whether your NMF components are capturing patterns beyond what would be expected from local, short-term correlations.
+It's a more conservative approach, making your results more robust if you find differences between the original and randomized data.
+
+```{r}
+
+
+
+
+# Function to create a fully randomised dataset
+# Function to create a fully randomised dataset
+
+fn_spatiotemporal_randomize <- function(X, groups, time_block_size = 10, space_block_size = 5) {
+  X_randomised <- X
+  unique_groups <- unique(groups)
+  n_features <- ncol(X)
+  
+  for (group in unique_groups) {
+    indices <- which(groups == group)
+    n_samples <- length(indices)
+    
+    # Temporal block permutation
+    n_time_blocks <- floor(n_samples / time_block_size)
+    if (n_time_blocks > 1) {
+      time_block_indices <- split(indices, rep(1:n_time_blocks, each = time_block_size, length.out = n_samples))
+      shuffled_time_blocks <- sample(time_block_indices)
+      new_time_indices <- unlist(shuffled_time_blocks)
+      X_randomised[indices, ] <- X[new_time_indices, ]
+    }
+    
+    # Spatial block permutation
+    n_space_blocks <- floor(n_features / space_block_size)
+    if (n_space_blocks > 1) {
+      for (i in 1:n_time_blocks) {
+        block_start <- (i - 1) * time_block_size + 1
+        block_end <- min(i * time_block_size, n_samples)
+        
+        space_block_indices <- split(1:n_features, rep(1:n_space_blocks, each = space_block_size, length.out = n_features))
+        shuffled_space_blocks <- sample(space_block_indices)
+        new_space_indices <- unlist(shuffled_space_blocks)
+        
+        X_randomised[indices[block_start:block_end], ] <- X_randomised[indices[block_start:block_end], new_space_indices]
+      }
+    }
+  }
+  
+  return(X_randomised)
+}
+
+# Usage:
+dta_posed_subs_a_rnd <- fn_spatiotemporal_randomize(
+  dta_subs_a[,16:32],
+  dta_subs_a$filename,
+  time_block_size = 10,
+  space_block_size = 3  # Adjust based on number of spatial features
+)
+
+
+
+
+dta_posed_subs_a_rnd$filename <- dta_subs_a$filename
+dta_posed_subs_a_rnd$expression <- dta_subs_a$expression
+dta_posed_subs_a_rnd$timestamp <- dta_subs_a$timestamp
+
+
+
+
+dta_subs_a%>%
+  ggplot(aes(timestamp,AU06_r_Cheek_raiser, group = filename))+
+  geom_line(colour = "blue", alpha = .5)+
+  geom_line(aes(y = AU01_r_Inner_brow_raiser), colour = "red", alpha = .1)+
+  facet_grid(~expression)
+
+
+
+dta_posed_subs_a_rnd%>%
+  ggplot(aes(timestamp,AU06_r_Cheek_raiser, group = filename))+
+  geom_line(colour = "blue", alpha = .5)+
+  geom_line(aes(y = AU01_r_Inner_brow_raiser), colour = "red", alpha = .1)+
+  facet_grid(~expression)
+
+
+colnames(dta_posed_rnd)
+
+
+
+
+# estimate quality measures from the shuffled data (use default NMF algorithm)
+estim_posed_random_1 <- NMF::nmf(dta_posed_subs_a_rnd[,1:17], 2:6, nrun=10, seed=123456)
+
+
+plot(res_find_k_1)
+
+
+plot(res_find_k_1, estim_posed_random_1)+
+  geom_vline(xintercept = 3)
+
+?NMF::consensusmap
+NMF::consensusmap(res_find_k_1)
+
+NMF::consensusmap(estim_posed_random_1)
+
+
+
+# Compare components
+res_find_k_1[,1]
+
+
+original_components<- NMF::basis(res_find_k_1$fit$`3`)
+original_components
+
+random_components<- NMF::basis(estim_posed_random_1$fit$`3`)  
+
+
+mean(abs(cor(original_components, random_components)))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`2`), NMF::basis(estim_posed_random_1$fit$`2`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`4`), NMF::basis(estim_posed_random_1$fit$`4`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`5`), NMF::basis(estim_posed_random_1$fit$`5`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`6`), NMF::basis(estim_posed_random_1$fit$`6`) )))
+
+
+dta_posed_subs_a_rnd[,1:17]
+```
+
+Max-normalizing before fitting NMF:
+
+Pros:
+
+Ensures all features are on the same scale, preventing features with larger magnitudes from dominating the NMF.
+Can help with numerical stability during the NMF algorithm's iterations.
+May lead to more interpretable components, as the contributions of different features are more comparable.
+
+Cons:
+
+May alter the relative relationships between features within each sample.
+Could potentially mask important amplitude differences between features.
+
+
+Normalizing the components after fitting NMF:
+
+Pros:
+
+Preserves the original scale relationships between features in the data.
+Allows the NMF to capture amplitude differences between features, which might be important in your analysis.
+Can still provide interpretable results if you're more interested in relative patterns than absolute magnitudes.
+
+Cons:
+
+Features with larger magnitudes might dominate the NMF results.
+May need to be careful about numerical stability during NMF fitting, especially if your data has a wide range of values.
+
+Recommendation:
+In many cases, especially for spatiotemporal data like yours, normalizing after fitting NMF is often preferred. Here's why:
+
+Preserves original relationships: For spatiotemporal data, the relative magnitudes between different features (in your case, AUs) might carry important information.
+Captures amplitude differences: Different AUs might naturally have different ranges of activation, which could be important for your analysis.
+Post-normalization interpretability: You can still normalize the components after fitting to make them more comparable and interpretable, without losing the benefits of fitting on the original scale.
+
+library(stats)
+
+auto size
+
+```{r}
+
+library(stats)
+
+# Function to determine appropriate block sizes based on ACF and CCF thresholds
+auto_block_size <- function(X, groups, max_lag = 50, acf_threshold = 0.2, ccf_threshold = 0.2) {
+  unique_groups <- unique(groups)
+  
+  # Determine time block size
+  acf_results <- lapply(unique_groups, function(group) {
+    indices <- which(groups == group)
+    group_data <- X[indices, ]
+    acf_mean <- colMeans(apply(group_data, 2, function(col) acf(col, lag.max = max_lag, plot = FALSE)$acf))
+    block_size <- which(acf_mean < acf_threshold)[1]
+    if (is.na(block_size)) max_lag else block_size
+  })
+  
+  time_block_size <- max(unlist(acf_results), na.rm = TRUE)
+  if (is.infinite(time_block_size) || is.na(time_block_size)) {
+    time_block_size <- max_lag
+  }
+  
+  # Determine space block size
+  n_features <- ncol(X)
+  ccf_matrix <- cor(X)
+  diag(ccf_matrix) <- 0
+  ccf_sorted <- sort(abs(ccf_matrix), decreasing = TRUE)
+  space_block_size <- which(ccf_sorted < ccf_threshold)[1]
+  if (is.na(space_block_size)) {
+    space_block_size <- n_features
+  }
+  
+  return(list(time_block_size = time_block_size, space_block_size = space_block_size))
+}
+
+# Function for spatiotemporal randomisation
+fn_spatiotemporal_randomize_2 <- function(X, groups, time_block_size = NULL, space_block_size = NULL) {
+  if (is.null(time_block_size) || is.null(space_block_size)) {
+    block_sizes <- auto_block_size(X, groups)
+    time_block_size <- block_sizes$time_block_size
+    space_block_size <- block_sizes$space_block_size
+  }
+  
+  X_randomised <- X
+  unique_groups <- unique(groups)
+  n_features <- ncol(X)
+  
+  for (group in unique_groups) {
+    indices <- which(groups == group)
+    n_samples <- length(indices)
+    
+    # Temporal block permutation
+    n_time_blocks <- floor(n_samples / time_block_size)
+    if (n_time_blocks > 1) {
+      time_block_indices <- split(indices, rep(1:n_time_blocks, each = time_block_size, length.out = n_samples))
+      shuffled_time_blocks <- sample(time_block_indices)
+      new_time_indices <- unlist(shuffled_time_blocks)
+      X_randomised[indices, ] <- X[new_time_indices, ]
+    }
+    
+    # Spatial block permutation
+    n_space_blocks <- floor(n_features / space_block_size)
+    if (n_space_blocks > 1) {
+      for (i in 1:n_time_blocks) {
+        block_start <- (i - 1) * time_block_size + 1
+        block_end <- min(i * time_block_size, n_samples)
+        
+        space_block_indices <- split(1:n_features, rep(1:n_space_blocks, each = space_block_size, length.out = n_features))
+        shuffled_space_blocks <- sample(space_block_indices)
+        new_space_indices <- unlist(shuffled_space_blocks)
+        
+        X_randomised[indices[block_start:block_end], ] <- X_randomised[indices[block_start:block_end], new_space_indices]
+      }
+    }
+  }
+  
+  return(X_randomised)
+}
+
+
+
+# Usage
+dta_posed_subs_a_rnd_2 <- fn_spatiotemporal_randomize_2(
+  dta_subs_a[,16:32],
+  dta_subs_a$filename
+)
+
+
+
+dta_posed_subs_a_rnd_2$filename <- dta_subs_a$filename
+dta_posed_subs_a_rnd_2$expression <- dta_subs_a$expression
+dta_posed_subs_a_rnd_2$timestamp <- dta_subs_a$timestamp
+
+
+
+
+dta_posed_subs_a_rnd_2%>%
+  ggplot(aes(timestamp,AU06_r_Cheek_raiser, group = filename))+
+  geom_line(colour = "blue", alpha = .5)+
+  geom_line(aes(y = AU01_r_Inner_brow_raiser), colour = "red", alpha = .1)+
+  facet_grid(~expression)
+
+
+
+dta_posed_subs_a_rnd_2%>%
+  ggplot(aes(timestamp,AU06_r_Cheek_raiser, group = filename))+
+  geom_line(colour = "blue", alpha = .5)+
+  geom_line(aes(y = AU01_r_Inner_brow_raiser), colour = "red", alpha = .1)+
+  facet_grid(~expression)
+
+
+
+
+# estimate quality measures from the shuffled data (use default NMF algorithm)
+estim_posed_random_2 <- NMF::nmf(dta_posed_subs_a_rnd_2[,1:17], 2:6, nrun=10, seed=123456)
+
+
+plot(res_find_k_1)
+
+
+plot(res_find_k_1, estim_posed_random_1)+
+  geom_vline(xintercept = 3)
+
+?NMF::consensusmap
+NMF::consensusmap(res_find_k_1)
+
+NMF::consensusmap(estim_posed_random_1)
+
+
+
+# Compare components
+res_find_k_1[,1]
+
+
+original_components<- NMF::basis(res_find_k_1$fit$`3`)
+original_components
+
+random_components<- NMF::basis(estim_posed_random_1$fit$`3`)  
+
+
+mean(abs(cor(original_components, random_components)))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`2`), NMF::basis(estim_posed_random_1$fit$`2`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`4`), NMF::basis(estim_posed_random_1$fit$`4`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`5`), NMF::basis(estim_posed_random_1$fit$`5`) )))
+mean(abs(cor(NMF::basis(res_find_k_1$fit$`6`), NMF::basis(estim_posed_random_1$fit$`6`) )))
+
+
+dta_posed_subs_a_rnd[,1:17]
+
+```
+
+We select values of k where the magnitude of the cophenetic correlation coefficient begins to fall (see below).
+so now we can fit the final model
+
+```{r}
+
+colnames(df_OF_output_AUsW_unblind_posed_binned)
+df_OF_output_AUsW_unblind_posed_binned$AU01_r_Inner_brow_raiser
+
+res_k3 <- NMF::nmf(df_OF_output_AUsW_unblind_posed_binned[,16:32], r = 3, 
+                  nrun = 200, 
+                  seed=123456,
+                 .options = list( 'v')) #
+
+
+```
+
+
+
+
+store NMF components on dataset
+```{r}
+
+# reconstruct
+
+res_k3
+
+install.packages(NMF)
+
+
+df_OF_output_AUsW_unblind_posed_binned$NMFtable<- as.data.frame(res_k3@fit@W)
+
+df_OF_output_AUsW_unblind_posed_binned$comp1 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V1
+table(is.na(df_OF_output_AUsW_unblind_posed_binned$comp1))
+df_OF_output_AUsW_unblind_posed_binned$comp2 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V2
+df_OF_output_AUsW_unblind_posed_binned$comp3 = df_OF_output_AUsW_unblind_posed_binned$NMFtable$V3
+
+
+
+
+```
+
+
+
+CONTINUE HERE - ORGANISE  CODE BELOW FOR FIGURE 2
+
+Combine the data and visualise
+vis preferrences 
+Figure 2
+
+```{r}
+
+sf = 1 # scaling factor to make it easier to change sizes of everything, in which case change here
+
+p<- list()
+
+p$graphstyle_int <-  theme(#base plot theme
+  
+  # axis lines
+  axis.line.y = element_line(color="black", size = 1.5),
+  axis.line.x = element_line(color="black", size = 1,5),
+  
+  axis.title.y=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)),
+  axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)),
+  
+  # text
+  strip.text.x = element_text(size = 16*(sf+.5),  colour = "black"),
+  strip.text.y = element_text(size = 16*(sf+.5),  colour = "black"),
+  
+  text=element_text(size = 14),
+  axis.text.x = element_text(size = 15*(sf+.5), colour = "black",),
+  axis.text.y = element_text(size = 15*(sf+.5), colour = "black"),
+  
+  
+  # panel
+  panel.grid.major = element_blank(),
+  panel.background = element_blank(),
+  # panel.background = element_rect(fill="transparent"),
+  # panel.border = element_rect(fill="transparent"),
+  # strip shades (reco rectagles)
+   # strip.background = element_blank(),
+  
+  # legend
+  # legend.position = "top",
+  legend.key = element_rect(colour = "transparent", fill="transparent"),
+  # axis.ticks = element_blank(),
+  # legend.k
+  #legend.direction = "horizontal",
+
+  legend.text = element_text(size = 16*(sf+.5)),
+  legend.title= element_text(size = 16*(sf+.5)),
+  # legend.title = element_text(size = 10*(sf+.3)),
+  # legend line tends to be really small in print so adjust here
+  # legend.key.height = unit(.5, "cm"),
+  # legend.key.width = unit(2, "cm"),
+  
+  #legend.text = element_text(size = 10*sf),
+  # legend.title=element_blank(),
+  #legend.text = element_blank(),
+  #axis.ticks = element_blank(),
+)
+
+
+```
+
+
+
+# recreate heatmap AUS
+
+```{r}
+
+chool_talk$AU_NM <-
+as.data.frame(res_k3@fit@H)%>%
+  mutate(component = as.factor(1:n()))%>%
+  gather(AU, coef, -component)%>%
+  group_by(component)%>%
+  mutate(max_comp = max(coef),
+         coef = coef/max_comp,
+         # AU = substring(AU,8,40),
+         AU_code = substring(AU,4,5)
+         )%>%
+  arrange(AU_code)%>%
+  ggplot(aes(component,AU, fill = coef))+
+  geom_tile()+
+  coord_cartesian(expand = FALSE)+
+  # make_fullsize()
+  
+  theme_classic()+
+  # scale_fill_viridis_()
+    scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  xlab("Component (K)")+
+
+  scale_x_discrete(position = "top")+
+guides(fill=guide_colorbar(ticks.colour = NA))
+  
+
+
+
+
+
+
+```
+
+
+```{r}
+
+triangle_plots$delaunay_tri_comp3
+
+
+# require()
+
+
+# I is for italic
+labels <- c(
+  `1` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp1noct.png'
+    width='100' /><br> 1",
+  `2` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp2noct.png'
+    width='100' /><br> 2",
+  `3` = "<img src='https://github.com/hcuve/halo_faces/raw/main/ggtextimgs/comp3noct.png'
+    width='100' /><br> 3"
+)
+# ggtext::
+
+
+chool_talk$AU_NM<-  chool_talk$AU_NM +
+  xlab("Component (K)")+
+    scale_x_discrete(
+      position = "top",
+    # name = NULL,
+    labels = labels
+  ) +
+  theme(
+     axis.text.x.top = element_markdown(color = "black", size = 16*(sf+.5)),
+     axis.title.x = element_text(size = 16*(sf+.5)),#update this,
+     axis.title.y = element_text(size = 16*(sf+.5)),#update this,
+     axis.text.x = element_text(size = 15*(sf+.5), colour = "black"),
+  axis.text.y = element_text(size = 15*(sf+.5), colour = "black"),
+  legend.key.height = unit(1, "cm"),
+  legend.key.width = unit(.7, "cm"),
+  legend.text = element_text(size = 16*(sf+.5)),
+  legend.title= element_text(size = 16*(sf+.5))
+    # axis.text.x = element_markdown(color = "black", size = 15),
+       # axis.text.x.top = element_markdown(size = 8, lineheight = 1.05)
+     # axis.title.x = element_markdown(color = "black", size = 20)
+  )
+
+
+chool_talk$AU_NM
+
+
+
+```
+
+
+
+
+
+
+
+  
+```{r}
+# chool_talk$AU_NM2<- chool_talk$AU_NM+
+#   theme(axis.text.y = element_blank())+
+#   ylab("Motor Action Unit")
+
+chool_talk$AU_NM2
+chool_talk$ts_smooth
+
+ggsave("AU_NMF2.tiff",chool_talk$AU_NM2, device = "tiff", width = 5, height = 8, dpi = 800)
+
+chool_talk$ts_hm
+
+```
+
+
+timeseries
+```{r}
+chool_talk$ts_smooth <- df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component,subject,expression)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(expression, component, bin_frame,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+
+
+chool_talk$ts_smooth
+
+# just components
+paper_plots$posed_comp_ts<-
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  
+      group_by(filename,component)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max) %>%
+  
+  group_by(component, bin_frame,subject)%>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, coef, color = component))+
+  geom_smooth()+
+  # geom_smooth(aes(group = subject), se = F)+
+  # stat_summary(aes(group = subject, color = component), geom = "smooth")+
+  # facet_grid(~expression )+
+  theme_classic()+
+   xlab("time bin")+
+  p$graphstyle_int+
+   scale_color_viridis_d(option = "magma")
+paper_plots$posed_comp_ts
+```
+
+
+   
+chool_talk$ts_smooth
+
+
+heatmap + timeseries + timeseries heatmap
+```{r}
+chool_talk$ts_hm <-
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  group_by(filename,component)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max)%>%
+  # mutate_at(c("coef"), scale)%>%
+  group_by(component, expression, bin_frame)%>%
+
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, component, fill= coef))+
+  geom_tile()+
+  xlab("time bin")+
+  scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  # geom_smooth(se = F)+
+  facet_grid(~expression)+
+  theme_classic()+
+  p$graphstyle_int+
+  guides(fill=guide_colorbar(ticks.colour = NA))+
+  theme(panel.spacing = unit(1, "cm"))
+   # guides(fill = guide_colourbar(barwidth = 1.5,ticks.colour = NA, barheight = 5))
+
+chool_talk$ts_hm 
+
+paper_plots$posed_comp_ts_hm<-
+df_OF_output_AUsW_unblind_posed_binned[,c(1,2:3,9:10,34:36)]%>%
+  gather(component, coef,-bin_frame, -subject, -expression, -drug.placebo,-filename)%>%
+  group_by(filename,component)%>%
+  mutate(coef_max = max(coef),
+         coef = coef/coef_max)%>%
+  # mutate_at(c("coef"), scale)%>%
+  group_by(component, bin_frame)%>%
+
+  summarise_if(is.numeric, mean, na.rm = TRUE)%>%
+  # ggplot(aes(Dataset, coef , color = Dataset, fill = Dataset))+
+  ggplot(aes(bin_frame, component, fill= coef))+
+  geom_tile()+
+  xlab("time bin")+
+  scale_fill_viridis_c(option = "magma", breaks=c(0,.5,1),
+                       limits =c(0,1))+#)+
+  # facet_grid(~expression)+
+  theme_classic()+
+  p$graphstyle_int +
+  guides(fill=guide_colorbar(ticks.colour = NA))+
+  theme(panel.spacing = unit(1, "cm"))
+   # guides(fill = guide_colourbar(barwidth = 1.5,ticks.colour = NA, barheight = 5))
+
+chool_talk$ts_hm 
+
+paper_plots$posed_comp_ts_hm
+
+```
+
+library(patchwork)
+```{r}
+# chool_talk$ts_nmf_heat_NMF <- (chool_talk$ts_smooth/
+#   chool_talk$ts_hm)+
+#   plot_layout(heights = c(1,2))
+
+# soace out values in x axis
+chool_talk$ts_smooth <- chool_talk$ts_smooth + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+    scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+  theme(panel.spacing.x = unit(1.5, "lines"))+
+  theme(legend.position = "top")
+
+chool_talk$ts_smooth
+
+test4pot5
+
+
+# chool_talk$ts_smooth <- test4pot5 + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+#     scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+#   theme(panel.spacing.x = unit(1.5, "lines"))+
+#   theme(legend.position = "top")
+
+chool_talk$ts_hm <- chool_talk$ts_hm +scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+  theme(panel.spacing.x = unit(1.5, "lines"))
+
+chool_talk$ts_hm 
+# components
+paper_plots$posed_comp_ts <- paper_plots$posed_comp_ts + scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+    # scale_y_continuous(breaks=c(0,.5,1), limits = c(0, 1))+
+  theme(panel.spacing.x = unit(1.5, "lines"))+
+  theme(legend.position = "top")
+
+paper_plots$posed_comp_ts_hm <-paper_plots$posed_comp_ts_hm +scale_x_continuous(breaks=c(0,50,100), limits = c(0, 100))+
+  theme(panel.spacing.x = unit(1.5, "lines"))
+
+chool_talk$ts_smooth
+chool_talk$ts_hm 
+paper_plots$posed_comp_ts
+paper_plots$posed_comp_ts_hm
+
+```
+
+
+
+````{r}
+
+require(patchwork)
+
+paper_plots$NMF_panel_posed
+
+test
+library(patchwork)
+# make sure to flip 1 to 3
+
+ triangle_plots$delaunay_tri_comp1.1 <- triangle_plots$delaunay_tri_comp1 +
+theme_void()+theme(legend.position = "none",
+                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp1")
+
+
+triangle_plots$delaunay_tri_comp2.1<- triangle_plots$delaunay_tri_comp2+
+theme_void()+theme(legend.position = "none",
+                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp2")
+ 
+triangle_plots$delaunay_tri_comp3.1<- triangle_plots$delaunay_tri_comp3+
+theme_void()+theme(legend.position = "none",
+                     axis.title.x=element_text(size = 16*(sf+.5), margin=margin(0,5,0,0)))+xlab("Comp3")
+
+
+comp1_2_3<- triangle_plots$delaunay_tri_comp1.1 /
+        triangle_plots$delaunay_tri_comp2.1/
+       triangle_plots$delaunay_tri_comp3.1
+
+comp1_2_3
+
+```
+
+```{r}
+paper_plots$posed_comp_ts
+paper_plots$posed_comp_ts_hm
+
+ts_ts_hm_compns<- (paper_plots$posed_comp_ts/paper_plots$posed_comp_ts_hm)
+ts_ts_hm_compns
+
+
+comp1_2_3
+```
+
+
+
+
+
+
+```{r}
+
+save.image("~/Library/CloudStorage/GoogleDrive-helioclemente.c@gmail.com/My Drive/2022 - University Of Birmingham/HaloStudy/Data/halofacestudyOCT2023.RData")
+```

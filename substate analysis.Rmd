@@ -4379,38 +4379,7 @@ emmeans::emmeans(rslt_clust_dur_count_perc, pairwise~expression|posed_spoken, ad
 summary(rslt_clust_dur_count_perc)
 
 ```
-entropy
 
-```{r}
-
-spoken_posed_nmf_filtered_agg2<- spoken_posed_nmf_filtered_agg%>%
-  group_by(subject,expression,posed_spoken)%>%
-  summarise_if(is.numeric, mean, na.rm = T)
-
-spoken_posed_nmf_filtered_agg2$subject <- as.factor(spoken_posed_nmf_filtered_agg2$subject)
-
-rslt_trans_entropy<-lmer(trans_entropy~ expression*posed_spoken +(1+posed_spoken+expression|subject),
-     REML =FALSE,
-     data = spoken_posed_nmf_filtered_agg2)
-eigen(rslt_trans_entropy)
-
-spoken_posed_nmf_filtered%>%
-    # group_by(subject,expression,posed_spoken)%>%
-  # summarise_if(is.numeric, mean, na.rm = T)%>%
-  ggplot(aes(posed_spoken, entropy_clust))+
-  # geom_jitter(width = .2,alpha = .1)+
-  stat_summary(geom = "pointrange")+
-  facet_grid(~expression)
-  
-  
-  afex::aov_ez(data = spoken_posed_nmf_filtered_agg2,
-              id = "subject",
-              dv = "trans_entropy",
-              within = c("posed_spoken", "expression"),
-              # fun_aggregate = "mean",
-              print.formula = TRUE)
-
-```
 
 
 
@@ -4618,6 +4587,17 @@ spoken_posed_nmf_entropy<- spoken_posed_nmf_filtered%>%
     mutate(entropy_clust_norm =entropy_clust/(log2(3)))
   spoken_posed_nmf_entropy$entropy_clust_norm
   
+  
+  
+  
+```
+
+
+
+
+```{r}
+
+  
 plts_substate_entropy_stat<-
   
 spoken_posed_nmf_entropy%>%
@@ -4704,6 +4684,97 @@ plts_substate_entropy_stat
 
 
 
+lmer entropy
+
+
+entropy
+
+```{r}
+
+# stationary entropy
+spoken_posed_nmf_entropy #stat
+spoken_posed_nmf_trans_entropy
+
+spoken_posed_nmf_entropy$subject <- as.factor(spoken_posed_nmf_entropy$subject)
+
+rslt_stat_entropy<-lmer(log1p(entropy_clust_norm+.1)~ expression*posed_spoken +(1+posed_spoken+expression|subject),
+     REML =FALSE,
+     data = spoken_posed_nmf_entropy%>%
+       subset(expression!= "neutral"))
+
+qqnorm(resid(rslt_stat_entropy))
+summary(rslt_stat_entropy)
+anova(rslt_stat_entropy)
+
+
+summary(rslt_stat_entropy)
+
+
+
+emmeans::emmeans(rslt_stat_entropy, pairwise~expression, adjust = "bonf")
+emmeans::emmeans(rslt_stat_entropy, pairwise~posed_spoken)
+
+emmeans::emmeans(rslt_stat_entropy, pairwise~expression|posed_spoken, adjust = "holm")
+# install.packages("report")
+report::report(rslt_stat_entropy)
+report::report(anova(rslt_stat_entropy))
+
+
+```
+
+
+transition lmer
+
+```{r}
+rslt_trans_entropy<-lmer(trans_entropy_norm~ expression*posed_spoken +(1+posed_spoken|subject),
+     REML =FALSE,
+     data = spoken_posed_nmf_trans_entropy%>%
+       subset(expression!= "neutral"))
+
+plot(rslt_trans_entropy)
+qqnorm(resid(rslt_trans_entropy))
+summary(rslt_trans_entropy)
+anova(rslt_trans_entropy)
+
+
+summary(rslt_trans_entropy)
+
+
+
+emmeans::emmeans(rslt_trans_entropy, pairwise~expression, adjust = "bonf")
+emmeans::emmeans(rslt_trans_entropy, pairwise~posed_spoken)
+
+emmeans::emmeans(rslt_trans_entropy, pairwise~expression|posed_spoken, adjust = "holm")
+# install.packages("report")
+report::report(rslt_trans_entropy)
+report::report(anova(rslt_trans_entropy))
+
+
+
+
+```
+
+eigen(rslt_trans_entropy)
+
+  
+summary(rslt_trans_entropy)
+
+anova(rslt_trans_entropy)
+# afex::aov_ez(data = spoken_posed_nmf_filtered_agg2,
+#               id = "subject",
+#               dv = "trans_entropy",
+#               within = c("posed_spoken", "expression"),
+#               # fun_aggregate = "mean",
+#               print.formula = TRUE)
+  
+  
+
+```
+
+
+
+
+
 ```{r}
 
 plts_substate_entropy_trans<-
@@ -4756,40 +4827,7 @@ ggsave("plts_substate_entropy.tiff", plts_substate_entropy, device = "tiff",
        width = 14, height = 14, dpi = 800)
 
 
-
-
-
-spoken_posed_nmf1$subject<- as.factor(spoken_posed_nmf1$subject)
-install.packages("lmerTest")
-library(lmerTest)
-
-rslt_trans_entropy<-lmer(trans_entropy_norm~ expression*posed_spoken+
-                           # expression:posed_spoken+
-                           # expression:cluster_label+
-                           # posed_spoken:cluster_label +
-                           (1+posed_spoken|subject),
-     REML =FALSE,
-     data = spoken_posed_nmf_trans_entropy%>%
-       subset(expression!= "neutral"))
-
-summary(rslt_trans_entropy)
-emmeans::emmeans(rslt_trans_entropy, pairwise~expression)
-emmeans::emmeans(rslt_trans_entropy, pairwise~expression|posed_spoken)
-
-
-
-emmeans::emmeans(rslt_trans_entropy, pairwise~expression, adjust = "bonf")
-emmeans::emmeans(rslt_trans_entropy, pairwise~posed_spoken)
-
-emmeans::emmeans(rslt_trans_entropy, pairwise~expression*posed_spoken, adjust = "holm")
-install.packages("report")
-report::report(rslt_trans_entropy)
-report::report(anova(rslt_trans_entropy))
-
-
-
 ```
-
 # compute just one entropy
 
 ```{r}

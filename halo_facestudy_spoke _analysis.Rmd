@@ -56,6 +56,44 @@ unique(df_OF_output_AUsW_unblind_spoken1_binned$bin_frame)
 # df_OF_output_AUsW_unblind_spoken1_binned
 
 unique(df_OF_output_AUsW_unblind_spoken1_binned$expression)
+
+
+ # Define the columns to be normalized
+columns_to_normalize <- 17:33
+
+# Function to apply max normalization
+max_normalize <- function(x) {
+  max_val <- max(x, na.rm = TRUE)
+  if (max_val == 0) {
+    return(rep(0, length(x)))
+  } else {
+    return(x / max_val)
+  }
+}
+# Apply max normalization within each group
+colnames(df_OF_output_AUsW_unblind_spoken1_binned)
+
+dta_spok_4nmf_norm <- df_OF_output_AUsW_unblind_spoken1_binned %>%
+  group_by(filename) %>%
+  mutate(across(all_of(columns_to_normalize), max_normalize)) %>%
+  mutate(AU01_r_Inner_brow_raiser = max_normalize(AU01_r_Inner_brow_raiser))%>%
+  ungroup()
+
+dta_spok_4nmf_norm
+
+range(dta_spok_4nmf_norm[,columns_to_normalize])
+
+range(dta_spok_4nmf_norm$AU01_r_Inner_brow_raiser)
+range(dta_spok_4nmf_norm$AU02_r_Outer_brow_raiser)
+range(dta_spok_4nmf_norm$AU26_r_Jaw_drop)
+
+
+range(dta_spok_4nmf_norm$AU12_r_Lip_corner_puller)
+# in cases of conatnt values we should just add .01
+
+```
+
+```{r}
 res_k3_spoken1 <- NMF::nmf(df_OF_output_AUsW_unblind_spoken1_binned[,17:33], r = 3, 
                   nrun = 200, #number of runs to try and update for
                   seed=123456, #specific seed for reproducibility
@@ -99,7 +137,7 @@ NMF::consensusmap(res_k3_spoken1)
 res_spoken1_find_k
 
 ```
-face heatmaps for Spoje NMF
+
 
 
 library(RcppML)
@@ -107,7 +145,8 @@ find k
 ```{r}
 
 # Function to run NMF for a specific rank
-run_nmf <- function(data, rank, seed, maxit) {
+# run_nmf
+fn_run_nmf <- function(data, rank, seed, maxit) {
   tryCatch({
     RcppML::nmf(data, k = rank, seed = seed, maxit = maxit)
   }, error = function(e) {
@@ -117,8 +156,39 @@ run_nmf <- function(data, rank, seed, maxit) {
 }
 
 # Data preparation
-data <- df_OF_output_AUsW_unblind_spoken1_binned[, 17:33] + 0.01
+colnames(dta_spok_4nmf_norm[, 17:33])
+# table(is.na(df_OF_output_AUsW_unblind_spoken1_binned))
+range(dta_spok_4nmf_norm$AU26_r_Jaw_drop)
 
+dta_spk_4nmf<-dta_spok_4nmf_norm[, 17:33] 
+
+# Ensure all columns are numeric
+dta_spk_4nmf <- dta_spk_4nmf %>%
+  mutate(across(everything(), as.numeric))
+
+# Check for and replace NA values
+dta_spk_4nmf <- dta_spk_4nmf %>%
+  mutate(across(everything(), ~ replace_na(., 0.01)))
+
+
+ # Convert to matrix format
+dta_spk_4nmf <- as.matrix(dta_spk_4nmf)
+
+
+
+# Ensure no NAs are present
+if (any(is.na(dta_spk_4nmf))) {
+  stop("There are still NA values in the matrix.")
+} else {
+  message("All values are fine, no NAs present in the matrix.")
+}
+
+str(dta_spk_4nmf)
+
+dta_spk_4nmf[1,1]
+```
+colnames(dta_spk_4nmf)
+```{r}
 # Parameters
 seed <- 123456
 maxit <- 100
@@ -126,20 +196,206 @@ maxit <- 100
 # Run NMF for ranks 2 to 6
 res_spoken1_find_k <- list()
 for (rank in 2:6) {
-  res <- run_nmf(data, rank, seed, maxit)
+  res <- fn_run_nmf(dta_spk_4nmf, rank, seed, maxit)
   if (!is.null(res)) {
     res_spoken1_find_k[[paste0("rank_", rank)]] <- res
   }
 }
 
+range(dta_spk_4nmf[,1])
+
+
+
+res
 # Check results
 if (length(res_spoken1_find_k) == 0) {
   message("All NMF computations failed.")
 } else {
   message("NMF computations completed successfully for ranks: ", paste(names(res_spoken1_find_k), collapse = ", "))
 }
+
+
+
+# Function to run NMF for a specific rank multiple times and compute the consensus matrix
+run_nmf_with_consensus <- function(data, rank, seed, maxit, nrun = 30) {
+  consensus_matrix <- matrix(0, nrow = nrow(data), ncol = nrow(data))
+  for (i in 1:nrun) {
+    res <- tryCatch({
+      RcppML::nmf(data, k = rank, seed = seed , maxit = maxit)
+    }, error = function(e) {
+      message("Error in NMF computation for rank ", rank, " run ", i, ": ", e$message)
+      NULL
+    })
+    
+    if (!is.null(res)) {
+      # Get the basis (W) matrix
+      # res$w
+      W <- res$w
+      if (!is.null(W) && nrow(W) > 0 && ncol(W) > 0) {
+        # Assign clusters based on the highest value in each row of W
+        clusters <- apply(W, 1, which.max)
+        # Update the consensus matrix
+        for (j in 1:length(clusters)) {
+          for (k in 1:length(clusters)) {
+            if (clusters[j] == clusters[k]) {
+              consensus_matrix[j, k] <- consensus_matrix[j, k] + 1
+            }
+          }
+        }
+      } else {
+        message("Invalid W matrix in run ", i, " for rank ", rank)
+      }
+    }
+  }
+  # Normalize the consensus matrix
+  consensus_matrix <- consensus_matrix / nrun
+  return(consensus_matrix)
+}
+
+# Function to plot consensus map
+plot_consensus_map <- function(consensus_matrix, rank) {
+  # Convert the consensus matrix to a format suitable for the consensusmap function
+  consensus_obj <- new("NMFfit")
+  consensus_obj@consensus <- consensus_matrix
+  # Plot the consensus map
+  consensusmap(consensus_obj, main = paste("Consensus Map for Rank", rank))
+}
+
+
+# Run NMF for ranks 2 to 6 and compute consensus matrices
+consensus_matrices <- list()
+dta_spk_4nmf
+# 
+# range(dta_spk_4nmf$AU01_r_Inner_brow_raiser)
+# range(dta_spk_4nmf$AU04_r_Brow_lowerer)
+
+for (rank in 2:6) {
+  cat("Computing consensus matrix for rank", rank, "\n")
+  consensus_matrix <- run_nmf_with_consensus(dta_spk_4nmf, rank, seed, maxit)
+  consensus_matrices[[paste0("rank_", rank)]] <- consensus_matrix
+}
+
+# Plot consensus maps
+for (rank in 2:6) {
+  consensus_matrix <- consensus_matrices[[paste0("rank_", rank)]]
+  if (!is.null(consensus_matrix)) {
+    cat("Plotting consensus map for rank", rank, "\n")
+    plot_consensus_map(consensus_matrix, rank)
+  }
+}
+
+
+
+
 ```
 
+
+
+
+
+```{r}
+# Load necessary libraries
+library(RcppML)
+library(NMF)
+library(dplyr)
+
+# Function to run NMF for a specific rank multiple times and compute the consensus matrix
+run_nmf_with_consensus <- function(data, rank, seed, maxit, nrun = 10) {
+  consensus_matrix <- matrix(0, nrow = nrow(data), ncol = nrow(data))
+  successful_runs <- 0
+  for (i in 1:nrun) {
+    gc()  # Perform garbage collection to free up memory
+    res <- tryCatch({
+      RcppML::nmf(data, k = rank, seed = seed + i, maxit = maxit)
+    }, error = function(e) {
+      message("Error in NMF computation for rank ", rank, " run ", i, ": ", e$message)
+      NULL
+    })
+    
+    if (!is.null(res)) {
+      # Get the basis (W) matrix
+      W <- res$W
+      if (!is.null(W) && nrow(W) > 0 && ncol(W) > 0) {
+        successful_runs <- successful_runs + 1
+        # Assign clusters based on the highest value in each row of W
+        clusters <- apply(W, 1, which.max)
+        # Update the consensus matrix
+        for (j in 1:length(clusters)) {
+          for (k in 1:length(clusters)) {
+            if (clusters[j] == clusters[k]) {
+              consensus_matrix[j, k] <- consensus_matrix[j, k] + 1
+            }
+          }
+        }
+      } else {
+        message("Invalid W matrix in run ", i, " for rank ", rank)
+      }
+    }
+  }
+  # Normalize the consensus matrix if there were successful runs
+  if (successful_runs > 0) {
+    consensus_matrix <- consensus_matrix / successful_runs
+  } else {
+    message("No successful runs for rank ", rank)
+  }
+  return(consensus_matrix)
+}
+
+# Data preparation
+dta_spk_4nmf
+str(dta_spk_4nmf)
+
+
+# Parameters
+seed <- 123456
+maxit <- 100
+
+# Initialize lists to store successful and failed computations
+consensus_matrices <- list()
+failed_ranks <- list()
+
+# Run NMF for ranks 2 to 6 and compute consensus matrices
+
+for (rank in 2:6) {
+  cat("Computing consensus matrix for rank", rank, "\n")
+  consensus_matrix <- run_nmf_with_consensus(dta_spk_4nmf, rank, seed, maxit, nrun = 10)
+  if (!is.null(consensus_matrix)) {
+    consensus_matrices[[paste0("rank_", rank)]] <- consensus_matrix
+  } else {
+    failed_ranks[[paste0("rank_", rank)]] <- rank
+  }
+}
+
+# Check results and print messages
+if (length(consensus_matrices) == 0) {
+  message("All NMF computations failed.")
+} else {
+  successful_ranks <- names(consensus_matrices)
+  message("NMF computations completed successfully for ranks: ", paste(successful_ranks, collapse = ", "))
+  if (length(failed_ranks) > 0) {
+    failed_ranks_names <- names(failed_ranks)
+    message("NMF computations failed for ranks: ", paste(failed_ranks_names, collapse = ", "))
+  }
+}
+
+# Plot consensus maps for each successful rank
+for (rank_name in successful_ranks) {
+  consensus_matrix <- consensus_matrices[[rank_name]]
+  if (!is.null(consensus_matrix)) {
+    cat("Plotting consensus map for", rank_name, "\n")
+    consensus_obj <- new("NMFfit")
+    consensus_obj@consensus <- consensus_matrix
+    consensusmap(consensus_obj, main = paste("Consensus Map for", rank_name))
+  }
+}
+
+
+
+test<-RcppML::nmf(dta_spk_4nmf, k = 3, seed = seed, maxit = maxit)
+test$w
+
+test$h
+```
 some custom visualisations
 
 custom visalisation of H (mixing components)
